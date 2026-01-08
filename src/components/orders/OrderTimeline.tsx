@@ -12,7 +12,7 @@ interface TimelineStep {
 
 interface OrderTimelineProps {
   orderId: string;
-  currentStatus: "confirmed" | "processing" | "out_for_delivery" | "delivered";
+  currentStatus: "confirmed" | "processing" | "out_for_delivery" | "delivered" | "completed";
   className?: string;
 }
 
@@ -21,6 +21,7 @@ const statusConfig = {
   processing: { color: "warning", label: "Processing" },
   out_for_delivery: { color: "accent", label: "Out for Delivery" },
   delivered: { color: "success", label: "Delivered" },
+  completed: { color: "success", label: "Completed" },
 } as const;
 
 export function OrderTimeline({ orderId, currentStatus, className }: OrderTimelineProps) {
