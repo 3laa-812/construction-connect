@@ -12,6 +12,8 @@ import Projects from "./pages/Projects";
 import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
+import SupplierRFQFeed from "./pages/SupplierRFQFeed";
+import Financials from "./pages/Financials";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
           <Route path="/suppliers" element={<Suppliers />} />
           <Route path="/approvals" element={<Approvals />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/supplier/rfq-feed" element={<SupplierRFQFeed />} />
+          <Route path="/financials" element={<Financials />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
