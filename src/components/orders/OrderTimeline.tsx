@@ -1,6 +1,7 @@
 import { Check, Clock, Package, Truck, MapPin, CheckCircle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TimelineStep {
   id: string;
@@ -16,44 +17,46 @@ interface OrderTimelineProps {
   className?: string;
 }
 
-const statusConfig = {
-  confirmed: { color: "primary", label: "Confirmed" },
-  processing: { color: "warning", label: "Processing" },
-  out_for_delivery: { color: "accent", label: "Out for Delivery" },
-  delivered: { color: "success", label: "Delivered" },
-  completed: { color: "success", label: "Completed" },
-} as const;
-
 export function OrderTimeline({ orderId, currentStatus, className }: OrderTimelineProps) {
+  const { t } = useLanguage();
+
+  const statusConfig = {
+    confirmed: { color: "primary", label: t("orders.timeline.steps.confirmed_title") },
+    processing: { color: "warning", label: t("orders.timeline.steps.processing_title") },
+    out_for_delivery: { color: "accent", label: t("orders.timeline.steps.out_for_delivery_title") },
+    delivered: { color: "success", label: t("orders.timeline.steps.delivered_title") },
+    completed: { color: "success", label: t("orders.timeline.steps.delivered_title") },
+  } as const;
+
   const statusOrder = ["confirmed", "processing", "out_for_delivery", "delivered"];
   const currentIndex = statusOrder.indexOf(currentStatus);
 
   const steps: TimelineStep[] = [
     {
       id: "confirmed",
-      title: "Order Confirmed",
-      description: "Order has been confirmed by supplier",
+      title: t("orders.timeline.steps.confirmed_title"),
+      description: t("orders.timeline.steps.confirmed_desc"),
       timestamp: "Jan 15, 2024 · 09:30 AM",
       status: currentIndex >= 0 ? (currentIndex === 0 ? "current" : "completed") : "pending",
     },
     {
       id: "processing",
-      title: "Processing",
-      description: "Order is being prepared for shipment",
+      title: t("orders.timeline.steps.processing_title"),
+      description: t("orders.timeline.steps.processing_desc"),
       timestamp: currentIndex >= 1 ? "Jan 16, 2024 · 02:15 PM" : undefined,
       status: currentIndex > 0 ? (currentIndex === 1 ? "current" : "completed") : "pending",
     },
     {
       id: "out_for_delivery",
-      title: "Out for Delivery",
-      description: "Order is on its way to the delivery location",
+      title: t("orders.timeline.steps.out_for_delivery_title"),
+      description: t("orders.timeline.steps.out_for_delivery_desc"),
       timestamp: currentIndex >= 2 ? "Jan 18, 2024 · 07:45 AM" : undefined,
       status: currentIndex > 1 ? (currentIndex === 2 ? "current" : "completed") : "pending",
     },
     {
       id: "delivered",
-      title: "Delivered",
-      description: "Order has been successfully delivered",
+      title: t("orders.timeline.steps.delivered_title"),
+      description: t("orders.timeline.steps.delivered_desc"),
       timestamp: currentIndex >= 3 ? "Jan 18, 2024 · 11:20 AM" : undefined,
       status: currentIndex === 3 ? "current" : "pending",
     },
@@ -70,7 +73,7 @@ export function OrderTimeline({ orderId, currentStatus, className }: OrderTimeli
     <div className={cn("bg-card rounded-xl border border-border", className)}>
       <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <div>
-          <h3 className="font-semibold text-foreground">Order Status</h3>
+          <h3 className="font-semibold text-foreground">{t("orders.timeline.title")}</h3>
           <p className="text-sm text-muted-foreground">{orderId}</p>
         </div>
         <StatusBadge

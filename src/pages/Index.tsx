@@ -29,14 +29,14 @@ const Index = () => {
       iconColor: "success" as const,
     },
     {
-      title: isRTL ? "الطلبات هذا الشهر" : "Orders This Month",
+      title: t("dashboard.orders_this_month"),
       value: 156,
       change: { value: 5, type: "decrease" as const },
       icon: ShoppingCart,
       iconColor: "accent" as const,
     },
     {
-      title: isRTL ? "التسليمات المعلقة" : "Deliveries Pending",
+      title: t("dashboard.deliveries_pending"),
       value: 23,
       icon: Package,
       iconColor: "warning" as const,
@@ -51,13 +51,13 @@ const Index = () => {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("dashboard.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              {isRTL ? "مرحباً بعودتك، أحمد. إليك نظرة عامة على المشتريات." : "Welcome back, Ahmed. Here's your procurement overview."}
+              {t("dashboard.welcome_message", { name: "Ahmed" })}
             </p>
           </div>
           <Link to="/rfqs/new">
             <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 me-2" />
-              {isRTL ? "طلب عرض أسعار جديد" : "New RFQ"}
+              {t("dashboard.create_new_rfq_action")}
             </Button>
           </Link>
         </div>
@@ -93,7 +93,7 @@ const Index = () => {
           {/* Quick Links */}
           <div className="bg-card rounded-xl border border-border p-6">
             <h3 className="font-semibold text-foreground mb-4">
-              {isRTL ? "إجراءات سريعة" : "Quick Actions"}
+              {t("dashboard.quick_actions")}
             </h3>
             <div className="grid gap-3">
               <Link
@@ -106,10 +106,10 @@ const Index = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {isRTL ? "إنشاء طلب عرض أسعار جديد" : "Create New RFQ"}
+                      {t("dashboard.create_new_rfq_action")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {isRTL ? "طلب عروض أسعار من الموردين" : "Request quotes from suppliers"}
+                      {t("dashboard.create_new_rfq_desc")}
                     </p>
                   </div>
                 </div>
@@ -126,10 +126,10 @@ const Index = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {isRTL ? "إدارة الموردين" : "Manage Suppliers"}
+                      {t("dashboard.manage_suppliers_action")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {isRTL ? "عرض وإدارة شبكة الموردين" : "View and manage supplier network"}
+                      {t("dashboard.manage_suppliers_desc")}
                     </p>
                   </div>
                 </div>
@@ -146,10 +146,10 @@ const Index = () => {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {isRTL ? "تتبع الطلبات" : "Track Orders"}
+                      {t("dashboard.track_orders_action")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {isRTL ? "مراقبة التسليم والتنفيذ" : "Monitor deliveries and fulfillment"}
+                      {t("dashboard.track_orders_desc")}
                     </p>
                   </div>
                 </div>

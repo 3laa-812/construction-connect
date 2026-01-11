@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SupplierRatingProps {
   orderId: string;
@@ -34,29 +35,7 @@ interface RatingData {
   timestamp: string;
 }
 
-const ratingCategories = [
-  {
-    key: "delivery",
-    label: "Delivery Time",
-    labelAr: "وقت التسليم",
-    icon: Truck,
-    description: "Was the delivery on time?",
-  },
-  {
-    key: "quality",
-    label: "Product Quality",
-    labelAr: "جودة المنتج",
-    icon: Package,
-    description: "Did the products meet specifications?",
-  },
-  {
-    key: "communication",
-    label: "Communication",
-    labelAr: "التواصل",
-    icon: MessageSquare,
-    description: "How responsive was the supplier?",
-  },
-];
+
 
 function StarRating({
   value,
@@ -114,11 +93,33 @@ export function SupplierRating({
   onOpenChange,
   onSubmit,
 }: SupplierRatingProps) {
+  const { t } = useLanguage();
   const [ratings, setRatings] = useState({
     delivery: 0,
     quality: 0,
     communication: 0,
   });
+
+  const ratingCategories = [
+    {
+      key: "delivery",
+      label: t("orders.rating.categories.delivery"),
+      icon: Truck,
+      description: t("orders.rating.categories.delivery_desc"),
+    },
+    {
+      key: "quality",
+      label: t("orders.rating.categories.quality"),
+      icon: Package,
+      description: t("orders.rating.categories.quality_desc"),
+    },
+    {
+      key: "communication",
+      label: t("orders.rating.categories.communication"),
+      icon: MessageSquare,
+      description: t("orders.rating.categories.communication_desc"),
+    },
+  ];
   const [review, setReview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -153,16 +154,16 @@ export function SupplierRating({
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast({
-        title: "Rating Submitted",
-        description: `Thank you for rating ${supplier}`,
+        title: t("orders.rating.toast.submitted"),
+        description: t("orders.rating.toast.thank_you", { supplier }),
       });
 
       onSubmit?.(ratingData);
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Submission Failed",
-        description: "Please try again",
+        title: t("orders.rating.toast.failed"),
+        description: t("orders.rating.toast.try_again"),
         variant: "destructive",
       });
     } finally {
@@ -181,10 +182,10 @@ export function SupplierRating({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Star className="w-5 h-5 text-warning" />
-            Rate Supplier
+            {t("orders.rating.title")}
           </DialogTitle>
           <DialogDescription>
-            Share your experience with this supplier to help other buyers
+            {t("orders.rating.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -204,7 +205,7 @@ export function SupplierRating({
                 </p>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                Order: {orderId}
+                {t("orders.grn.summary.order_id")}: {orderId}
               </p>
             </div>
           </div>
@@ -239,7 +240,7 @@ export function SupplierRating({
           {/* Overall Rating Display */}
           {canSubmit && (
             <div className="bg-primary/5 rounded-lg p-4 text-center border border-primary/20">
-              <p className="text-sm text-muted-foreground mb-2">Overall Rating</p>
+              <p className="text-sm text-muted-foreground mb-2">{t("orders.rating.overall")}</p>
               <div className="flex items-center justify-center gap-2">
                 <Star className="w-8 h-8 text-warning fill-warning" />
                 <span className="text-3xl font-bold text-primary tabular-nums">
@@ -252,29 +253,29 @@ export function SupplierRating({
 
           {/* Written Review */}
           <div className="space-y-2">
-            <Label>Written Review (Optional)</Label>
+            <Label>{t("orders.rating.review_label")}</Label>
             <Textarea
-              placeholder="Share more details about your experience with this supplier..."
+              placeholder={t("orders.rating.review_placeholder")}
               value={review}
               onChange={(e) => setReview(e.target.value)}
               rows={4}
             />
             <p className="text-xs text-muted-foreground">
-              Your review helps other buyers make informed decisions
+              {t("orders.rating.review_help")}
             </p>
           </div>
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button variant="ghost" onClick={handleReset} className="sm:me-auto">
-            Reset
+            {t("orders.rating.actions.reset")}
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Skip
+            {t("orders.rating.actions.skip")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
             <Send className="w-4 h-4 me-2" />
-            {isSubmitting ? "Submitting..." : "Submit Rating"}
+            {isSubmitting ? t("orders.rating.actions.submitting") : t("orders.rating.actions.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>

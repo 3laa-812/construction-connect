@@ -1,0 +1,873 @@
+{
+  "app_title": "كونستركشن كونكت",
+  "welcome": "مرحباً بكم في كونستركشن كونكت",
+
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "rfqs": "طلبات عروض الأسعار",
+    "bids": "العروض",
+    "orders": "الطلبات",
+    "suppliers": "الموردين",
+    "projects": "المشاريع",
+    "approvals": "الموافقات",
+    "financials": "المالية",
+    "supplier_portal": "بوابة الموردين",
+    "settings": "الإعدادات",
+    "more": "المزيد"
+  },
+  "common": {
+    "search": "بحث",
+    "search_placeholder": "البحث في طلبات الأسعار، الطلبات، الموردين...",
+    "notifications": "الإشعارات",
+    "profile": "الملف الشخصي",
+    "sign_out": "تسجيل الخروج",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "submit": "إرسال",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "view": "عرض",
+    "download": "تنزيل",
+    "upload": "رفع",
+    "actions": "الإجراءات",
+    "status": "الحالة",
+    "date": "التاريخ",
+    "amount": "المبلغ",
+    "total": "الإجمالي",
+    "items": "العناصر",
+    "notes": "ملاحظات",
+    "back": "السابق",
+    "next": "التالي",
+    "finish": "إنهاء",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "loading": "جاري التحميل...",
+    "no_data": "لا توجد بيانات",
+    "app_name": "كونستركشن كونكت",
+    "procurement": "إدارة المشتريات",
+    "sidebar": {
+      "main": "الرئيسية",
+      "management": "الإدارة",
+      "admin": "الإشراف",
+      "collapse": "طي الشريط الجانبي"
+    }
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "active_rfqs": "طلبات الأسعار النشطة",
+    "pending_orders": "الطلبات المعلقة",
+    "total_suppliers": "إجمالي الموردين",
+    "monthly_spend": "الإنفاق الشهري",
+    "recent_activity": "النشاط الأخير",
+    "pending_approvals": "الموافقات المعلقة",
+    "vs_last_month": "مقارنة بالشهر الماضي",
+    "orders_this_month": "الطلبات هذا الشهر",
+    "deliveries_pending": "التسليمات المعلقة",
+    "welcome_message": "مرحباً بعودتك، {{name}}. إليك نظرة عامة على المشتريات.",
+    "quick_actions": "إجراءات سريعة",
+    "create_new_rfq_action": "إنشاء طلب عرض أسعار جديد",
+    "create_new_rfq_desc": "طلب عروض أسعار من الموردين",
+    "manage_suppliers_action": "إدارة الموردين",
+    "manage_suppliers_desc": "عرض وإدارة شبكة الموردين",
+    "track_orders_action": "تتبع الطلبات",
+    "track_orders_desc": "مراقبة التسليم والتنفيذ",
+    "activities": {
+      "new_bid": {
+        "title": "تم استلام عرض جديد",
+        "desc": "قدمت شركة حديد التكنولوجيا عرضاً لـ 'حديد التسليح'"
+      },
+      "order_confirmed": {
+        "title": "تم تأكيد الطلب",
+        "desc": "تم تأكيد الطلب رقم #ORD-2024-001"
+      },
+      "out_for_delivery": {
+        "title": "جاري التوصيل",
+        "desc": "موعد الوصول المتوقع: اليوم، 2:00 م"
+      },
+      "rfq_closing": {
+        "title": "يغلق قريباً",
+        "desc": "تغلق 'التوصيلات الكهربائية' في ساعتين"
+      },
+      "delivery_completed": {
+        "title": "تم التوصيل",
+        "desc": "تم تأكيد تفريغ الأسمنت في الموقع أ"
+      }
+    },
+    "time": {
+      "min_ago": "منذ {{count}} دقيقة",
+      "hour_ago": "منذ {{count}} ساعة",
+      "hours_ago": "منذ {{count}} ساعة"
+    }
+  },
+  "rfq_builder": {
+    "title": "إنشاء طلب عرض أسعار جديد",
+    "subtitle": "أنشئ طلب عرض أسعار في 4 خطوات بسيطة",
+    "steps": {
+      "project": {
+        "title": "المشروع والتفاصيل",
+        "desc": "المعلومات الأساسية"
+      },
+      "items": {
+        "title": "بنود الطلب",
+        "desc": "المنتجات المطلوبة"
+      },
+      "terms": {
+        "title": "الشروط والمستندات",
+        "desc": "الدفع والملفات"
+      },
+      "review": {
+        "title": "المراجعة",
+        "desc": "الفحص النهائي"
+      }
+    },
+    "sections": {
+      "project_category": "المشروع والفئة",
+      "project_category_desc": "اختر المشروع والفئة لهذا الطلب",
+      "delivery_contact": "التسليم وجهة الاتصال",
+      "delivery_contact_desc": "حدد متى وأين تحتاج المواد",
+      "line_items": "بنود الطلب",
+      "line_items_desc": "أضف المنتجات أو الخدمات التي تحتاجها",
+      "terms_docs": "الشروط والمستندات",
+      "terms_docs_desc": "حدد شروط الدفع وأرفق المستندات الداعمة",
+      "review": "مراجعة الطلب",
+      "review_desc": "يرجى مراجعة كافة التفاصيل قبل الإرسال"
+    },
+    "form": {
+      "project_label": "المشروع",
+      "project_placeholder": "اختر المشروع",
+      "category_label": "الفئة",
+      "category_placeholder": "اختر الفئة",
+      "priority_label": "الأولوية",
+      "priority_placeholder": "اختر الأولوية",
+      "delivery_date_label": "تاريخ التسليم",
+      "delivery_location_label": "موقع التسليم",
+      "delivery_location_placeholder": "أدخل عنوان التسليم",
+      "delivery_location_help": "العنوان الكامل بما في ذلك المدينة والحي",
+      "contact_name_label": "اسم جهة الاتصال بالموقع",
+      "contact_name_placeholder": "أدخل اسم جهة الاتصال",
+      "contact_phone_label": "هاتف جهة الاتصال بالموقع",
+      "contact_phone_placeholder": "أدخل رقم الهاتف",
+      "payment_terms_label": "شروط الدفع المفضلة",
+      "payment_terms_placeholder": "اختر شروط الدفع",
+      "quote_validity_label": "صلاحية العرض",
+      "quote_validity_placeholder": "اختر فترة الصلاحية",
+      "quote_validity_help": "كم تتوقع أن تظل الأسعار صالحة؟",
+      "partial_bids_label": "السماح بالعروض الجزئية",
+      "partial_bids_desc": "يمكن للموردين التسعير لبعض البنود بدلاً من الكل",
+      "upload_title": "رفع المستندات",
+      "upload_desc": "أرفق جداول الكميات، المواصفات، أو الرسومات (اختياري)",
+      "drop_files": "أفلت الملفات هنا أو اضغط للرفع",
+      "file_types": "PDF, Excel, صور حتى 10 ميجابايت",
+      "notes_label": "ملاحظات إضافية",
+      "notes_placeholder": "أي تعليمات خاصة للموردين..."
+    },
+    "items": {
+      "item_number": "بند {{number}}",
+      "remove": "إزالة",
+      "product_name": "اسم المنتج",
+      "product_placeholder": "مثال: إسمنت بورتلاندي نوع 1",
+      "brand": "العلامة التجارية (اختياري)",
+      "brand_placeholder": "مثال: محلي",
+      "quantity": "الكمية",
+      "unit": "الوحدة",
+      "unit_placeholder": "اختر الوحدة",
+      "specs": "الواصفات",
+      "specs_placeholder": "مثال: أكياس 50 كجم، ASTM C150",
+      "add_item": "إضافة بند آخر"
+    },
+    "review": {
+      "project": "المشروع",
+      "category": "الفئة",
+      "priority": "الأولوية",
+      "delivery_date": "تاريخ التسليم",
+      "location": "الموقع",
+      "site_contact": "جهة اتصال الموقع",
+      "line_items": "بنود الطلب",
+      "payment_terms": "شروط الدفع",
+      "payment": "الدفع",
+      "quote_validity": "صلاحية العرض",
+      "partial_bids": "العروض الجزئية",
+      "allowed": "مسموح",
+      "not_allowed": "غير مسموح",
+      "documents": "المستندات",
+      "additional_notes": "ملاحظات إضافية",
+      "summary_title": "ملخص الطلب",
+      "priority_highlight": "تم تمييز هذا الطلب كأولوية عالية"
+    },
+    "card": {
+      "items": "عناصر"
+    },
+    "actions": {
+      "previous": "السابق",
+      "next": "الخطوة التالية",
+      "submit": "إرسال الطلب"
+    },
+    "toast": {
+      "submitted": "تم إرسال الطلب",
+      "submitted_desc": "تم إرسال طلبك إلى الموردين المؤهلين"
+    }
+  },
+  "rfq": {
+    "title": "إدارة طلبات عروض الأسعار",
+    "create_new": "إنشاء طلب جديد",
+    "rfq_number": "رقم الطلب",
+    "project": "المشروع",
+    "deadline": "الموعد النهائي",
+    "bids_received": "العروض المستلمة",
+    "closing_soon": "يغلق قريباً",
+    "wizard": {
+      "header": "معلومات الرأس",
+      "line_items": "بنود الطلب",
+      "delivery": "التسليم",
+      "review": "المراجعة والإرسال"
+    },
+    "subtitle": "إدارة طلبات عروض الأسعار الخاصة بك",
+    "create_rfq": "إنشاء طلب جديد",
+    "search_placeholder": "البحث برقم الطلب، العنوان، أو المشروع...",
+    "filter": {
+      "status": "الحالة",
+      "all_status": "كل الحالات",
+      "open": "مفتوح",
+      "closed": "مغلق",
+      "awarded": "تمت الترسية",
+      "cancelled": "ملغي",
+      "category": "الفئة",
+      "all_categories": "كل الفئات"
+    },
+    "table": {
+      "details": "تفاصيل الطلب",
+      "project": "المشروع",
+      "category": "الفئة",
+      "bids": "العروض",
+      "deadline": "الموعد النهائي",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "days_left": "أيام متبقية",
+    "view_details": "عرض التفاصيل",
+    "view_bids": "عرض العروض",
+    "edit": "تعديل الطلب",
+    "cancel": "إلغاء الطلب",
+    "no_results": "لم يتم العثور على طلبات",
+    "no_results_desc": "جرب تعديل البحث أو المرشحات"
+  },
+  "bids": {
+    "title": "العروض",
+    "subtitle": "مراجعة وإدارة عروض الموردين",
+    "compare": "مقارنة العروض",
+    "award": "ترسية",
+    "reject": "رفض",
+    "unit_price": "سعر الوحدة",
+    "total_price": "السعر الإجمالي",
+    "delivery": "التسليم",
+    "days": "أيام",
+    "quote_valid": "صلاحية العرض",
+    "note": "ملاحظة",
+    "supplier": "المورد",
+    "delivery_days": "أيام التسليم",
+    "score": "النتيجة",
+    "view_details": "عرض التفاصيل",
+    "accept_bid": "قبول العرض",
+    "reject_bid": "رفض العرض",
+    "pending_count": "{{count}} في الانتظار",
+    "search_placeholder": "البحث بإسم المورد، رقم الطلب، أو العنوان...",
+    "filter": {
+        "status": "الحالة",
+        "all_status": "كل الحالات",
+        "pending": "قيد المراجعة",
+        "accepted": "مقبول",
+        "rejected": "مرفوض",
+        "expired": "منتهي الصلاحية"
+    },
+    "tabs": {
+        "pending_review": "قيد المراجعة",
+        "history": "السجل"
+    },
+    "empty": {
+        "caught_up": "لقد انتهيت!",
+        "no_pending": "لا توجد عروض معلقة للمراجعة",
+        "no_history": "لا يوجد سجل للعروض",
+        "history_desc": "العروض المقبولة والمرفوضة ستظهر هنا"
+    },
+    "status": {
+        "pending": "قيد المراجعة",
+        "accepted": "مقبول",
+        "rejected": "مرفوض",
+        "expired": "منتهي الصلاحية"
+    },
+    "dialog": {
+        "reject_title": "رفض العرض",
+        "reject_desc": "يرجى تقديم سبب لرفض هذا العرض. تساعد هذه الملاحظات في تحسين عروض الموردين.",
+        "reason_label": "سبب الرفض *",
+        "select_reason": "اختر سبباً",
+        "comments_placeholder": "تعليقات إضافية (اختياري)...",
+        "cancel": "إلغاء",
+        "confirm_reject": "رفض العرض",
+        "reasons": {
+            "price_high": "السعر مرتفع جداً",
+            "delivery_late": "التسليم متأخر جداً",
+            "quality": "مخاوف الجودة",
+            "missing_specs": "المواصفات ناقصة",
+            "other": "أسباب أخرى"
+        }
+    },
+    "toast": {
+        "accepted_title": "تم قبول العرض",
+        "accepted_desc": "سيتم إنشاء طلب مع {{supplier}}",
+        "rejected_title": "تم رفض العرض",
+        "rejected_desc": "تم إشعار {{supplier}}"
+    },
+    "comparison": {
+      "title": "مقارنة العروض",
+      "total_bids": "عروض",
+      "table": {
+        "supplier": "المورد",
+        "unit_price": "سعر الوحدة",
+        "total_price": "السعر الإجمالي",
+        "delivery": "التسليم",
+        "score": "النتيجة",
+        "action": "إجراء"
+      },
+      "badges": {
+        "lowest": "الأقل",
+        "fastest": "الأسرع",
+        "days": "أيام"
+      },
+      "actions": {
+        "award": "ترسية"
+      },
+      "dialog": {
+        "title": "ترسية العقد",
+        "description": "أنت على وشك ترسية هذا العقد. سيقوم هذا الإجراء بإنشاء طلب شراء.",
+        "supplier": "المورد",
+        "total_amount": "المبلغ الإجمالي",
+        "delivery": "التسليم",
+        "cancel": "إلغاء",
+        "confirm": "تأكيد الترسية"
+      },
+      "toast": {
+        "awarded_title": "تم ترسية العقد",
+        "awarded_desc": "تم تقديم الطلب مع {{supplier}}"
+      }
+    }
+  },
+  "orders": {
+    "title": "الطلبات",
+    "subtitle": "تتبع وإدارة طلبات الشراء الخاصة بك",
+    "order_number": "رقم الطلب",
+    "supplier": "المورد",
+    "project": "المشروع",
+    "amount": "المبلغ",
+    "status": "الحالة",
+    "payment": "الدفع",
+    "delivery_date": "تاريخ التسليم",
+    "grn_confirm": "تأكيد الاستلام (GRN)",
+    "rate_supplier": "تقييم المورد",
+    "track": "تتبع الشحنة",
+    "view_details": "عرض التفاصيل",
+    "view_invoice": "عرض الفاتورة",
+    "download_dn": "تنزيل إشعار التسليم",
+    "in_transit_count": "{{count}} في الطريق",
+    "total_orders": "إجمالي الطلبات",
+    "processing": "جاري المعالجة",
+    "in_transit": "في الطريق",
+    "delivered": "تم التسليم",
+    "order_id": "معرف الطلب",
+    "rfq_ref": "مرجع طلب السعر",
+    "order_date": "تاريخ الطلب",
+    "total_amount": "المبلغ الإجمالي",
+    "order_info": "معلومات الطلب",
+    "supplier_details": "تفاصيل المورد",
+    "company": "الشركة",
+    "search_placeholder": "البحث برقم الطلب، المورد، أو المشروع...",
+    "filter": {
+        "status": "الحالة",
+        "all_status": "كل الحالات",
+        "confirmed": "مؤكد",
+        "processing": "جاري المعالجة",
+        "out_for_delivery": "جاري التوصيل",
+        "delivered": "تم التسليم",
+        "completed": "مكتمل"
+    },
+
+    "payment_status": {
+        "pending": "الدفع معلق",
+        "paid": "مدفوع",
+        "overdue": "متأخر"
+    },
+    "details": {
+        "title": "تفاصيل الطلب"
+    },
+    "empty": {
+        "no_orders": "لم يتم العثور على طلبات",
+        "desc": "جرب تعديل البحث أو المرشحات"
+    },
+    "grn": {
+      "title": "إشعار استلام البضائع (GRN)",
+      "subtitle": "تأكيد الاستلام للطلب {{orderId}} من {{supplier}}",
+      "steps": {
+        "verify": "التحقق من العناصر",
+        "photo": "إثبات الصور",
+        "sign": "التوقيع والتأكيد"
+      },
+      "verify_items": "التحقق من العناصر المستلمة",
+      "delivery_note": "إشعار التوصيل",
+      "ordered": "مطلوب",
+      "status": {
+        "ok": "موافق",
+        "check": "تحقق"
+      },
+      "form": {
+        "received_qty": "الكمية المستلمة",
+        "quality_check": "فحص الجودة",
+        "quality_acceptable": "الجودة مقبولة",
+        "notes": "ملاحظات",
+        "notes_placeholder": "صف المشكلة...",
+        "notes_required": "ملاحظات (مطلوبة للتباينات)",
+        "discrepancies_title": "تم اكتشاف تباينات",
+        "discrepancies_desc": "بعض العناصر بها مشكلات في الكمية أو الجودة. يرجى إضافة ملاحظات لكل تباين."
+      },
+      "photo": {
+        "title": "إثبات الصور (FR-D03)",
+        "desc": "التقط صوراً للمواد المسلمة لسجلاتك",
+        "add": "إضافة صورة",
+        "overall_notes": "ملاحظات عامة",
+        "notes_placeholder": "أي ملاحظات إضافية حول التوصيل..."
+      },
+      "sign": {
+        "title": "التوقيع الرقمي",
+        "receiver_name": "اسم المستلم",
+        "receiver_phone": "رقم الهاتف",
+        "signature_label": "التوقيع",
+        "sign_here": "وقع هنا على جهاز محمول",
+        "touch_draw": "المس وارسم توقيعك",
+        "disclaimer": "بالتوقيع، أنت تؤكد استلام البضائع كما هو موثق أعلاه."
+      },
+      "summary": {
+        "title": "ملخص التوصيل",
+        "order_id": "رقم الطلب",
+        "items_received": "العناصر المستلمة",
+        "photos_attached": "الصور المرفقة",
+        "discrepancies": "التباينات",
+        "yes": "نعم",
+        "none": "لا يوجد"
+      },
+      "actions": {
+        "back": "رجوع",
+        "next_photos": "التالي: إضافة صور",
+        "next_sign": "التالي: التوقيع والتأكيد",
+        "confirm": "تأكيد الاستلام",
+        "confirming": "جاري التأكيد..."
+      },
+      "toast": {
+        "missing_info": "معلومات ناقصة",
+        "enter_details": "يرجى إدخال اسم المستلم ورقم الهاتف",
+        "confirmed": "تم تأكيد الاستلام",
+        "success_desc": "تم تسجيل GRN للطلب {{orderId}} بنجاح",
+        "failed": "فشل التأكيد",
+        "try_again": "يرجى المحاولة مرة أخرى"
+      }
+    },
+    "timeline": {
+      "title": "حالة الطلب",
+      "steps": {
+        "confirmed_title": "تم تأكيد الطلب",
+        "confirmed_desc": "تم تأكيد الطلب من قبل المورد",
+        "processing_title": "جاري المعالجة",
+        "processing_desc": "يتم تجهيز الطلب للشحن",
+        "out_for_delivery_title": "جاري التوصيل",
+        "out_for_delivery_desc": "الطلبية في طريقها إلى موقع التسليم",
+        "delivered_title": "تم التسليم",
+        "delivered_desc": "تم تسليم الطلب بنجاح"
+      }
+    },
+    "rating": {
+      "title": "تقييم المورد",
+      "description": "شارك تجربتك مع هذا المورد لمساعدة المشترين الآخرين",
+      "categories": {
+        "delivery": "وقت التسليم",
+        "delivery_desc": "هل كان التوصيل في الوقت المحدد؟",
+        "quality": "جودة المنتج",
+        "quality_desc": "هل طابقت المنتجات المواصفات؟",
+        "communication": "التواصل",
+        "communication_desc": "ما مدى استجابة المورد؟"
+      },
+      "overall": "التقييم العام",
+      "review_label": "مراجعة مكتوبة (اختياري)",
+      "review_placeholder": "شارك المزيد من التفاصيل حول تجربتك مع هذا المورد...",
+      "review_help": "مراجعتك تساعد المشترين الآخرين في اتخاذ قرارات مستنيرة",
+      "actions": {
+        "reset": "إعادة تعيين",
+        "skip": "تخطي",
+        "submit": "إرسال التقييم",
+        "submitting": "جاري الإرسال..."
+      },
+      "toast": {
+        "submitted": "تم إرسال التقييم",
+        "thank_you": "شكراً لتقييمك {{supplier}}",
+        "failed": "فشل الإرسال",
+        "try_again": "يرجى المحاولة مرة أخرى"
+      }
+    }
+  },
+  "suppliers": {
+    "title": "الموردين",
+    "subtitle": "إدارة شبكة الموردين والشراكات",
+    "add_new": "إضافة مورد جديد",
+    "company_name": "اسم الشركة",
+    "contact": "جهة الاتصال",
+    "rating": "التقييم",
+    "categories": "الفئات",
+    "active_count": "{{count}} نشط",
+    "pending_count": "{{count}} معلق",
+    "search_placeholder": "البحث بالاسم، السجل التجاري...",
+    "filter": {
+        "status": "الحالة",
+        "all_status": "كل الحالات",
+        "active": "نشط",
+        "pending": "معلق",
+        "suspended": "موقوف",
+        "category": "الفئة",
+        "all_categories": "كل الفئات"
+    },
+    "status": {
+        "active": "نشط",
+        "pending": "معلق KYB",
+        "suspended": "موقوف"
+    },
+    "actions": {
+        "view_profile": "عرض الملف الشخصي",
+        "view_orders": "عرض الطلبات",
+        "send_message": "إرسال رسالة",
+        "suspend": "إيقاف المورد"
+    },
+    "metrics": {
+        "orders": "الطلبات",
+        "total_orders": "إجمالي الطلبات",
+        "on_time": "في الوقت المحدد",
+        "response": "الاستجابة",
+        "sar_value": "قيمة SAR"
+    },
+    "profile": {
+        "title": "ملف المورد",
+        "contact_info": "معلومات الاتصال",
+        "business_details": "تفاصيل العمل",
+        "cr_number": "السجل التجاري"
+    },
+    "empty": {
+        "no_suppliers": "لم يتم العثور على موردين",
+        "desc": "جرب تعديل البحث أو المرشحات"
+    }
+  },
+  "projects": {
+    "title": "المشاريع",
+    "subtitle": "إدارة مواقع البناء ومواقع التسليم",
+    "create_new": "مشروع جديد",
+    "create_dialog": {
+        "title": "إنشاء مشروع جديد",
+        "desc": "أضف مشروع بناء جديد مع تفاصيل موقع التسليم.",
+        "name": "اسم المشروع *",
+        "name_placeholder": "مثال: مجمع فلل الرياض",
+        "location": "موقع العمل *",
+        "location_placeholder": "أدخل العنوان الكامل أو استخدم خرائط جوجل",
+        "location_tip": "نصيحة: قم بتضمين اسم الشارع والحي والمدينة لعمليات تسليم دقيقة",
+        "receiver": "اسم المستلم *",
+        "receiver_placeholder": "جهة الاتصال في الموقع",
+        "phone": "رقم الهاتف *",
+        "phone_placeholder": "+966 5X XXX XXXX",
+        "cancel": "إلغاء",
+        "submit": "إنشاء المشروع"
+    },
+    "search_placeholder": "البحث باسم المشروع أو الموقع...",
+    "status": {
+        "active": "نشط",
+        "completed": "مكتمل",
+        "on_hold": "معلق"
+    },
+    "actions": {
+        "edit": "تعديل المشروع",
+        "view_rfqs": "عرض طلبات الأسعار",
+        "view_orders": "عرض الطلبات",
+        "delete": "حذف المشروع"
+    },
+    "metrics": {
+        "rfqs": "طلبات الأسعار",
+        "orders": "الطلبات",
+        "sar_spent": "SAR المصروفة"
+    },
+    "empty": {
+        "no_projects": "لم يتم العثور على مشاريع",
+        "desc": "أنشئ مشروعك الأول لبدء إدارة المشتريات"
+    },
+    "toast": {
+        "created_title": "تم إنشاء المشروع",
+        "created_desc": "تم إضافة {{name}} إلى مشاريعك."
+    }
+  },
+  "financials_page": {
+    "title": "الإدارة المالية",
+    "subtitle": "تتبع الفواتير والمدفوعات ورصيد المحفظة",
+    "tabs": {
+      "invoices": "الفواتير",
+      "wallet": "سجل المحفظة"
+    },
+    "summary": {
+      "total_invoices": "إجمالي الفواتير",
+      "pending_payment": "مدفوعات معلقة",
+      "paid_this_month": "مدفوع هذا الشهر",
+      "overdue": "متأخرة"
+    },
+    "table": {
+      "invoice": "رقم الفاتورة",
+      "supplier": "المورد",
+      "order": "رقم الطلب"
+    },
+    "status": {
+      "paid": "مدفوع",
+      "sent": "مرسل",
+      "draft": "مسودة"
+    }
+  },
+  "financials": {
+    "title": "الإدارة المالية",
+    "invoices": "الفواتير",
+    "payments": "المدفوعات",
+    "wallet": "سجل المحفظة",
+    "total_spent": "إجمالي الإنفاق",
+    "outstanding": "المستحقات",
+    "this_month": "هذا الشهر"
+  },
+  "approvals": {
+    "title": "الموافقات",
+    "subtitle": "إدارة طلبات الموردين KYB والتحقق من المستندات",
+    "pending_count": "{{count}} قيد الانتظار",
+    "summary": {
+      "pending": "طلبات معلقة",
+      "suppliers": "الموردين",
+      "contractors": "المقاولين",
+      "approved_mtd": "تمت الموافقة هذا الشهر"
+    },
+    "widget": {
+        "title": "موافقات KYB المعلقة",
+        "subtitle": "مراجعة طلبات التحقق من الموردين",
+        "pending_badge": "معلق",
+        "all_caught_up": "لا توجد مهام جديدة!",
+        "no_pending": "لا توجد موافقات معلقة حالياً.",
+        "cr_prefix": "س.ت",
+        "submitted_prefix": "تم التقديم"
+    },
+    "search_placeholder": "البحث بالشركة، السجل التجاري، البريد...",
+    "filter": {
+      "type": "النوع",
+      "all_types": "كل الأنواع",
+      "suppliers": "الموردين",
+      "contractors": "المقاولين"
+    },
+    "tabs": {
+      "all": "كل الطلبات",
+      "suppliers": "الموردين",
+      "contractors": "المقاولين"
+    },
+    "empty": {
+      "all_caught_up": "لا توجد مهام جديدة!",
+      "no_pending": "لا توجد طلبات موافقة معلقة حالياً."
+    },
+    "card": {
+      "pending_review": "قيد المراجعة",
+      "supplier": "مورد",
+      "contractor": "مقاول",
+      "cr_number": "السجل التجاري",
+      "contact": "جهة الاتصال",
+      "submitted": "تم التقديم",
+      "review": "مراجعة الطلب"
+    },
+    "dialog": {
+      "title": "مراجعة الطلب",
+      "desc": "التحقق من المستندات المقدمة وتفاصيل الشركة أدناه.",
+      "uploaded_docs": "المستندات المرفوعة",
+      "view": "عرض",
+      "company_info": "معلومات الشركة",
+      "company_name_en": "اسم الشركة (EN)",
+      "company_name_ar": "اسم الشركة (AR)",
+      "cr_number": "السجل التجاري",
+      "vat_number": "الرقم الضريبي",
+      "categories": "الفئات",
+      "contact_info": "معلومات الاتصال",
+      "contact_person": "الشخص المسؤول",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "rejection_reason": "سبب الرفض",
+      "rejection_placeholder": "يرجى ذكر سبب الرفض...",
+      "cancel": "إلغاء",
+      "confirm_reject": "تأكيد الرفض",
+      "close": "إغلاق",
+      "reject": "رفض",
+      "approve": "موافقة",
+      "kyb_review_title": "مراجعة KYB",
+      "kyb_review_desc": "التحقق من وثيقة السجل التجاري للمورد",
+      "cr_document": "وثيقة السجل التجاري",
+      "open": "فتح",
+      "doc_preview_placeholder": "ستظهر معاينة المستند هنا"
+    },
+    "toast": {
+      "approved_title": "تمت الموافقة",
+      "approved_desc": "تمت الموافقة على {{name}} بنجاح.",
+      "rejected_title": "تم الرفض",
+      "rejected_desc": "تم رفض طلب {{name}}."
+    }
+  },
+  "supplier_rfq_feed": {
+    "title": "طلبات الأسعار المفتوحة",
+    "subtitle": "تصفح الفرص النشطة وقدم عروضك",
+    "filters": {
+      "new": "جديد",
+      "urgent": "عاجل",
+      "search_placeholder": "بحث بكلمة مفتاحية، شركة...",
+      "category_placeholder": "اختر الفئة",
+      "all_categories": "كل الفئات"
+    },
+    "card": {
+      "urgent": "عاجل",
+      "high_priority": "أولوية عالية",
+      "normal": "عادي",
+      "required_by": "مطلوب بحلول",
+      "items": "عناصر",
+      "more_items": "عناصر أخرى",
+      "bids": "عروض",
+      "partial_ok": "يقبل التجزئة",
+      "view_details": "عرض التفاصيل",
+      "submit_quote": "تقديم عرض"
+    },
+    "time": {
+      "days_left": "متبقي {{days}}ي {{hours}}س",
+      "hours_left": "متبقي {{hours}}س",
+      "closing_soon": "يغلق قريباً"
+    },
+    "empty": {
+      "title": "لا توجد طلبات مفتوحة",
+      "desc": "تحقق لاحقاً من وجود فرص جديدة."
+    },
+    "dialog": {
+      "submit_title": "تقديم عرض أسعار"
+    }
+  },
+  "settings_page": {
+    "title": "الإعدادات",
+    "subtitle": "إدارة إعدادات حسابك وتفضيلاتك",
+    "toast": {
+      "saved_title": "تم حفظ الإعدادات",
+      "saved_desc": "تم حفظ تغييراتك بنجاح."
+    },
+    "tabs": {
+      "profile": "الملف الشخصي",
+      "company": "الشركة",
+      "notifications": "الإشعارات",
+      "team": "الفريق",
+      "catalog": "الكتالوج",
+      "admin": "الإشراف"
+    },
+    "profile": {
+      "personal_info": "المعلومات الشخصية",
+      "first_name": "الاسم الأول",
+      "last_name": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "role": "الدور الوظيفي",
+      "save_changes": "حفظ التغييرات",
+      "preferences": "التفضيلات",
+      "language": "اللغة",
+      "language_desc": "اختر لغتك المفضلة",
+      "theme": "المظهر",
+      "theme_desc": "تخصيص المظهر والشعور",
+      "theme_options": {
+        "light": "فاتح",
+        "dark": "داكن",
+        "system": "النظام"
+      }
+    },
+    "company": {
+      "info": "معلومات الشركة",
+      "name_en": "اسم الشركة (إنجليزي)",
+      "name_ar": "اسم الشركة (عربي)",
+      "cr": "السجل التجاري",
+      "vat": "الرقم الضريبي",
+      "address": "العنوان المسجل"
+    },
+    "notifications": {
+      "email": "إشعارات البريد الإلكتروني",
+      "new_bids": "عروض جديدة",
+      "new_bids_desc": "استلام بريد إلكتروني عند وصول عروض جديدة",
+      "order_updates": "تحديثات الطلبات",
+      "order_updates_desc": "الحصول على إشعارات حول تغييرات حالة الطلب",
+      "delivery_alerts": "تنبيهات التوصيل",
+      "delivery_alerts_desc": "إشعارات للتسليمات القادمة",
+      "rfq_expiry": "انتهاء صلاحية طلبات الأسعار",
+      "rfq_expiry_desc": "تنبيهات عند قرب انتهاء طلبات الأسعار",
+      "payment_reminders": "تذكيرات الدفع",
+      "payment_reminders_desc": "تذكيرات للمدفوعات القادمة",
+      "sms": "إشعارات الرسائل القصيرة",
+      "delivery_confirmations": "تأكيدات التوصيل",
+      "delivery_confirmations_desc": "استلام رموز SMS لتأكيد التوصيل",
+      "urgent_alerts": "تنبيهات عاجلة",
+      "urgent_alerts_desc": "تنبيهات SMS للأمور العاجلة"
+    },
+    "admin": {
+      "commission": "إعداد العمولات",
+      "commission_desc": "تحديد نسب عمولة المنصة",
+      "rate": "نسبة العمولة (%)",
+      "rate_help": "النسبة المأخوذة من كل معاملة",
+      "min_commission": "الحد الأدنى للعمولة (ريال)",
+      "min_commission_help": "الحد الأدنى للمبلغ المحتسب لكل معاملة",
+      "save_config": "حفظ الإعدادات",
+      "payment_settings": "طرق الدفع",
+      "payment_settings_desc": "تكوين طرق الدفع المقبولة",
+      "cash": "نقدي / مدى",
+      "cash_desc": "قبول الدفع النقدي أو مدى عند التوصيل",
+      "credit": "شروط الائتمان",
+      "credit_desc": "السماح بالدفع الآجل (مثال: صافي 30 يوم)",
+      "bank": "تحويل بنكي",
+      "bank_desc": "قبول التحويلات البنكية المباشرة",
+      "cheques": "شيكات",
+      "cheques_desc": "قبول الشيكات المؤجلة"
+    }
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "general": "عام",
+    "notifications": "الإشعارات",
+    "team": "الفريق",
+    "catalog": "الكتالوج",
+    "integrations": "التكاملات"
+  },
+  "status": {
+    "pending": "قيد الانتظار",
+    "approved": "موافق عليه",
+    "rejected": "مرفوض",
+    "active": "نشط",
+    "closed": "مغلق",
+    "completed": "مكتمل",
+    "in_progress": "قيد التنفيذ",
+    "delivered": "تم التسليم",
+    "cancelled": "ملغي"
+  },
+  "notification": {
+    "new_bid": "عرض جديد",
+    "order_confirmed": "تم تأكيد الطلب",
+    "out_for_delivery": "خرج للتسليم",
+    "delivered": "تم التسليم"
+  },
+  "ui": {
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي",
+      "more_pages": "المزيد من الصفحات"
+    },
+    "sidebar": {
+      "toggle": "تبديل الشريط الجانبي"
+    }
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  }
+}

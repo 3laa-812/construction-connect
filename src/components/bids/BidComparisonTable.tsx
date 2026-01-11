@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Award, ChevronDown, ChevronUp, Star, Truck, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -78,6 +79,7 @@ const mockBids: Bid[] = [
 type SortKey = "totalPrice" | "deliveryDays" | "score" | "supplierRating";
 
 export function BidComparisonTable() {
+  const { t } = useLanguage();
   const [bids, setBids] = useState(mockBids);
   const [sortKey, setSortKey] = useState<SortKey>("score");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -106,8 +108,8 @@ export function BidComparisonTable() {
   const confirmAward = () => {
     if (selectedBid) {
       toast({
-        title: "Contract Awarded",
-        description: `Order has been placed with ${selectedBid.supplierName}`,
+        title: t("bids.comparison.toast.awarded_title"),
+        description: t("bids.comparison.toast.awarded_desc", { supplier: selectedBid.supplierName }),
       });
       setShowAwardDialog(false);
       setSelectedBid(null);
@@ -138,11 +140,11 @@ export function BidComparisonTable() {
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-foreground">Bid Comparison</h3>
+            <h3 className="font-semibold text-foreground">{t("bids.comparison.title")}</h3>
             <p className="text-sm text-muted-foreground">RFQ-2024-0162 · Portland Cement Type I</p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge variant="primary">{bids.length} Bids</StatusBadge>
+            <StatusBadge variant="primary">{bids.length} {t("bids.comparison.total_bids")}</StatusBadge>
           </div>
         </div>
 
@@ -150,20 +152,20 @@ export function BidComparisonTable() {
           <table className="w-full data-grid">
             <thead>
               <tr>
-                <th className="min-w-[200px]">Supplier</th>
+                <th className="min-w-[200px] text-start">{t("bids.comparison.table.supplier")}</th>
                 <th className="min-w-[120px]">
-                  <SortHeader label="Unit Price" sortKeyName="totalPrice" />
+                  <SortHeader label={t("bids.comparison.table.unit_price")} sortKeyName="totalPrice" />
                 </th>
                 <th className="min-w-[140px]">
-                  <SortHeader label="Total Price" sortKeyName="totalPrice" />
+                  <SortHeader label={t("bids.comparison.table.total_price")} sortKeyName="totalPrice" />
                 </th>
                 <th className="min-w-[130px]">
-                  <SortHeader label="Delivery" sortKeyName="deliveryDays" />
+                  <SortHeader label={t("bids.comparison.table.delivery")} sortKeyName="deliveryDays" />
                 </th>
                 <th className="min-w-[100px]">
-                  <SortHeader label="Score" sortKeyName="score" />
+                  <SortHeader label={t("bids.comparison.table.score")} sortKeyName="score" />
                 </th>
-                <th className="min-w-[120px] text-center">Action</th>
+                <th className="min-w-[120px] text-center">{t("bids.comparison.table.action")}</th>
               </tr>
             </thead>
             <tbody>
@@ -204,7 +206,7 @@ export function BidComparisonTable() {
                       {bid.isLowestPrice && (
                         <StatusBadge variant="success" size="sm">
                           <DollarSign className="w-3 h-3" />
-                          Lowest
+                          {t("bids.comparison.badges.lowest")}
                         </StatusBadge>
                       )}
                     </div>
@@ -215,13 +217,13 @@ export function BidComparisonTable() {
                   )}>
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="font-medium">{bid.deliveryDays} days</p>
+                        <p className="font-medium">{bid.deliveryDays} {t("bids.comparison.badges.days")}</p>
                         <p className="text-xs text-muted-foreground">{bid.deliveryDate}</p>
                       </div>
                       {bid.isEarliestDelivery && (
                         <StatusBadge variant="success" size="sm">
                           <Truck className="w-3 h-3" />
-                          Fastest
+                          {t("bids.comparison.badges.fastest")}
                         </StatusBadge>
                       )}
                     </div>
@@ -247,7 +249,7 @@ export function BidComparisonTable() {
                       className="bg-accent hover:bg-accent/90 text-accent-foreground"
                     >
                       <Award className="w-4 h-4 me-1" />
-                      Award
+                      {t("bids.comparison.actions.award")}
                     </Button>
                   </td>
                 </tr>
@@ -261,41 +263,41 @@ export function BidComparisonTable() {
       <Dialog open={showAwardDialog} onOpenChange={setShowAwardDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Award Contract</DialogTitle>
+            <DialogTitle>{t("bids.comparison.dialog.title")}</DialogTitle>
             <DialogDescription>
-              You are about to award this contract. This action will create a purchase order.
+              {t("bids.comparison.dialog.description")}
             </DialogDescription>
           </DialogHeader>
 
           {selectedBid && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Supplier</span>
+                <span className="text-muted-foreground">{t("bids.comparison.dialog.supplier")}</span>
                 <span className="font-medium">{selectedBid.supplierName}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total Amount</span>
+                <span className="text-muted-foreground">{t("bids.comparison.dialog.total_amount")}</span>
                 <span className="font-semibold text-lg tabular-nums">
                   SAR {selectedBid.totalPrice.toLocaleString()}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Delivery</span>
-                <span className="font-medium">{selectedBid.deliveryDays} days</span>
+                <span className="text-muted-foreground">{t("bids.comparison.dialog.delivery")}</span>
+                <span className="font-medium">{selectedBid.deliveryDays} {t("bids.comparison.badges.days")}</span>
               </div>
             </div>
           )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAwardDialog(false)}>
-              Cancel
+              {t("bids.comparison.dialog.cancel")}
             </Button>
             <Button
               onClick={confirmAward}
               className="bg-accent hover:bg-accent/90 text-accent-foreground"
             >
               <Award className="w-4 h-4 me-2" />
-              Confirm Award
+              {t("bids.comparison.dialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

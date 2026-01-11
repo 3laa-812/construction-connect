@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface KYBRequest {
   id: string;
@@ -98,6 +99,7 @@ const mockKYBRequests: KYBRequest[] = [
 ];
 
 export default function Approvals() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedRequest, setSelectedRequest] = useState<KYBRequest | null>(null);
@@ -127,8 +129,8 @@ export default function Approvals() {
   const handleApprove = () => {
     if (selectedRequest) {
       toast({
-        title: "Application Approved",
-        description: `${selectedRequest.companyName} has been approved and notified.`,
+        title: t("approvals.toast.approved_title"),
+        description: t("approvals.toast.approved_desc", { name: selectedRequest.companyName }),
       });
       setShowReviewDialog(false);
     }
@@ -137,8 +139,8 @@ export default function Approvals() {
   const handleReject = () => {
     if (selectedRequest && rejectionReason.trim()) {
       toast({
-        title: "Application Rejected",
-        description: `${selectedRequest.companyName} has been notified with the reason.`,
+        title: t("approvals.toast.rejected_title"),
+        description: t("approvals.toast.rejected_desc", { name: selectedRequest.companyName }),
       });
       setShowReviewDialog(false);
     }
@@ -157,10 +159,10 @@ export default function Approvals() {
             <div className="flex items-center gap-2 mt-2">
               <StatusBadge variant="warning" size="sm">
                 <Clock className="w-3 h-3" />
-                Pending Review
+                {t("approvals.card.pending_review")}
               </StatusBadge>
               <StatusBadge variant="neutral" size="sm">
-                {request.type === "supplier" ? "Supplier" : "Contractor"}
+                {request.type === "supplier" ? t("approvals.card.supplier") : t("approvals.card.contractor")}
               </StatusBadge>
             </div>
           </div>
@@ -169,15 +171,15 @@ export default function Approvals() {
 
       <div className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">CR Number</span>
+          <span className="text-muted-foreground">{t("approvals.card.cr_number")}</span>
           <span className="font-medium tabular-nums">{request.crNumber}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Contact</span>
+          <span className="text-muted-foreground">{t("approvals.card.contact")}</span>
           <span className="font-medium">{request.contactName}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Submitted</span>
+          <span className="text-muted-foreground">{t("approvals.card.submitted")}</span>
           <span className="font-medium">{request.submittedAt}</span>
         </div>
         {request.categories && (
@@ -194,7 +196,7 @@ export default function Approvals() {
       <div className="flex gap-2 mt-4 pt-4 border-t border-border">
         <Button variant="outline" className="flex-1" onClick={() => handleReview(request)}>
           <Eye className="w-4 h-4 me-2" />
-          Review
+          {t("approvals.card.review")}
         </Button>
       </div>
     </div>
@@ -210,14 +212,14 @@ export default function Approvals() {
               <AlertTriangle className="w-6 h-6 text-warning" />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Pending Approvals</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("approvals.title")}</h1>
               <p className="text-muted-foreground mt-1">
-                Review KYB applications from suppliers and contractors
+                {t("approvals.subtitle")}
               </p>
             </div>
           </div>
           <StatusBadge variant="warning" className="text-lg px-4 py-2">
-            {mockKYBRequests.length} Pending
+            {t("approvals.pending_count", { count: mockKYBRequests.length })}
           </StatusBadge>
         </div>
 
@@ -230,7 +232,7 @@ export default function Approvals() {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{mockKYBRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-sm text-muted-foreground">{t("approvals.summary.pending")}</p>
               </div>
             </div>
           </div>
@@ -241,7 +243,7 @@ export default function Approvals() {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{supplierRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Suppliers</p>
+                <p className="text-sm text-muted-foreground">{t("approvals.summary.suppliers")}</p>
               </div>
             </div>
           </div>
@@ -252,7 +254,7 @@ export default function Approvals() {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{contractorRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Contractors</p>
+                <p className="text-sm text-muted-foreground">{t("approvals.summary.contractors")}</p>
               </div>
             </div>
           </div>
@@ -263,7 +265,7 @@ export default function Approvals() {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">156</p>
-                <p className="text-sm text-muted-foreground">Approved MTD</p>
+                <p className="text-sm text-muted-foreground">{t("approvals.summary.approved_mtd")}</p>
               </div>
             </div>
           </div>
@@ -275,7 +277,7 @@ export default function Approvals() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by company name, CR number, or email..."
+                placeholder={t("approvals.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -284,12 +286,12 @@ export default function Approvals() {
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[160px]">
                 <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder="Type" />
+                <SelectValue placeholder={t("approvals.filter.type")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="supplier">Suppliers</SelectItem>
-                <SelectItem value="contractor">Contractors</SelectItem>
+                <SelectItem value="all">{t("approvals.filter.all_types")}</SelectItem>
+                <SelectItem value="supplier">{t("approvals.filter.suppliers")}</SelectItem>
+                <SelectItem value="contractor">{t("approvals.filter.contractors")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -298,9 +300,9 @@ export default function Approvals() {
         {/* Requests Tabs */}
         <Tabs defaultValue="all" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="all">All ({filteredRequests.length})</TabsTrigger>
-            <TabsTrigger value="suppliers">Suppliers ({supplierRequests.length})</TabsTrigger>
-            <TabsTrigger value="contractors">Contractors ({contractorRequests.length})</TabsTrigger>
+            <TabsTrigger value="all">{t("approvals.tabs.all")} ({filteredRequests.length})</TabsTrigger>
+            <TabsTrigger value="suppliers">{t("approvals.tabs.suppliers")} ({supplierRequests.length})</TabsTrigger>
+            <TabsTrigger value="contractors">{t("approvals.tabs.contractors")} ({contractorRequests.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
@@ -331,9 +333,9 @@ export default function Approvals() {
         {filteredRequests.length === 0 && (
           <div className="bg-card rounded-xl border border-border p-12 text-center">
             <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
-            <p className="font-medium text-foreground">All caught up!</p>
+            <p className="font-medium text-foreground">{t("approvals.empty.all_caught_up")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              No pending approvals at the moment
+              {t("approvals.empty.no_pending")}
             </p>
           </div>
         )}
@@ -343,9 +345,9 @@ export default function Approvals() {
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>KYB Application Review</DialogTitle>
+            <DialogTitle>{t("approvals.dialog.title")}</DialogTitle>
             <DialogDescription>
-              Verify the business documents and approve or reject the application
+              {t("approvals.dialog.desc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -354,7 +356,7 @@ export default function Approvals() {
               {/* Document Preview */}
               <div className="bg-muted rounded-lg flex flex-col">
                 <div className="px-4 py-3 border-b border-border">
-                  <span className="text-sm font-medium">Uploaded Documents</span>
+                  <span className="text-sm font-medium">{t("approvals.dialog.uploaded_docs")}</span>
                 </div>
                 <div className="flex-1 p-4 space-y-3">
                   {selectedRequest.documents.map((doc, index) => (
@@ -366,7 +368,7 @@ export default function Approvals() {
                       <span className="flex-1 text-sm font-medium">{doc}</span>
                       <Button variant="ghost" size="sm">
                         <Eye className="w-4 h-4 me-1" />
-                        View
+                        {t("approvals.dialog.view")}
                       </Button>
                     </div>
                   ))}
@@ -377,30 +379,30 @@ export default function Approvals() {
               <div className="space-y-6 overflow-y-auto">
                 <div className="space-y-4">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Company Information
+                    {t("approvals.dialog.company_info")}
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Company Name (English)</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_en")}</p>
                       <p className="font-medium">{selectedRequest.companyName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Company Name (Arabic)</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_ar")}</p>
                       <p className="font-medium" dir="rtl">{selectedRequest.companyNameAr}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">CR Number</p>
+                        <p className="text-xs text-muted-foreground">{t("approvals.dialog.cr_number")}</p>
                         <p className="font-medium tabular-nums">{selectedRequest.crNumber}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">VAT Number</p>
+                        <p className="text-xs text-muted-foreground">{t("approvals.dialog.vat_number")}</p>
                         <p className="font-medium tabular-nums">{selectedRequest.vatNumber}</p>
                       </div>
                     </div>
                     {selectedRequest.categories && (
                       <div>
-                        <p className="text-xs text-muted-foreground">Categories</p>
+                        <p className="text-xs text-muted-foreground">{t("approvals.dialog.categories")}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {selectedRequest.categories.map((cat) => (
                             <StatusBadge key={cat} variant="neutral" size="sm">
@@ -415,19 +417,19 @@ export default function Approvals() {
 
                 <div className="space-y-4">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Contact Information
+                    {t("approvals.dialog.contact_info")}
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Contact Person</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.contact_person")}</p>
                       <p className="font-medium">{selectedRequest.contactName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.email")}</p>
                       <p className="font-medium">{selectedRequest.contactEmail}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Phone</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.phone")}</p>
                       <p className="font-medium tabular-nums">{selectedRequest.contactPhone}</p>
                     </div>
                   </div>
@@ -435,9 +437,9 @@ export default function Approvals() {
 
                 {isRejecting && (
                   <div className="space-y-2">
-                    <Label className="text-danger">Rejection Reason *</Label>
+                    <Label className="text-danger">{t("approvals.dialog.rejection_reason")}</Label>
                     <Textarea
-                      placeholder="Please provide a reason for rejection..."
+                      placeholder={t("approvals.dialog.rejection_placeholder")}
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
                       rows={3}
@@ -452,7 +454,7 @@ export default function Approvals() {
             {isRejecting ? (
               <>
                 <Button variant="outline" onClick={() => setIsRejecting(false)}>
-                  Cancel
+                  {t("approvals.dialog.cancel")}
                 </Button>
                 <Button
                   variant="destructive"
@@ -460,13 +462,13 @@ export default function Approvals() {
                   disabled={!rejectionReason.trim()}
                 >
                   <XCircle className="w-4 h-4 me-2" />
-                  Confirm Rejection
+                  {t("approvals.dialog.confirm_reject")}
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" onClick={() => setShowReviewDialog(false)}>
-                  Close
+                  {t("approvals.dialog.close")}
                 </Button>
                 <Button
                   variant="outline"
@@ -474,11 +476,11 @@ export default function Approvals() {
                   onClick={() => setIsRejecting(true)}
                 >
                   <XCircle className="w-4 h-4 me-2" />
-                  Reject
+                  {t("approvals.dialog.reject")}
                 </Button>
                 <Button onClick={handleApprove} className="bg-success hover:bg-success/90 text-success-foreground">
                   <CheckCircle className="w-4 h-4 me-2" />
-                  Approve
+                  {t("approvals.dialog.approve")}
                 </Button>
               </>
             )}

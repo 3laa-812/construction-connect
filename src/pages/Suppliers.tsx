@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Supplier {
   id: string;
@@ -143,12 +144,13 @@ const mockSuppliers: Supplier[] = [
 ];
 
 const statusConfig = {
-  active: { color: "success", label: "Active", icon: CheckCircle },
-  pending: { color: "warning", label: "Pending KYB", icon: Clock },
-  suspended: { color: "danger", label: "Suspended", icon: Ban },
+  active: { color: "success", labelKey: "suppliers.status.active", icon: CheckCircle },
+  pending: { color: "warning", labelKey: "suppliers.status.pending", icon: Clock },
+  suspended: { color: "danger", labelKey: "suppliers.status.suspended", icon: Ban },
 } as const;
 
 export default function Suppliers() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -179,14 +181,14 @@ export default function Suppliers() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Suppliers</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("suppliers.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your supplier network and partnerships
+              {t("suppliers.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge variant="success">{mockSuppliers.filter((s) => s.status === "active").length} Active</StatusBadge>
-            <StatusBadge variant="warning">{mockSuppliers.filter((s) => s.status === "pending").length} Pending</StatusBadge>
+            <StatusBadge variant="success">{t("suppliers.active_count", { count: mockSuppliers.filter((s) => s.status === "active").length })}</StatusBadge>
+            <StatusBadge variant="warning">{t("suppliers.pending_count", { count: mockSuppliers.filter((s) => s.status === "pending").length })}</StatusBadge>
           </div>
         </div>
 
@@ -196,7 +198,7 @@ export default function Suppliers() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, CR number..."
+                placeholder={t("suppliers.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -206,21 +208,21 @@ export default function Suppliers() {
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
                   <Filter className="w-4 h-4 me-2" />
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t("suppliers.filter.status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="all">{t("suppliers.filter.all_status")}</SelectItem>
+                  <SelectItem value="active">{t("suppliers.filter.active")}</SelectItem>
+                  <SelectItem value="pending">{t("suppliers.filter.pending")}</SelectItem>
+                  <SelectItem value="suspended">{t("suppliers.filter.suspended")}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("suppliers.filter.category")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("suppliers.filter.all_categories")}</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -265,15 +267,15 @@ export default function Suppliers() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleViewProfile(supplier)}>
                         <Eye className="w-4 h-4 me-2" />
-                        View Profile
+                        {t("suppliers.actions.view_profile")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem>View Orders</DropdownMenuItem>
-                      <DropdownMenuItem>Send Message</DropdownMenuItem>
+                      <DropdownMenuItem>{t("suppliers.actions.view_orders")}</DropdownMenuItem>
+                      <DropdownMenuItem>{t("suppliers.actions.send_message")}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {supplier.status === "active" && (
                         <DropdownMenuItem className="text-danger">
                           <Ban className="w-4 h-4 me-2" />
-                          Suspend Supplier
+                          {t("suppliers.actions.suspend")}
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -283,7 +285,7 @@ export default function Suppliers() {
                 <div className="flex items-center gap-2 mt-3">
                   <StatusBadge variant={statusConfig[supplier.status].color as any} size="sm">
                     <StatusIcon className="w-3 h-3" />
-                    {statusConfig[supplier.status].label}
+                    {t(statusConfig[supplier.status].labelKey)}
                   </StatusBadge>
                   <div className="flex items-center gap-1 text-sm">
                     <Star className="w-4 h-4 text-warning fill-warning" />
@@ -310,15 +312,15 @@ export default function Suppliers() {
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
                       <p className="text-lg font-bold tabular-nums">{supplier.totalOrders}</p>
-                      <p className="text-xs text-muted-foreground">Orders</p>
+                      <p className="text-xs text-muted-foreground">{t("suppliers.metrics.orders")}</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold tabular-nums text-success">{supplier.onTimeDelivery}%</p>
-                      <p className="text-xs text-muted-foreground">On-Time</p>
+                      <p className="text-xs text-muted-foreground">{t("suppliers.metrics.on_time")}</p>
                     </div>
                     <div>
                       <p className="text-lg font-bold tabular-nums text-primary">{supplier.responseRate}%</p>
-                      <p className="text-xs text-muted-foreground">Response</p>
+                      <p className="text-xs text-muted-foreground">{t("suppliers.metrics.response")}</p>
                     </div>
                   </div>
                 </div>
@@ -328,7 +330,7 @@ export default function Suppliers() {
                   className="w-full mt-4"
                   onClick={() => handleViewProfile(supplier)}
                 >
-                  View Profile
+                  {t("suppliers.actions.view_profile")}
                 </Button>
               </div>
             );
@@ -338,9 +340,9 @@ export default function Suppliers() {
         {filteredSuppliers.length === 0 && (
           <div className="bg-card rounded-xl border border-border p-12 text-center">
             <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">No suppliers found</p>
+            <p className="font-medium text-foreground">{t("suppliers.empty.no_suppliers")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search or filters
+              {t("suppliers.empty.desc")}
             </p>
           </div>
         )}
@@ -350,7 +352,7 @@ export default function Suppliers() {
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Supplier Profile</DialogTitle>
+            <DialogTitle>{t("suppliers.profile.title")}</DialogTitle>
           </DialogHeader>
 
           {selectedSupplier && (
@@ -366,7 +368,7 @@ export default function Suppliers() {
                   <p className="text-muted-foreground" dir="rtl">{selectedSupplier.nameAr}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <StatusBadge variant={statusConfig[selectedSupplier.status].color as any}>
-                      {statusConfig[selectedSupplier.status].label}
+                      {t(statusConfig[selectedSupplier.status].labelKey)}
                     </StatusBadge>
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-warning fill-warning" />
@@ -379,7 +381,7 @@ export default function Suppliers() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Contact Information
+                    {t("suppliers.profile.contact_info")}
                   </h4>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -399,15 +401,15 @@ export default function Suppliers() {
 
                 <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Business Details
+                    {t("suppliers.profile.business_details")}
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">CR Number</span>
+                      <span className="text-muted-foreground">{t("suppliers.profile.cr_number")}</span>
                       <span className="font-medium tabular-nums">{selectedSupplier.crNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Categories</span>
+                      <span className="text-muted-foreground">{t("suppliers.categories")}</span>
                       <span className="font-medium">{selectedSupplier.categories.join(", ")}</span>
                     </div>
                   </div>
@@ -417,25 +419,25 @@ export default function Suppliers() {
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold tabular-nums">{selectedSupplier.totalOrders}</p>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
+                  <p className="text-sm text-muted-foreground">{t("suppliers.metrics.total_orders")}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold tabular-nums text-primary">
                     {(selectedSupplier.totalValue / 1000000).toFixed(1)}M
                   </p>
-                  <p className="text-sm text-muted-foreground">SAR Value</p>
+                  <p className="text-sm text-muted-foreground">{t("suppliers.metrics.sar_value")}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold tabular-nums text-success">
                     {selectedSupplier.onTimeDelivery}%
                   </p>
-                  <p className="text-sm text-muted-foreground">On-Time</p>
+                  <p className="text-sm text-muted-foreground">{t("suppliers.metrics.on_time")}</p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-4 text-center">
                   <p className="text-2xl font-bold tabular-nums text-accent">
                     {selectedSupplier.responseRate}%
                   </p>
-                  <p className="text-sm text-muted-foreground">Response</p>
+                  <p className="text-sm text-muted-foreground">{t("suppliers.metrics.response")}</p>
                 </div>
               </div>
             </div>

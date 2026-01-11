@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LineItemCheck {
   id: string;
@@ -62,6 +63,7 @@ export function GoodsReceivedNote({
   onOpenChange,
   onConfirm,
 }: GoodsReceivedNoteProps) {
+  const { t } = useLanguage();
   const [step, setStep] = useState<"verify" | "photo" | "sign">("verify");
   const [itemChecks, setItemChecks] = useState<LineItemCheck[]>(
     lineItems.map((item) => ({
@@ -113,8 +115,8 @@ export function GoodsReceivedNote({
   const handleConfirm = async () => {
     if (!receiverName || !receiverPhone) {
       toast({
-        title: "Missing Information",
-        description: "Please enter receiver name and phone number",
+        title: t("orders.grn.toast.missing_info"),
+        description: t("orders.grn.toast.enter_details"),
         variant: "destructive",
       });
       return;
@@ -137,16 +139,16 @@ export function GoodsReceivedNote({
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       toast({
-        title: "Delivery Confirmed",
-        description: `GRN for ${orderId} has been recorded successfully`,
+        title: t("orders.grn.toast.confirmed"),
+        description: t("orders.grn.toast.success_desc", { orderId }),
       });
 
       onConfirm?.(grnData);
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "Confirmation Failed",
-        description: "Please try again",
+        title: t("orders.grn.toast.failed"),
+        description: t("orders.grn.toast.try_again"),
         variant: "destructive",
       });
     } finally {
@@ -160,10 +162,10 @@ export function GoodsReceivedNote({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ClipboardCheck className="w-5 h-5 text-primary" />
-            Goods Received Note (GRN)
+            {t("orders.grn.title")}
           </DialogTitle>
           <DialogDescription>
-            Confirm delivery for {orderId} from {supplier}
+            {t("orders.grn.subtitle", { orderId, supplier })}
           </DialogDescription>
         </DialogHeader>
 
@@ -206,12 +208,12 @@ export function GoodsReceivedNote({
           <div className="space-y-4">
             <h4 className="font-medium text-foreground flex items-center gap-2">
               <Package className="w-4 h-4" />
-              Verify Received Items
+              {t("orders.grn.verify_items")}
             </h4>
 
             {deliveryNote && (
               <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                <span className="text-muted-foreground">Delivery Note: </span>
+                <span className="text-muted-foreground">{t("orders.grn.delivery_note")}: </span>
                 <span className="font-medium">{deliveryNote}</span>
               </div>
             )}
@@ -231,25 +233,25 @@ export function GoodsReceivedNote({
                     <div>
                       <h5 className="font-medium text-foreground">{item.productName}</h5>
                       <p className="text-sm text-muted-foreground">
-                        Ordered: {item.orderedQuantity} {item.unit}
+                        {t("orders.grn.ordered")}: {item.orderedQuantity} {item.unit}
                       </p>
                     </div>
                     {item.receivedQuantity === item.orderedQuantity && item.qualityOk ? (
                       <StatusBadge variant="success" size="sm">
                         <CheckCircle className="w-3 h-3" />
-                        OK
+                        {t("orders.grn.status.ok")}
                       </StatusBadge>
                     ) : (
                       <StatusBadge variant="warning" size="sm">
                         <AlertTriangle className="w-3 h-3" />
-                        Check
+                        {t("orders.grn.status.check")}
                       </StatusBadge>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Received Quantity</Label>
+                      <Label>{t("orders.grn.form.received_qty")}</Label>
                       <Input
                         type="number"
                         min="0"
@@ -263,7 +265,7 @@ export function GoodsReceivedNote({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Quality Check</Label>
+                      <Label>{t("orders.grn.form.quality_check")}</Label>
                       <div className="flex items-center gap-2 h-10">
                         <Checkbox
                           checked={item.qualityOk}
@@ -271,16 +273,16 @@ export function GoodsReceivedNote({
                             updateItemCheck(item.id, { qualityOk: !!checked })
                           }
                         />
-                        <span className="text-sm">Quality Acceptable</span>
+                        <span className="text-sm">{t("orders.grn.form.quality_acceptable")}</span>
                       </div>
                     </div>
                   </div>
 
                   {(item.receivedQuantity !== item.orderedQuantity || !item.qualityOk) && (
                     <div className="space-y-2">
-                      <Label>Notes (required for discrepancies)</Label>
+                      <Label>{t("orders.grn.form.notes_required")}</Label>
                       <Textarea
-                        placeholder="Describe the issue..."
+                        placeholder={t("orders.grn.form.notes_placeholder")}
                         value={item.notes}
                         onChange={(e) =>
                           updateItemCheck(item.id, { notes: e.target.value })
@@ -297,9 +299,9 @@ export function GoodsReceivedNote({
               <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-start gap-2">
                 <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-warning">Discrepancies Detected</p>
+                  <p className="font-medium text-warning">{t("orders.grn.form.discrepancies_title")}</p>
                   <p className="text-muted-foreground">
-                    Some items have quantity or quality issues. Please add notes for each discrepancy.
+                    {t("orders.grn.form.discrepancies_desc")}
                   </p>
                 </div>
               </div>
@@ -312,10 +314,10 @@ export function GoodsReceivedNote({
           <div className="space-y-4">
             <h4 className="font-medium text-foreground flex items-center gap-2">
               <Camera className="w-4 h-4" />
-              Photo Evidence (FR-D03)
+              {t("orders.grn.photo.title")}
             </h4>
             <p className="text-sm text-muted-foreground">
-              Take photos of the delivered materials for your records
+              {t("orders.grn.photo.desc")}
             </p>
 
             <div className="grid grid-cols-3 gap-3">
@@ -337,7 +339,7 @@ export function GoodsReceivedNote({
 
               <label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary">
                 <Camera className="w-8 h-8" />
-                <span className="text-xs text-center">Add Photo</span>
+                <span className="text-xs text-center">{t("orders.grn.photo.add")}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -349,9 +351,9 @@ export function GoodsReceivedNote({
             </div>
 
             <div className="space-y-2">
-              <Label>Overall Notes</Label>
+              <Label>{t("orders.grn.photo.overall_notes")}</Label>
               <Textarea
-                placeholder="Any additional notes about the delivery..."
+                placeholder={t("orders.grn.photo.notes_placeholder")}
                 value={overallNotes}
                 onChange={(e) => setOverallNotes(e.target.value)}
                 rows={3}
@@ -365,12 +367,12 @@ export function GoodsReceivedNote({
           <div className="space-y-4">
             <h4 className="font-medium text-foreground flex items-center gap-2">
               <Pen className="w-4 h-4" />
-              Digital Signature
+              {t("orders.grn.sign.title")}
             </h4>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Receiver Name *</Label>
+                <Label>{t("orders.grn.sign.receiver_name")} *</Label>
                 <Input
                   placeholder="Full name"
                   value={receiverName}
@@ -378,7 +380,7 @@ export function GoodsReceivedNote({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Phone Number *</Label>
+                <Label>{t("orders.grn.sign.receiver_phone")} *</Label>
                 <Input
                   placeholder="+966 5X XXX XXXX"
                   value={receiverPhone}
@@ -388,39 +390,39 @@ export function GoodsReceivedNote({
             </div>
 
             <div className="space-y-2">
-              <Label>Signature</Label>
+              <Label>{t("orders.grn.sign.signature_label")}</Label>
               <div className="border-2 border-dashed border-border rounded-lg h-32 flex items-center justify-center bg-muted/30">
                 <div className="text-center text-muted-foreground">
                   <Pen className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm">Sign here on mobile device</p>
-                  <p className="text-xs">Touch and draw your signature</p>
+                  <p className="text-sm">{t("orders.grn.sign.sign_here")}</p>
+                  <p className="text-xs">{t("orders.grn.sign.touch_draw")}</p>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                By signing, you confirm receipt of the goods as documented above.
+                {t("orders.grn.sign.disclaimer")}
               </p>
             </div>
 
             {/* Summary */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <h5 className="font-medium text-sm">Delivery Summary</h5>
+              <h5 className="font-medium text-sm">{t("orders.grn.summary.title")}</h5>
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Order ID</span>
+                  <span className="text-muted-foreground">{t("orders.grn.summary.order_id")}</span>
                   <span className="font-medium">{orderId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Items Received</span>
+                  <span className="text-muted-foreground">{t("orders.grn.summary.items_received")}</span>
                   <span className="font-medium">{itemChecks.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Photos Attached</span>
+                  <span className="text-muted-foreground">{t("orders.grn.summary.photos_attached")}</span>
                   <span className="font-medium">{photos.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Discrepancies</span>
+                  <span className="text-muted-foreground">{t("orders.grn.summary.discrepancies")}</span>
                   <span className={cn("font-medium", hasDiscrepancies ? "text-warning" : "text-success")}>
-                    {hasDiscrepancies ? "Yes" : "None"}
+                    {hasDiscrepancies ? t("orders.grn.summary.yes") : t("orders.grn.summary.none")}
                   </span>
                 </div>
               </div>
@@ -436,19 +438,19 @@ export function GoodsReceivedNote({
                 setStep(step === "sign" ? "photo" : "verify")
               }
             >
-              Back
+              {t("orders.grn.actions.back")}
             </Button>
           )}
 
           {step === "verify" && (
             <Button onClick={() => setStep("photo")}>
-              Next: Add Photos
+              {t("orders.grn.actions.next_photos")}
             </Button>
           )}
 
           {step === "photo" && (
             <Button onClick={() => setStep("sign")}>
-              Next: Sign & Confirm
+              {t("orders.grn.actions.next_sign")}
             </Button>
           )}
 
@@ -459,7 +461,7 @@ export function GoodsReceivedNote({
               className="bg-success hover:bg-success/90 text-success-foreground"
             >
               <CheckCircle className="w-4 h-4 me-2" />
-              {isSubmitting ? "Confirming..." : "Confirm Delivery"}
+              {isSubmitting ? t("orders.grn.actions.confirming") : t("orders.grn.actions.confirm")}
             </Button>
           )}
         </DialogFooter>

@@ -12,6 +12,7 @@ interface Activity {
   descriptionAr: string;
   time: string;
   timeAr: string;
+  timeVal?: number;
   status?: "success" | "warning" | "neutral";
 }
 
@@ -19,56 +20,61 @@ const activities: Activity[] = [
   {
     id: "1",
     type: "bid",
-    title: "New bid received",
-    titleAr: "تم استلام عرض جديد",
-    description: "Ezz Steel submitted bid for RFQ-2024-0162",
-    descriptionAr: "قدمت شركة حديد عز عرضاً لطلب RFQ-2024-0162",
-    time: "5 min ago",
-    timeAr: "منذ 5 دقائق",
+    title: "dashboard.activities.new_bid.title",
+    titleAr: "",
+    description: "dashboard.activities.new_bid.desc",
+    descriptionAr: "",
+    time: "dashboard.time.min_ago",
+    timeAr: "",
+    timeVal: 5,
     status: "success",
   },
   {
     id: "2",
     type: "order",
-    title: "Order confirmed",
-    titleAr: "تم تأكيد الطلب",
-    description: "ORD-2024-0845 confirmed by Saudi Ceramics",
-    descriptionAr: "تم تأكيد ORD-2024-0845 من السيراميك السعودي",
-    time: "32 min ago",
-    timeAr: "منذ 32 دقيقة",
+    title: "dashboard.activities.order_confirmed.title",
+    titleAr: "",
+    description: "dashboard.activities.order_confirmed.desc",
+    descriptionAr: "",
+    time: "dashboard.time.min_ago",
+    timeAr: "",
+    timeVal: 32,
     status: "success",
   },
   {
     id: "3",
     type: "delivery",
-    title: "Out for delivery",
-    titleAr: "خرج للتسليم",
-    description: "ORD-2024-0839 - Portland Cement Type I",
-    descriptionAr: "ORD-2024-0839 - أسمنت بورتلاند النوع الأول",
-    time: "1 hour ago",
-    timeAr: "منذ ساعة",
+    title: "dashboard.activities.out_for_delivery.title",
+    titleAr: "",
+    description: "dashboard.activities.out_for_delivery.desc",
+    descriptionAr: "",
+    time: "dashboard.time.hour_ago",
+    timeAr: "",
+    timeVal: 1,
     status: "warning",
   },
   {
     id: "4",
     type: "rfq",
-    title: "RFQ closing soon",
-    titleAr: "طلب الأسعار يغلق قريباً",
-    description: "RFQ-2024-0158 closes in 2 hours",
-    descriptionAr: "RFQ-2024-0158 يغلق خلال ساعتين",
-    time: "2 hours ago",
-    timeAr: "منذ ساعتين",
+    title: "dashboard.activities.rfq_closing.title",
+    titleAr: "",
+    description: "dashboard.activities.rfq_closing.desc",
+    descriptionAr: "",
+    time: "dashboard.time.hours_ago",
+    timeAr: "",
+    timeVal: 2,
     status: "warning",
   },
   {
     id: "5",
     type: "delivery",
-    title: "Delivery completed",
-    titleAr: "اكتمل التسليم",
-    description: "ORD-2024-0832 delivered to Al-Faisaliah Tower site",
-    descriptionAr: "تم تسليم ORD-2024-0832 إلى موقع برج الفيصلية",
-    time: "3 hours ago",
-    timeAr: "منذ 3 ساعات",
+    title: "dashboard.activities.delivery_completed.title",
+    titleAr: "",
+    description: "dashboard.activities.delivery_completed.desc",
+    descriptionAr: "",
+    time: "dashboard.time.hours_ago",
+    timeAr: "",
+    timeVal: 3,
     status: "success",
   },
 ];
@@ -109,15 +115,15 @@ export function RecentActivity() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">
-                  {isRTL ? activity.titleAr : activity.title}
+                  {t(activity.title)}
                 </p>
                 <p className="text-sm text-muted-foreground truncate">
-                  {isRTL ? activity.descriptionAr : activity.description}
+                  {t(activity.description)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className="text-xs text-muted-foreground">
-                  {isRTL ? activity.timeAr : activity.time}
+                  {t(activity.time, { count: activity.timeVal })}
                 </span>
                 {activity.status && (
                   <div className={cn(

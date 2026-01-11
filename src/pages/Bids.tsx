@@ -30,6 +30,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Bid {
   id: string;
@@ -111,13 +112,14 @@ const mockBids: Bid[] = [
 ];
 
 const statusConfig = {
-  pending: { color: "warning", label: "Pending Review", icon: Clock },
-  accepted: { color: "success", label: "Accepted", icon: CheckCircle },
-  rejected: { color: "danger", label: "Rejected", icon: XCircle },
-  expired: { color: "neutral", label: "Expired", icon: Clock },
+  pending: { color: "warning", labelKey: "bids.status.pending", icon: Clock },
+  accepted: { color: "success", labelKey: "bids.status.accepted", icon: CheckCircle },
+  rejected: { color: "danger", labelKey: "bids.status.rejected", icon: XCircle },
+  expired: { color: "neutral", labelKey: "bids.status.expired", icon: Clock },
 } as const;
 
 export default function Bids() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
@@ -138,16 +140,16 @@ export default function Bids() {
 
   const handleAccept = (bid: Bid) => {
     toast({
-      title: "Bid Accepted",
-      description: `Order will be created with ${bid.supplier}`,
+      title: t("bids.toast.accepted_title"),
+      description: t("bids.toast.accepted_desc", { supplier: bid.supplier }),
     });
   };
 
   const handleReject = () => {
     if (selectedBid && rejectionReason.trim()) {
       toast({
-        title: "Bid Rejected",
-        description: `${selectedBid.supplier} has been notified`,
+        title: t("bids.toast.rejected_title"),
+        description: t("bids.toast.rejected_desc", { supplier: selectedBid.supplier }),
       });
       setShowRejectDialog(false);
       setRejectionReason("");
@@ -167,9 +169,9 @@ export default function Bids() {
             <div>
               <div className="flex items-center gap-2">
                 <p className="font-medium text-foreground">{bid.supplier}</p>
-                <StatusBadge variant={statusConfig[bid.status].color as any} size="sm">
-                  <StatusIcon className="w-3 h-3" />
-                  {statusConfig[bid.status].label}
+                  <StatusBadge variant={statusConfig[bid.status].color as any} size="sm">
+                  {statusConfig[bid.status].icon && <StatusIcon className="w-3 h-3" />}
+                  {t(statusConfig[bid.status].labelKey)}
                 </StatusBadge>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -186,14 +188,14 @@ export default function Bids() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
                 <Eye className="w-4 h-4 me-2" />
-                View Details
+                {t("bids.view_details")}
               </DropdownMenuItem>
               {bid.status === "pending" && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleAccept(bid)} className="text-success">
                     <Award className="w-4 h-4 me-2" />
-                    Accept Bid
+                    {t("bids.accept_bid")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
@@ -203,7 +205,7 @@ export default function Bids() {
                     className="text-danger"
                   >
                     <XCircle className="w-4 h-4 me-2" />
-                    Reject Bid
+                    {t("bids.reject_bid")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -213,21 +215,21 @@ export default function Bids() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
           <div>
-            <p className="text-xs text-muted-foreground">Unit Price</p>
+            <p className="text-xs text-muted-foreground">{t("bids.unit_price")}</p>
             <p className="font-medium tabular-nums">SAR {bid.unitPrice.toFixed(2)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Total Price</p>
+            <p className="text-xs text-muted-foreground">{t("bids.total_price")}</p>
             <p className="font-semibold text-primary tabular-nums">
               SAR {bid.totalPrice.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Delivery</p>
-            <p className="font-medium">{bid.deliveryDays} days</p>
+            <p className="text-xs text-muted-foreground">{t("bids.delivery")}</p>
+            <p className="font-medium">{bid.deliveryDays} {t("bids.days")}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Quote Valid</p>
+            <p className="text-xs text-muted-foreground">{t("bids.quote_valid")}</p>
             <p className="font-medium">{bid.quoteValidity}</p>
           </div>
         </div>
@@ -235,7 +237,7 @@ export default function Bids() {
         {bid.notes && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Note:</span> {bid.notes}
+              <span className="font-medium">{t("bids.note")}:</span> {bid.notes}
             </p>
           </div>
         )}
@@ -252,7 +254,7 @@ export default function Bids() {
               }}
             >
               <XCircle className="w-4 h-4 me-2" />
-              Reject
+              {t("common.reject")}
             </Button>
             <Button
               size="sm"
@@ -260,7 +262,7 @@ export default function Bids() {
               onClick={() => handleAccept(bid)}
             >
               <Award className="w-4 h-4 me-2" />
-              Accept
+              {t("bids.award")}
             </Button>
           </div>
         )}
@@ -274,13 +276,13 @@ export default function Bids() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Bids</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("bids.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Review and manage supplier quotations
+              {t("bids.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge variant="warning">{pendingBids.length} Pending</StatusBadge>
+            <StatusBadge variant="warning">{t("bids.pending_count", { count: pendingBids.length })}</StatusBadge>
           </div>
         </div>
 
@@ -290,7 +292,7 @@ export default function Bids() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by supplier, RFQ ID, or title..."
+                placeholder={t("bids.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -299,14 +301,14 @@ export default function Bids() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]">
                 <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t("bids.filter.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="all">{t("bids.filter.all_status")}</SelectItem>
+                <SelectItem value="pending">{t("bids.filter.pending")}</SelectItem>
+                <SelectItem value="accepted">{t("bids.filter.accepted")}</SelectItem>
+                <SelectItem value="rejected">{t("bids.filter.rejected")}</SelectItem>
+                <SelectItem value="expired">{t("bids.filter.expired")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -316,10 +318,10 @@ export default function Bids() {
         <Tabs defaultValue="pending" className="space-y-4">
           <TabsList>
             <TabsTrigger value="pending">
-              Pending Review ({pendingBids.length})
+              {t("bids.tabs.pending_review")} ({pendingBids.length})
             </TabsTrigger>
             <TabsTrigger value="history">
-              History ({historyBids.length})
+              {t("bids.tabs.history")} ({historyBids.length})
             </TabsTrigger>
           </TabsList>
 
@@ -327,9 +329,9 @@ export default function Bids() {
             {pendingBids.length === 0 ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
-                <p className="font-medium text-foreground">All caught up!</p>
+                <p className="font-medium text-foreground">{t("bids.empty.caught_up")}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  No pending bids to review
+                  {t("bids.empty.no_pending")}
                 </p>
               </div>
             ) : (
@@ -345,9 +347,9 @@ export default function Bids() {
             {historyBids.length === 0 ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="font-medium text-foreground">No bid history</p>
+                <p className="font-medium text-foreground">{t("bids.empty.no_history")}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Accepted and rejected bids will appear here
+                  {t("bids.empty.history_desc")}
                 </p>
               </div>
             ) : (
@@ -365,20 +367,20 @@ export default function Bids() {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Bid</DialogTitle>
+            <DialogTitle>{t("bids.dialog.reject_title")}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for rejecting this bid. This feedback helps improve supplier offerings.
+              {t("bids.dialog.reject_desc")}
             </DialogDescription>
           </DialogHeader>
 
           {selectedBid && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Supplier</span>
+                <span className="text-muted-foreground">{t("bids.supplier")}</span>
                 <span className="font-medium">{selectedBid.supplier}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Total Price</span>
+                <span className="text-muted-foreground">{t("bids.total_price")}</span>
                 <span className="font-semibold tabular-nums">
                   SAR {selectedBid.totalPrice.toLocaleString()}
                 </span>
@@ -387,21 +389,21 @@ export default function Bids() {
           )}
 
           <div className="space-y-2">
-            <Label>Reason for Rejection *</Label>
+            <Label>{t("bids.dialog.reason_label")}</Label>
             <Select onValueChange={(v) => setRejectionReason(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a reason" />
+                <SelectValue placeholder={t("bids.dialog.select_reason")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Price too high">Price too high</SelectItem>
-                <SelectItem value="Delivery too late">Delivery too late</SelectItem>
-                <SelectItem value="Quality concerns">Quality concerns</SelectItem>
-                <SelectItem value="Missing specifications">Missing specifications</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Price too high">{t("bids.dialog.reasons.price_high")}</SelectItem>
+                <SelectItem value="Delivery too late">{t("bids.dialog.reasons.delivery_late")}</SelectItem>
+                <SelectItem value="Quality concerns">{t("bids.dialog.reasons.quality")}</SelectItem>
+                <SelectItem value="Missing specifications">{t("bids.dialog.reasons.missing_specs")}</SelectItem>
+                <SelectItem value="Other">{t("bids.dialog.reasons.other")}</SelectItem>
               </SelectContent>
             </Select>
             <Textarea
-              placeholder="Additional comments (optional)..."
+              placeholder={t("bids.dialog.comments_placeholder")}
               rows={3}
               className="mt-2"
             />
@@ -409,7 +411,7 @@ export default function Bids() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              Cancel
+              {t("bids.dialog.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -417,7 +419,7 @@ export default function Bids() {
               disabled={!rejectionReason.trim()}
             >
               <XCircle className="w-4 h-4 me-2" />
-              Reject Bid
+              {t("bids.dialog.confirm_reject")}
             </Button>
           </DialogFooter>
         </DialogContent>

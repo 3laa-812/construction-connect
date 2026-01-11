@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface KYBRequest {
   id: string;
@@ -63,6 +64,7 @@ const mockRequests: KYBRequest[] = [
 ];
 
 export function KYBApprovalCard() {
+  const { t } = useLanguage();
   const [requests, setRequests] = useState(mockRequests);
   const [selectedRequest, setSelectedRequest] = useState<KYBRequest | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
@@ -84,8 +86,8 @@ export function KYBApprovalCard() {
         )
       );
       toast({
-        title: "Supplier Approved",
-        description: `${selectedRequest.companyName} has been approved and notified.`,
+        title: t("approvals.toast.approved_title"),
+        description: t("approvals.toast.approved_desc", { name: selectedRequest.companyName }),
       });
       setShowReviewDialog(false);
     }
@@ -99,8 +101,8 @@ export function KYBApprovalCard() {
         )
       );
       toast({
-        title: "Application Rejected",
-        description: `${selectedRequest.companyName} has been notified with the reason.`,
+        title: t("approvals.toast.rejected_title"),
+        description: t("approvals.toast.rejected_desc", { name: selectedRequest.companyName }),
       });
       setShowReviewDialog(false);
     }
@@ -117,19 +119,19 @@ export function KYBApprovalCard() {
               <AlertTriangle className="w-5 h-5 text-warning" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Pending KYB Approvals</h3>
-              <p className="text-sm text-muted-foreground">Review supplier verification requests</p>
+              <h3 className="font-semibold text-foreground">{t("approvals.widget.title")}</h3>
+              <p className="text-sm text-muted-foreground">{t("approvals.widget.subtitle")}</p>
             </div>
           </div>
-          <StatusBadge variant="warning">{pendingRequests.length} Pending</StatusBadge>
+          <StatusBadge variant="warning">{pendingRequests.length} {t("approvals.widget.pending_badge")}</StatusBadge>
         </div>
 
         <div className="divide-y divide-border">
           {pendingRequests.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <Check className="w-12 h-12 text-success mx-auto mb-4" />
-              <p className="font-medium text-foreground">All caught up!</p>
-              <p className="text-sm text-muted-foreground">No pending approvals at the moment.</p>
+              <p className="font-medium text-foreground">{t("approvals.widget.all_caught_up")}</p>
+              <p className="text-sm text-muted-foreground">{t("approvals.widget.no_pending")}</p>
             </div>
           ) : (
             pendingRequests.map((request, index) => (
@@ -147,19 +149,19 @@ export function KYBApprovalCard() {
                     <p className="font-medium text-foreground truncate">{request.companyName}</p>
                     <StatusBadge variant="warning" size="sm">
                       <Clock className="w-3 h-3" />
-                      Pending
+                      {t("approvals.widget.pending_badge")}
                     </StatusBadge>
                   </div>
                   <p className="text-sm text-muted-foreground">{request.companyNameAr}</p>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                    <span>CR: {request.crNumber}</span>
-                    <span>Submitted: {request.submittedAt}</span>
+                    <span>{t("approvals.widget.cr_prefix")}: {request.crNumber}</span>
+                    <span>{t("approvals.widget.submitted_prefix")}: {request.submittedAt}</span>
                   </div>
                 </div>
 
                 <Button onClick={() => handleReview(request)} size="sm">
                   <Eye className="w-4 h-4 me-2" />
-                  Review
+                  {t("approvals.card.review")}
                 </Button>
               </div>
             ))
@@ -171,9 +173,9 @@ export function KYBApprovalCard() {
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>KYB Review</DialogTitle>
+            <DialogTitle>{t("approvals.dialog.kyb_review_title")}</DialogTitle>
             <DialogDescription>
-              Verify the supplier's Commercial Registration document
+              {t("approvals.dialog.kyb_review_desc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -182,17 +184,17 @@ export function KYBApprovalCard() {
               {/* Document Preview */}
               <div className="bg-muted rounded-lg flex flex-col">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                  <span className="text-sm font-medium">CR Document</span>
+                  <span className="text-sm font-medium">{t("approvals.dialog.cr_document")}</span>
                   <Button variant="ghost" size="sm">
                     <ExternalLink className="w-4 h-4 me-1" />
-                    Open
+                    {t("approvals.dialog.open")}
                   </Button>
                 </div>
                 <div className="flex-1 flex items-center justify-center p-8">
                   <div className="text-center">
                     <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                     <p className="text-sm text-muted-foreground">
-                      Document preview would appear here
+                      {t("approvals.dialog.doc_preview_placeholder")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       CR-{selectedRequest.crNumber}.pdf
@@ -205,19 +207,19 @@ export function KYBApprovalCard() {
               <div className="space-y-6 overflow-y-auto">
                 <div className="space-y-4">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Company Information
+                    {t("approvals.dialog.company_info")}
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Company Name (English)</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_en")}</p>
                       <p className="font-medium">{selectedRequest.companyName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Company Name (Arabic)</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_ar")}</p>
                       <p className="font-medium" dir="rtl">{selectedRequest.companyNameAr}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Commercial Registration #</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.cr_number")}</p>
                       <p className="font-medium tabular-nums">{selectedRequest.crNumber}</p>
                     </div>
                   </div>
@@ -225,15 +227,15 @@ export function KYBApprovalCard() {
 
                 <div className="space-y-4">
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                    Contact Information
+                    {t("approvals.dialog.contact_info")}
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-muted-foreground">Contact Person</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.contact_person")}</p>
                       <p className="font-medium">{selectedRequest.contactName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.email")}</p>
                       <p className="font-medium">{selectedRequest.contactEmail}</p>
                     </div>
                   </div>
@@ -241,9 +243,9 @@ export function KYBApprovalCard() {
 
                 {isRejecting && (
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-danger">Rejection Reason *</label>
+                    <label className="text-sm font-medium text-danger">{t("approvals.dialog.rejection_reason")} *</label>
                     <Textarea
-                      placeholder="Please provide a reason for rejection..."
+                      placeholder={t("approvals.dialog.rejection_placeholder")}
                       value={rejectionReason}
                       onChange={(e) => setRejectionReason(e.target.value)}
                       rows={3}
@@ -258,7 +260,7 @@ export function KYBApprovalCard() {
             {isRejecting ? (
               <>
                 <Button variant="outline" onClick={() => setIsRejecting(false)}>
-                  Cancel
+                  {t("approvals.dialog.cancel")}
                 </Button>
                 <Button
                   variant="destructive"
@@ -266,13 +268,13 @@ export function KYBApprovalCard() {
                   disabled={!rejectionReason.trim()}
                 >
                   <X className="w-4 h-4 me-2" />
-                  Confirm Rejection
+                  {t("approvals.dialog.confirm_reject")}
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" onClick={() => setShowReviewDialog(false)}>
-                  Close
+                  {t("approvals.dialog.close")}
                 </Button>
                 <Button
                   variant="outline"
@@ -280,11 +282,11 @@ export function KYBApprovalCard() {
                   onClick={() => setIsRejecting(true)}
                 >
                   <X className="w-4 h-4 me-2" />
-                  Reject
+                  {t("approvals.dialog.reject")}
                 </Button>
                 <Button onClick={handleApprove} className="bg-success hover:bg-success/90 text-success-foreground">
                   <Check className="w-4 h-4 me-2" />
-                  Approve
+                  {t("approvals.dialog.approve")}
                 </Button>
               </>
             )}

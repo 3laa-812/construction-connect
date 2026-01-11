@@ -1,0 +1,873 @@
+{
+  "app_title": "Construction Connect",
+  "welcome": "Welcome to Construction Connect",
+
+  "nav": {
+    "dashboard": "Dashboard",
+    "rfqs": "RFQs",
+    "bids": "Bids",
+    "orders": "Orders",
+    "suppliers": "Suppliers",
+    "projects": "Projects",
+    "approvals": "Approvals",
+    "financials": "Financials",
+    "supplier_portal": "Supplier Portal",
+    "settings": "Settings",
+    "more": "More"
+  },
+  "common": {
+    "search": "Search",
+    "search_placeholder": "Search RFQs, Orders, Suppliers...",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "sign_out": "Sign out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "amount": "Amount",
+    "total": "Total",
+    "items": "Items",
+    "notes": "Notes",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "no_data": "No data available",
+    "app_name": "Construction Connect",
+    "procurement": "Procurement Management",
+    "sidebar": {
+      "main": "Main",
+      "management": "Management",
+      "admin": "Admin",
+      "collapse": "Collapse Sidebar"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "active_rfqs": "Active RFQs",
+    "pending_orders": "Pending Orders",
+    "total_suppliers": "Total Suppliers",
+    "monthly_spend": "Monthly Spend",
+    "recent_activity": "Recent Activity",
+    "pending_approvals": "Pending Approvals",
+    "vs_last_month": "vs last month",
+    "orders_this_month": "Orders This Month",
+    "deliveries_pending": "Deliveries Pending",
+    "welcome_message": "Welcome back, {{name}}. Here's your procurement overview.",
+    "quick_actions": "Quick Actions",
+    "create_new_rfq_action": "Create New RFQ",
+    "create_new_rfq_desc": "Request quotes from suppliers",
+    "manage_suppliers_action": "Manage Suppliers",
+    "manage_suppliers_desc": "View and manage supplier network",
+    "track_orders_action": "Track Orders",
+    "track_orders_desc": "Monitor deliveries and fulfillment",
+    "activities": {
+      "new_bid": {
+        "title": "New Bid Received",
+        "desc": "TechSteel Ltd submitted a bid for 'Steel Rebar'"
+      },
+      "order_confirmed": {
+        "title": "Order Confirmed",
+        "desc": "Order #ORD-2024-001 has been confirmed"
+      },
+      "out_for_delivery": {
+        "title": "Out for Delivery",
+        "desc": "Expected arrival: Today, 2:00 PM"
+      },
+      "rfq_closing": {
+        "title": "RFQ Closing Soon",
+        "desc": "'Electrical Wiring' closes in 2 hours"
+      },
+      "delivery_completed": {
+        "title": "Delivery Completed",
+        "desc": "Cement delivery at Site A confirmed"
+      }
+    },
+    "time": {
+      "min_ago": "{{count}} min ago",
+      "hour_ago": "{{count}} hour ago",
+      "hours_ago": "{{count}} hours ago"
+    }
+  },
+  "rfq_builder": {
+    "title": "Create New RFQ",
+    "subtitle": "Create a request for quotation in 4 simple steps",
+    "steps": {
+      "project": {
+        "title": "Project & Details",
+        "desc": "Basic information"
+      },
+      "items": {
+        "title": "Line Items",
+        "desc": "Products required"
+      },
+      "terms": {
+        "title": "Terms & Docs",
+        "desc": "Payment & files"
+      },
+      "review": {
+        "title": "Review",
+        "desc": "Final check"
+      }
+    },
+    "sections": {
+      "project_category": "Project & Category",
+      "project_category_desc": "Select the project and category for this request",
+      "delivery_contact": "Delivery & Contact",
+      "delivery_contact_desc": "Specify when and where the materials are needed",
+      "line_items": "Line Items",
+      "line_items_desc": "Add the products or services you need",
+      "terms_docs": "Terms & Documents",
+      "terms_docs_desc": "Set payment terms and attach supporting documents",
+      "review": "Review Request",
+      "review_desc": "Please review all details before submitting"
+    },
+    "form": {
+      "project_label": "Project",
+      "project_placeholder": "Select project",
+      "category_label": "Category",
+      "category_placeholder": "Select category",
+      "priority_label": "Priority",
+      "priority_placeholder": "Select priority",
+      "delivery_date_label": "Delivery Date",
+      "delivery_location_label": "Delivery Location",
+      "delivery_location_placeholder": "Enter delivery address",
+      "delivery_location_help": "Full address including city and district",
+      "contact_name_label": "Site Contact Name",
+      "contact_name_placeholder": "Enter contact name",
+      "contact_phone_label": "Site Contact Phone",
+      "contact_phone_placeholder": "Enter phone number",
+      "payment_terms_label": "Preferred Payment Terms",
+      "payment_terms_placeholder": "Select payment terms",
+      "quote_validity_label": "Quote Validity",
+      "quote_validity_placeholder": "Select validity period",
+      "quote_validity_help": "How long should the quote remain valid?",
+      "partial_bids_label": "Allow Partial Bids",
+      "partial_bids_desc": "Suppliers can quote for some items instead of all",
+      "upload_title": "Document Upload",
+      "upload_desc": "Attach BOQ, specifications, or drawings (Optional)",
+      "drop_files": "Drop files here or click to upload",
+      "file_types": "PDF, Excel, Images up to 10MB",
+      "notes_label": "Additional Notes",
+      "notes_placeholder": "Any special instructions for suppliers..."
+    },
+    "items": {
+      "item_number": "Item {{number}}",
+      "remove": "Remove",
+      "product_name": "Product Name",
+      "product_placeholder": "e.g., Portland Cement Type I",
+      "brand": "Brand (Optional)",
+      "brand_placeholder": "e.g., Local",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unit_placeholder": "Select Unit",
+      "specs": "Specifications",
+      "specs_placeholder": "e.g., 50kg bags, ASTM C150",
+      "add_item": "Add Another Item"
+    },
+    "review": {
+      "project": "Project",
+      "category": "Category",
+      "priority": "Priority",
+      "delivery_date": "Delivery Date",
+      "location": "Location",
+      "site_contact": "Site Contact",
+      "line_items": "Line Items",
+      "payment_terms": "Payment Terms",
+      "payment": "Payment",
+      "quote_validity": "Quote Validity",
+      "partial_bids": "Partial Bids",
+      "allowed": "Allowed",
+      "not_allowed": "Not Allowed",
+      "documents": "Documents",
+      "additional_notes": "Additional Notes",
+      "summary_title": "Request Summary",
+      "priority_highlight": "This request is marked as high priority"
+    },
+    "card": {
+      "items": "Items"
+    },
+    "actions": {
+      "previous": "Previous",
+      "next": "Next Step",
+      "submit": "Submit RFQ"
+    },
+    "toast": {
+      "submitted": "RFQ Submitted",
+      "submitted_desc": "Your request has been sent to eligible suppliers"
+    }
+  },
+  "rfq": {
+    "title": "RFQ Management",
+    "create_new": "Create New RFQ",
+    "rfq_number": "RFQ Number",
+    "project": "Project",
+    "deadline": "Deadline",
+    "bids_received": "Bids Received",
+    "closing_soon": "Closing Soon",
+    "wizard": {
+      "header": "Header Information",
+      "line_items": "Line Items",
+      "delivery": "Delivery",
+      "review": "Review & Submit"
+    },
+    "subtitle": "Manage your requests for quotation",
+    "create_rfq": "Create RFQ",
+    "search_placeholder": "Search by RFQ ID, title, or project...",
+    "filter": {
+      "status": "Status",
+      "all_status": "All Status",
+      "open": "Open",
+      "closed": "Closed",
+      "awarded": "Awarded",
+      "cancelled": "Cancelled",
+      "category": "Category",
+      "all_categories": "All Categories"
+    },
+    "table": {
+      "details": "RFQ Details",
+      "project": "Project",
+      "category": "Category",
+      "bids": "Bids",
+      "deadline": "Deadline",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "days_left": "days left",
+    "view_details": "View Details",
+    "view_bids": "View Bids",
+    "edit": "Edit RFQ",
+    "cancel": "Cancel RFQ",
+    "no_results": "No RFQs found",
+    "no_results_desc": "Try adjusting your search or filters"
+  },
+  "bids": {
+    "title": "Bids",
+    "subtitle": "Review and manage supplier quotations",
+    "compare": "Compare Bids",
+    "award": "Award",
+    "reject": "Reject",
+    "unit_price": "Unit Price",
+    "total_price": "Total Price",
+    "delivery": "Delivery",
+    "days": "days",
+    "quote_valid": "Quote Valid",
+    "note": "Note",
+    "supplier": "Supplier",
+    "delivery_days": "Delivery Days",
+    "score": "Score",
+    "view_details": "View Details",
+    "accept_bid": "Accept Bid",
+    "reject_bid": "Reject Bid",
+    "pending_count": "{{count}} Pending",
+    "search_placeholder": "Search by supplier, RFQ ID, or title...",
+    "filter": {
+        "status": "Status",
+        "all_status": "All Status",
+        "pending": "Pending",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "expired": "Expired"
+    },
+    "tabs": {
+        "pending_review": "Pending Review",
+        "history": "History"
+    },
+    "empty": {
+        "caught_up": "All caught up!",
+        "no_pending": "No pending bids to review",
+        "no_history": "No bid history",
+        "history_desc": "Accepted and rejected bids will appear here"
+    },
+    "status": {
+        "pending": "Pending Review",
+        "accepted": "Accepted",
+        "rejected": "Rejected",
+        "expired": "Expired"
+    },
+    "dialog": {
+        "reject_title": "Reject Bid",
+        "reject_desc": "Please provide a reason for rejecting this bid. This feedback helps improve supplier offerings.",
+        "reason_label": "Reason for Rejection *",
+        "select_reason": "Select a reason",
+        "comments_placeholder": "Additional comments (optional)...",
+        "cancel": "Cancel",
+        "confirm_reject": "Reject Bid",
+        "reasons": {
+            "price_high": "Price too high",
+            "delivery_late": "Delivery too late",
+            "quality": "Quality concerns",
+            "missing_specs": "Missing specifications",
+            "other": "Other"
+        }
+    },
+    "toast": {
+        "accepted_title": "Bid Accepted",
+        "accepted_desc": "Order will be created with {{supplier}}",
+        "rejected_title": "Bid Rejected",
+        "rejected_desc": "{{supplier}} has been notified"
+    },
+    "comparison": {
+      "title": "Bid Comparison",
+      "total_bids": "Bids",
+      "table": {
+        "supplier": "Supplier",
+        "unit_price": "Unit Price",
+        "total_price": "Total Price",
+        "delivery": "Delivery",
+        "score": "Score",
+        "action": "Action"
+      },
+      "badges": {
+        "lowest": "Lowest",
+        "fastest": "Fastest",
+        "days": "days"
+      },
+      "actions": {
+        "award": "Award"
+      },
+      "dialog": {
+        "title": "Award Contract",
+        "description": "You are about to award this contract. This action will create a purchase order.",
+        "supplier": "Supplier",
+        "total_amount": "Total Amount",
+        "delivery": "Delivery",
+        "cancel": "Cancel",
+        "confirm": "Confirm Award"
+      },
+      "toast": {
+        "awarded_title": "Contract Awarded",
+        "awarded_desc": "Order has been placed with {{supplier}}"
+      }
+    }
+  },
+  "orders": {
+    "title": "Orders",
+    "subtitle": "Track and manage your purchase orders",
+    "order_number": "Order Number",
+    "supplier": "Supplier",
+    "project": "Project",
+    "amount": "Amount",
+    "status": "Status",
+    "payment": "Payment",
+    "delivery_date": "Delivery Date",
+    "grn_confirm": "Confirm Receipt (GRN)",
+    "rate_supplier": "Rate Supplier",
+    "track": "Track Shipment",
+    "view_details": "View Details",
+    "view_invoice": "View Invoice",
+    "download_dn": "Download DN",
+    "in_transit_count": "{{count}} In Transit",
+    "total_orders": "Total Orders",
+    "processing": "Processing",
+    "in_transit": "In Transit",
+    "delivered": "Delivered",
+    "order_id": "Order ID",
+    "rfq_ref": "RFQ Reference",
+    "order_date": "Order Date",
+    "total_amount": "Total Amount",
+    "order_info": "Order Information",
+    "supplier_details": "Supplier Details",
+    "company": "Company",
+    "search_placeholder": "Search by Order ID, supplier, or project...",
+    "filter": {
+        "status": "Status",
+        "all_status": "All Status",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "out_for_delivery": "Out for Delivery",
+        "delivered": "Delivered",
+        "completed": "Completed"
+    },
+
+    "payment_status": {
+        "pending": "Payment Pending",
+        "paid": "Paid",
+        "overdue": "Overdue"
+    },
+    "details": {
+        "title": "Order Details"
+    },
+    "empty": {
+        "no_orders": "No orders found",
+        "desc": "Try adjusting your search or filters"
+    },
+    "grn": {
+      "title": "Goods Received Note (GRN)",
+      "subtitle": "Confirm delivery for {{orderId}} from {{supplier}}",
+      "steps": {
+        "verify": "Verify Items",
+        "photo": "Photo Evidence",
+        "sign": "Sign & Confirm"
+      },
+      "verify_items": "Verify Received Items",
+      "delivery_note": "Delivery Note",
+      "ordered": "Ordered",
+      "status": {
+        "ok": "OK",
+        "check": "Check"
+      },
+      "form": {
+        "received_qty": "Received Quantity",
+        "quality_check": "Quality Check",
+        "quality_acceptable": "Quality Acceptable",
+        "notes": "Notes",
+        "notes_placeholder": "Describe the issue...",
+        "notes_required": "Notes (required for discrepancies)",
+        "discrepancies_title": "Discrepancies Detected",
+        "discrepancies_desc": "Some items have quantity or quality issues. Please add notes for each discrepancy."
+      },
+      "photo": {
+        "title": "Photo Evidence (FR-D03)",
+        "desc": "Take photos of the delivered materials for your records",
+        "add": "Add Photo",
+        "overall_notes": "Overall Notes",
+        "notes_placeholder": "Any additional notes about the delivery..."
+      },
+      "sign": {
+        "title": "Digital Signature",
+        "receiver_name": "Receiver Name",
+        "receiver_phone": "Phone Number",
+        "signature_label": "Signature",
+        "sign_here": "Sign here on mobile device",
+        "touch_draw": "Touch and draw your signature",
+        "disclaimer": "By signing, you confirm receipt of the goods as documented above."
+      },
+      "summary": {
+        "title": "Delivery Summary",
+        "order_id": "Order ID",
+        "items_received": "Items Received",
+        "photos_attached": "Photos Attached",
+        "discrepancies": "Discrepancies",
+        "yes": "Yes",
+        "none": "None"
+      },
+      "actions": {
+        "back": "Back",
+        "next_photos": "Next: Add Photos",
+        "next_sign": "Next: Sign & Confirm",
+        "confirm": "Confirm Delivery",
+        "confirming": "Confirming..."
+      },
+      "toast": {
+        "missing_info": "Missing Information",
+        "enter_details": "Please enter receiver name and phone number",
+        "confirmed": "Delivery Confirmed",
+        "success_desc": "GRN for {{orderId}} has been recorded successfully",
+        "failed": "Confirmation Failed",
+        "try_again": "Please try again"
+      }
+    },
+    "timeline": {
+      "title": "Order Status",
+      "steps": {
+        "confirmed_title": "Order Confirmed",
+        "confirmed_desc": "Order has been confirmed by supplier",
+        "processing_title": "Processing",
+        "processing_desc": "Order is being prepared for shipment",
+        "out_for_delivery_title": "Out for Delivery",
+        "out_for_delivery_desc": "Order is on its way to the delivery location",
+        "delivered_title": "Delivered",
+        "delivered_desc": "Order has been successfully delivered"
+      }
+    },
+    "rating": {
+      "title": "Rate Supplier",
+      "description": "Share your experience with this supplier to help other buyers",
+      "categories": {
+        "delivery": "Delivery Time",
+        "delivery_desc": "Was the delivery on time?",
+        "quality": "Product Quality",
+        "quality_desc": "Did the products meet specifications?",
+        "communication": "Communication",
+        "communication_desc": "How responsive was the supplier?"
+      },
+      "overall": "Overall Rating",
+      "review_label": "Written Review (Optional)",
+      "review_placeholder": "Share more details about your experience with this supplier...",
+      "review_help": "Your review helps other buyers make informed decisions",
+      "actions": {
+        "reset": "Reset",
+        "skip": "Skip",
+        "submit": "Submit Rating",
+        "submitting": "Submitting..."
+      },
+      "toast": {
+        "submitted": "Rating Submitted",
+        "thank_you": "Thank you for rating {{supplier}}",
+        "failed": "Submission Failed",
+        "try_again": "Please try again"
+      }
+    }
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "subtitle": "Manage your supplier network and partnerships",
+    "add_new": "Add New Supplier",
+    "company_name": "Company Name",
+    "contact": "Contact",
+    "rating": "Rating",
+    "categories": "Categories",
+    "active_count": "{{count}} Active",
+    "pending_count": "{{count}} Pending",
+    "search_placeholder": "Search by name, CR number...",
+    "filter": {
+        "status": "Status",
+        "all_status": "All Status",
+        "active": "Active",
+        "pending": "Pending",
+        "suspended": "Suspended",
+        "category": "Category",
+        "all_categories": "All Categories"
+    },
+    "status": {
+        "active": "Active",
+        "pending": "Pending KYB",
+        "suspended": "Suspended"
+    },
+    "actions": {
+        "view_profile": "View Profile",
+        "view_orders": "View Orders",
+        "send_message": "Send Message",
+        "suspend": "Suspend Supplier"
+    },
+    "metrics": {
+        "orders": "Orders",
+        "total_orders": "Total Orders",
+        "on_time": "On-Time",
+        "response": "Response",
+        "sar_value": "SAR Value"
+    },
+    "profile": {
+        "title": "Supplier Profile",
+        "contact_info": "Contact Information",
+        "business_details": "Business Details",
+        "cr_number": "CR Number"
+    },
+    "empty": {
+        "no_suppliers": "No suppliers found",
+        "desc": "Try adjusting your search or filters"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Manage your construction sites and delivery locations",
+    "create_new": "New Project",
+    "create_dialog": {
+        "title": "Create New Project",
+        "desc": "Add a new construction project with delivery location details.",
+        "name": "Project Name *",
+        "name_placeholder": "e.g., Riyadh Villa Compound",
+        "location": "Site Location *",
+        "location_placeholder": "Enter the full address or use Google Maps integration",
+        "location_tip": "Tip: Include street name, district, and city for accurate deliveries",
+        "receiver": "Receiver Name *",
+        "receiver_placeholder": "Site contact person",
+        "phone": "Phone Number *",
+        "phone_placeholder": "+966 5X XXX XXXX",
+        "cancel": "Cancel",
+        "submit": "Create Project"
+    },
+    "search_placeholder": "Search by project name or location...",
+    "status": {
+        "active": "Active",
+        "completed": "Completed",
+        "on_hold": "On Hold"
+    },
+    "actions": {
+        "edit": "Edit Project",
+        "view_rfqs": "View RFQs",
+        "view_orders": "View Orders",
+        "delete": "Delete Project"
+    },
+    "metrics": {
+        "rfqs": "RFQs",
+        "orders": "Orders",
+        "sar_spent": "SAR Spent"
+    },
+    "empty": {
+        "no_projects": "No projects found",
+        "desc": "Create your first project to start managing procurement"
+    },
+    "toast": {
+        "created_title": "Project Created",
+        "created_desc": "{{name}} has been added to your projects."
+    }
+  },
+  "financials_page": {
+    "title": "Financial Management",
+    "subtitle": "Track your invoices, payments, and wallet balance",
+    "tabs": {
+      "invoices": "Invoices",
+      "wallet": "Wallet Ledger"
+    },
+    "summary": {
+      "total_invoices": "Total Invoices",
+      "pending_payment": "Pending Payment",
+      "paid_this_month": "Paid This Month",
+      "overdue": "Overdue"
+    },
+    "table": {
+      "invoice": "Invoice #",
+      "supplier": "Supplier",
+      "order": "Order ID"
+    },
+    "status": {
+      "paid": "Paid",
+      "sent": "Sent",
+      "draft": "Draft"
+    }
+  },
+  "financials": {
+    "title": "Financial Management",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "wallet": "Wallet Ledger",
+    "total_spent": "Total Spent",
+    "outstanding": "Outstanding",
+    "this_month": "This Month"
+  },
+  "approvals": {
+    "title": "Approvals",
+    "subtitle": "Manage supplier KYB requests and document verifications",
+    "pending_count": "{{count}} Pending",
+    "summary": {
+      "pending": "Pending Requests",
+      "suppliers": "Suppliers",
+      "contractors": "Contractors",
+      "approved_mtd": "Approved MTD"
+    },
+    "widget": {
+        "title": "Pending KYB Approvals",
+        "subtitle": "Review supplier verification requests",
+        "pending_badge": "Pending",
+        "all_caught_up": "All caught up!",
+        "no_pending": "No pending approvals at the moment.",
+        "cr_prefix": "CR",
+        "submitted_prefix": "Submitted"
+    },
+    "search_placeholder": "Search by company, CR, email...",
+    "filter": {
+      "type": "Type",
+      "all_types": "All Types",
+      "suppliers": "Suppliers",
+      "contractors": "Contractors"
+    },
+    "tabs": {
+      "all": "All Requests",
+      "suppliers": "Suppliers",
+      "contractors": "Contractors"
+    },
+    "empty": {
+      "all_caught_up": "You're all caught up!",
+      "no_pending": "No pending approval requests at the moment."
+    },
+    "card": {
+      "pending_review": "Pending Review",
+      "supplier": "Supplier",
+      "contractor": "Contractor",
+      "cr_number": "CR Number",
+      "contact": "Contact",
+      "submitted": "Submitted",
+      "review": "Review Application"
+    },
+    "dialog": {
+      "title": "Review Application",
+      "desc": "Verify the submitted documents and company details below.",
+      "uploaded_docs": "Uploaded Documents",
+      "view": "View",
+      "company_info": "Company Information",
+      "company_name_en": "Company Name (EN)",
+      "company_name_ar": "Company Name (AR)",
+      "cr_number": "CR Number",
+      "vat_number": "VAT Number",
+      "categories": "Categories",
+      "contact_info": "Contact Information",
+      "contact_person": "Contact Person",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "rejection_reason": "Rejection Reason",
+      "rejection_placeholder": "Please provide a reason for rejection...",
+      "cancel": "Cancel",
+      "confirm_reject": "Confirm Rejection",
+      "close": "Close",
+      "reject": "Reject",
+      "approve": "Approve",
+      "kyb_review_title": "KYB Review",
+      "kyb_review_desc": "Verify the supplier's Commercial Registration document",
+      "cr_document": "CR Document",
+      "open": "Open",
+      "doc_preview_placeholder": "Document preview would appear here"
+    },
+    "toast": {
+      "approved_title": "Application Approved",
+      "approved_desc": "{{name}} has been approved successfully.",
+      "rejected_title": "Application Rejected",
+      "rejected_desc": "{{name}} has been rejected."
+    }
+  },
+  "supplier_rfq_feed": {
+    "title": "Open RFQs",
+    "subtitle": "Browse and quote on active opportunities",
+    "filters": {
+      "new": "New",
+      "urgent": "Urgent",
+      "search_placeholder": "Search by keyword, company...",
+      "category_placeholder": "Select Category",
+      "all_categories": "All Categories"
+    },
+    "card": {
+      "urgent": "Urgent",
+      "high_priority": "High Priority",
+      "normal": "Normal",
+      "required_by": "Required by",
+      "items": "Items",
+      "more_items": "more items",
+      "bids": "Bids",
+      "partial_ok": "Partial Bids OK",
+      "view_details": "View Details",
+      "submit_quote": "Submit Quote"
+    },
+    "time": {
+      "days_left": "{{days}}d {{hours}}h left",
+      "hours_left": "{{hours}}h left",
+      "closing_soon": "Closing Soon"
+    },
+    "empty": {
+      "title": "No Open RFQs",
+      "desc": "Check back later for new opportunities."
+    },
+    "dialog": {
+      "submit_title": "Submit Quote"
+    }
+  },
+  "settings_page": {
+    "title": "Settings",
+    "subtitle": "Manage your account settings and preferences",
+    "toast": {
+      "saved_title": "Settings saved",
+      "saved_desc": "Your changes have been saved successfully."
+    },
+    "tabs": {
+      "profile": "Profile",
+      "company": "Company",
+      "notifications": "Notifications",
+      "team": "Team",
+      "catalog": "Catalog",
+      "admin": "Admin"
+    },
+    "profile": {
+      "personal_info": "Personal Information",
+      "first_name": "First Name",
+      "last_name": "Last Name",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "role": "Role",
+      "save_changes": "Save Changes",
+      "preferences": "Preferences",
+      "language": "Language",
+      "language_desc": "Select your preferred language",
+      "theme": "Theme",
+      "theme_desc": "Customize the look and feel",
+      "theme_options": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    },
+    "company": {
+      "info": "Company Information",
+      "name_en": "Company Name (English)",
+      "name_ar": "Company Name (Arabic)",
+      "cr": "Commercial Registration (CR)",
+      "vat": "VAT Number",
+      "address": "Registered Address"
+    },
+    "notifications": {
+      "email": "Email Notifications",
+      "new_bids": "New Bids",
+      "new_bids_desc": "Receive emails when you receive new bids",
+      "order_updates": "Order Updates",
+      "order_updates_desc": "Get notified about order status changes",
+      "delivery_alerts": "Delivery Alerts",
+      "delivery_alerts_desc": "Notifications for upcoming deliveries",
+      "rfq_expiry": "RFQ Expiry",
+      "rfq_expiry_desc": "Alerts when RFQs are about to expire",
+      "payment_reminders": "Payment Reminders",
+      "payment_reminders_desc": "Reminders for upcoming payments",
+      "sms": "SMS Notifications",
+      "delivery_confirmations": "Delivery Confirmations",
+      "delivery_confirmations_desc": "Receive SMS codes for delivery confirmation",
+      "urgent_alerts": "Urgent Alerts",
+      "urgent_alerts_desc": "SMS alerts for urgent matters"
+    },
+    "admin": {
+      "commission": "Commission Configuration",
+      "commission_desc": "Set platform commission rates",
+      "rate": "Commission Rate (%)",
+      "rate_help": "Percentage taken from each transaction",
+      "min_commission": "Minimum Commission (SAR)",
+      "min_commission_help": "Minimum amount charged per transaction",
+      "save_config": "Save Configuration",
+      "payment_settings": "Payment Methods",
+      "payment_settings_desc": "Configure accepted payment methods",
+      "cash": "Cash / Mada",
+      "cash_desc": "Accept cash or Mada on delivery",
+      "credit": "Credit Terms",
+      "credit_desc": "Allow credit payments (e.g., Net 30)",
+      "bank": "Bank Transfer",
+      "bank_desc": "Accept direct bank transfers",
+      "cheques": "Cheques",
+      "cheques_desc": "Accept post-dated cheques"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "notifications": "Notifications",
+    "team": "Team",
+    "catalog": "Catalog",
+    "integrations": "Integrations"
+  },
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "active": "Active",
+    "closed": "Closed",
+    "completed": "Completed",
+    "in_progress": "In Progress",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "notification": {
+    "new_bid": "New Bid",
+    "order_confirmed": "Order Confirmed",
+    "out_for_delivery": "Out for Delivery",
+    "delivered": "Delivered"
+  },
+  "ui": {
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "more_pages": "More pages"
+    },
+    "sidebar": {
+      "toggle": "Toggle Sidebar"
+    }
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  }
+}

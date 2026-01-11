@@ -83,17 +83,17 @@ export function TopBar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
               <div className="flex items-center gap-2">
-                <StatusBadge variant="primary" size="sm">{t("notification.new_bid")}</StatusBadge>
-                <span className="text-xs text-muted-foreground">2 min ago</span>
+                <StatusBadge variant="primary" size="sm">{t("common.notification_items.new_bid_title")}</StatusBadge>
+                <span className="text-xs text-muted-foreground">{t("dashboard.time.min_ago", { count: 2 })}</span>
               </div>
-              <p className="text-sm">Saudi Ceramics submitted a bid for RFQ-2024-0158</p>
+              <p className="text-sm">{t("common.notification_items.new_bid_desc")}</p>
             </DropdownMenuItem>
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
               <div className="flex items-center gap-2">
-                <StatusBadge variant="success" size="sm">{t("notification.delivered")}</StatusBadge>
-                <span className="text-xs text-muted-foreground">1 hour ago</span>
+                <StatusBadge variant="success" size="sm">{t("common.notification_items.delivered_title")}</StatusBadge>
+                <span className="text-xs text-muted-foreground">{t("dashboard.time.hour_ago", { count: 1 })}</span>
               </div>
-              <p className="text-sm">Order #ORD-2024-0842 has been delivered</p>
+              <p className="text-sm">{t("common.notification_items.delivered_desc")}</p>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -111,7 +111,7 @@ export function TopBar() {
             <DropdownMenuLabel>
               <div>
                 <p className="font-medium">Ahmed Al-Rashid</p>
-                <p className="text-xs text-muted-foreground">Procurement Manager</p>
+                <p className="text-xs text-muted-foreground">{t("common.procurement_manager")}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

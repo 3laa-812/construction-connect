@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RFQ {
   id: string;
@@ -108,13 +109,14 @@ const mockRFQs: RFQ[] = [
 ];
 
 const statusConfig = {
-  open: { color: "primary", label: "Open", icon: Clock },
-  closed: { color: "neutral", label: "Closed", icon: CheckCircle },
-  awarded: { color: "success", label: "Awarded", icon: CheckCircle },
-  cancelled: { color: "danger", label: "Cancelled", icon: XCircle },
+  open: { color: "primary", labelKey: "rfq.filter.open", icon: Clock },
+  closed: { color: "neutral", labelKey: "rfq.filter.closed", icon: CheckCircle },
+  awarded: { color: "success", labelKey: "rfq.filter.awarded", icon: CheckCircle },
+  cancelled: { color: "danger", labelKey: "rfq.filter.cancelled", icon: XCircle },
 } as const;
 
 export default function RFQs() {
+  const { t, isRTL } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -137,15 +139,15 @@ export default function RFQs() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">RFQs</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("rfq.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your requests for quotation
+              {t("rfq.subtitle")}
             </p>
           </div>
           <Link to="/rfqs/new">
             <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 me-2" />
-              Create RFQ
+              {t("rfq.create_rfq")}
             </Button>
           </Link>
         </div>
@@ -156,7 +158,7 @@ export default function RFQs() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by RFQ ID, title, or project..."
+                placeholder={t("rfq.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -166,22 +168,22 @@ export default function RFQs() {
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
                   <Filter className="w-4 h-4 me-2" />
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t("rfq.filter.status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="awarded">Awarded</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="all">{t("rfq.filter.all_status")}</SelectItem>
+                  <SelectItem value="open">{t("rfq.filter.open")}</SelectItem>
+                  <SelectItem value="closed">{t("rfq.filter.closed")}</SelectItem>
+                  <SelectItem value="awarded">{t("rfq.filter.awarded")}</SelectItem>
+                  <SelectItem value="cancelled">{t("rfq.filter.cancelled")}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={t("rfq.filter.category")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="all">{t("rfq.filter.all_categories")}</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -199,13 +201,13 @@ export default function RFQs() {
             <table className="w-full data-grid">
               <thead>
                 <tr>
-                  <th className="min-w-[280px]">RFQ Details</th>
-                  <th className="min-w-[180px]">Project</th>
-                  <th className="min-w-[120px]">Category</th>
-                  <th className="min-w-[100px]">Bids</th>
-                  <th className="min-w-[120px]">Deadline</th>
-                  <th className="min-w-[100px]">Status</th>
-                  <th className="min-w-[100px] text-center">Actions</th>
+                  <th className="min-w-[280px]">{t("rfq.table.details")}</th>
+                  <th className="min-w-[180px]">{t("rfq.table.project")}</th>
+                  <th className="min-w-[120px]">{t("rfq.table.category")}</th>
+                  <th className="min-w-[100px]">{t("rfq.table.bids")}</th>
+                  <th className="min-w-[120px]">{t("rfq.table.deadline")}</th>
+                  <th className="min-w-[100px]">{t("rfq.table.status")}</th>
+                  <th className="min-w-[100px] text-center">{t("rfq.table.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -248,7 +250,7 @@ export default function RFQs() {
                         <p className="text-sm">{rfq.deadline}</p>
                         {rfq.status === "open" && (
                           <p className="text-xs text-muted-foreground">
-                            {Math.ceil((new Date(rfq.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} days left
+                            {Math.ceil((new Date(rfq.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} {t("rfq.days_left")}
                           </p>
                         )}
                       </td>
@@ -257,8 +259,8 @@ export default function RFQs() {
                           variant={statusConfig[rfq.status].color as any}
                           size="sm"
                         >
-                          <StatusIcon className="w-3 h-3" />
-                          {statusConfig[rfq.status].label}
+                          {statusConfig[rfq.status].icon && <StatusIcon className="w-3 h-3" />}
+                          {t(statusConfig[rfq.status].labelKey)}
                         </StatusBadge>
                       </td>
                       <td className="text-center">
@@ -271,14 +273,14 @@ export default function RFQs() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>
                               <Eye className="w-4 h-4 me-2" />
-                              View Details
+                              {t("rfq.view_details")}
                             </DropdownMenuItem>
-                            <DropdownMenuItem>View Bids</DropdownMenuItem>
+                            <DropdownMenuItem>{t("rfq.view_bids")}</DropdownMenuItem>
                             {rfq.status === "open" && (
                               <>
-                                <DropdownMenuItem>Edit RFQ</DropdownMenuItem>
+                                <DropdownMenuItem>{t("rfq.edit")}</DropdownMenuItem>
                                 <DropdownMenuItem className="text-danger">
-                                  Cancel RFQ
+                                  {t("rfq.cancel")}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -295,9 +297,9 @@ export default function RFQs() {
           {filteredRFQs.length === 0 && (
             <div className="p-12 text-center">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="font-medium text-foreground">No RFQs found</p>
+              <p className="font-medium text-foreground">{t("rfq.no_results")}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Try adjusting your search or filters
+                {t("rfq.no_results_desc")}
               </p>
             </div>
           )}

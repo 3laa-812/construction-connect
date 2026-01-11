@@ -15,16 +15,17 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { TeamManagement } from "@/components/admin/TeamManagement";
-import { CatalogManagement } from "@/components/admin/CatalogManagement";
+import { TeamManagement } from "@/components/admin/TeamManagement";import { CatalogManagement } from "@/components/admin/CatalogManagement";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Settings() {
+  const { t } = useLanguage();
   const [commissionRate, setCommissionRate] = useState("2.5");
 
   const handleSave = () => {
     toast({
-      title: "Settings Saved",
-      description: "Your changes have been saved successfully.",
+      title: t("settings_page.toast.saved_title"),
+      description: t("settings_page.toast.saved_desc"),
     });
   };
 
@@ -33,9 +34,9 @@ export default function Settings() {
       <div className="p-4 lg:p-6 space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Settings</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("settings_page.title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your account and platform preferences
+            {t("settings_page.subtitle")}
           </p>
         </div>
 
@@ -43,71 +44,71 @@ export default function Settings() {
           <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="profile">
               <User className="w-4 h-4 me-2" />
-              Profile
+              {t("settings_page.tabs.profile")}
             </TabsTrigger>
             <TabsTrigger value="company">
               <Building2 className="w-4 h-4 me-2" />
-              Company
+              {t("settings_page.tabs.company")}
             </TabsTrigger>
             <TabsTrigger value="notifications">
               <Bell className="w-4 h-4 me-2" />
-              Notifications
+              {t("settings_page.tabs.notifications")}
             </TabsTrigger>
             <TabsTrigger value="team">
               <Users className="w-4 h-4 me-2" />
-              Team
+              {t("settings_page.tabs.team")}
             </TabsTrigger>
             <TabsTrigger value="catalog">
               <Package className="w-4 h-4 me-2" />
-              Catalog
+              {t("settings_page.tabs.catalog")}
             </TabsTrigger>
             <TabsTrigger value="admin">
               <Shield className="w-4 h-4 me-2" />
-              Admin
+              {t("settings_page.tabs.admin")}
             </TabsTrigger>
           </TabsList>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Personal Information</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("settings_page.profile.personal_info")}</h3>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">{t("settings_page.profile.first_name")}</Label>
                   <Input id="firstName" defaultValue="Ahmed" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">{t("settings_page.profile.last_name")}</Label>
                   <Input id="lastName" defaultValue="Al-Rashid" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">{t("settings_page.profile.email")}</Label>
                   <Input id="email" type="email" defaultValue="ahmed@buildpro.sa" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">{t("settings_page.profile.phone")}</Label>
                   <Input id="phone" defaultValue="+966 50 123 4567" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Role</Label>
+                  <Label htmlFor="role">{t("settings_page.profile.role")}</Label>
                   <Input id="role" defaultValue="Procurement Manager" disabled />
                 </div>
               </div>
               <Button className="mt-6" onClick={handleSave}>
                 <Save className="w-4 h-4 me-2" />
-                Save Changes
+                {t("settings_page.profile.save_changes")}
               </Button>
             </div>
 
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Preferences</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("settings_page.profile.preferences")}</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Globe className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Language</p>
-                      <p className="text-sm text-muted-foreground">Select your preferred language</p>
+                      <p className="font-medium">{t("settings_page.profile.language")}</p>
+                      <p className="text-sm text-muted-foreground">{t("settings_page.profile.language_desc")}</p>
                     </div>
                   </div>
                   <Select defaultValue="en">
@@ -125,8 +126,8 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <Palette className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Theme</p>
-                      <p className="text-sm text-muted-foreground">Choose light or dark mode</p>
+                      <p className="font-medium">{t("settings_page.profile.theme")}</p>
+                      <p className="text-sm text-muted-foreground">{t("settings_page.profile.theme_desc")}</p>
                     </div>
                   </div>
                   <Select defaultValue="light">
@@ -134,9 +135,9 @@ export default function Settings() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="light">{t("settings_page.profile.theme_options.light")}</SelectItem>
+                      <SelectItem value="dark">{t("settings_page.profile.theme_options.dark")}</SelectItem>
+                      <SelectItem value="system">{t("settings_page.profile.theme_options.system")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -147,32 +148,32 @@ export default function Settings() {
           {/* Company Tab */}
           <TabsContent value="company" className="space-y-6">
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Company Information</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("settings_page.company.info")}</h3>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>Company Name (English)</Label>
+                  <Label>{t("settings_page.company.name_en")}</Label>
                   <Input defaultValue="BuildPro Construction LLC" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Company Name (Arabic)</Label>
+                  <Label>{t("settings_page.company.name_ar")}</Label>
                   <Input defaultValue="بيلد برو للمقاولات" dir="rtl" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Commercial Registration (CR)</Label>
+                  <Label>{t("settings_page.company.cr")}</Label>
                   <Input defaultValue="1010123456" className="tabular-nums" />
                 </div>
                 <div className="space-y-2">
-                  <Label>VAT Number</Label>
+                  <Label>{t("settings_page.company.vat")}</Label>
                   <Input defaultValue="300012345600003" className="tabular-nums" />
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Address</Label>
+                  <Label>{t("settings_page.company.address")}</Label>
                   <Input defaultValue="King Fahd Road, Olaya District, Riyadh 12211" />
                 </div>
               </div>
               <Button className="mt-6" onClick={handleSave}>
                 <Save className="w-4 h-4 me-2" />
-                Save Changes
+                {t("settings_page.profile.save_changes")}
               </Button>
             </div>
           </TabsContent>
@@ -180,44 +181,44 @@ export default function Settings() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-6">
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">Email Notifications</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("settings_page.notifications.email")}</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">New Bids</p>
-                    <p className="text-sm text-muted-foreground">Receive notifications when suppliers submit bids</p>
+                    <p className="font-medium">{t("settings_page.notifications.new_bids")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.new_bids_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Order Updates</p>
-                    <p className="text-sm text-muted-foreground">Get notified about order status changes</p>
+                    <p className="font-medium">{t("settings_page.notifications.order_updates")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.order_updates_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Delivery Alerts</p>
-                    <p className="text-sm text-muted-foreground">Notifications when orders are out for delivery</p>
+                    <p className="font-medium">{t("settings_page.notifications.delivery_alerts")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.delivery_alerts_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">RFQ Expiry Reminders</p>
-                    <p className="text-sm text-muted-foreground">Reminders before your RFQs close</p>
+                    <p className="font-medium">{t("settings_page.notifications.rfq_expiry")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.rfq_expiry_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Payment Reminders</p>
-                    <p className="text-sm text-muted-foreground">Reminders for pending payments</p>
+                    <p className="font-medium">{t("settings_page.notifications.payment_reminders")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.payment_reminders_desc")}</p>
                   </div>
                   <Switch />
                 </div>
@@ -225,20 +226,20 @@ export default function Settings() {
             </div>
 
             <div className="bg-card rounded-xl border border-border p-6">
-              <h3 className="font-semibold text-foreground mb-4">SMS Notifications</h3>
+              <h3 className="font-semibold text-foreground mb-4">{t("settings_page.notifications.sms")}</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Delivery Confirmations</p>
-                    <p className="text-sm text-muted-foreground">SMS when orders are delivered</p>
+                    <p className="font-medium">{t("settings_page.notifications.delivery_confirmations")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.delivery_confirmations_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Urgent Alerts</p>
-                    <p className="text-sm text-muted-foreground">Critical updates requiring immediate attention</p>
+                    <p className="font-medium">{t("settings_page.notifications.urgent_alerts")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.notifications.urgent_alerts_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
@@ -264,13 +265,13 @@ export default function Settings() {
                   <Percent className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Commission Configuration</h3>
-                  <p className="text-sm text-muted-foreground">Set the platform commission fee per successful order</p>
+                  <h3 className="font-semibold text-foreground">{t("settings_page.admin.commission")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("settings_page.admin.commission_desc")}</p>
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6 mt-6">
                 <div className="space-y-2">
-                  <Label>Commission Rate (%)</Label>
+                  <Label>{t("settings_page.admin.rate")}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
@@ -284,20 +285,20 @@ export default function Settings() {
                     <span className="text-muted-foreground">%</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Applied to total order value upon completion
+                    {t("settings_page.admin.rate_help")}
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Minimum Commission (SAR)</Label>
+                  <Label>{t("settings_page.admin.min_commission")}</Label>
                   <Input type="number" defaultValue="50" className="tabular-nums" />
                   <p className="text-xs text-muted-foreground">
-                    Minimum commission per transaction
+                    {t("settings_page.admin.min_commission_help")}
                   </p>
                 </div>
               </div>
               <Button className="mt-6" onClick={handleSave}>
                 <Save className="w-4 h-4 me-2" />
-                Save Configuration
+                {t("settings_page.admin.save_config")}
               </Button>
             </div>
 
@@ -307,39 +308,39 @@ export default function Settings() {
                   <CreditCard className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Payment Settings</h3>
-                  <p className="text-sm text-muted-foreground">Configure payment terms and methods</p>
+                  <h3 className="font-semibold text-foreground">{t("settings_page.admin.payment_settings")}</h3>
+                  <p className="text-sm text-muted-foreground">{t("settings_page.admin.payment_settings_desc")}</p>
                 </div>
               </div>
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Allow Cash Payments</p>
-                    <p className="text-sm text-muted-foreground">Enable cash on delivery option</p>
+                    <p className="font-medium">{t("settings_page.admin.cash")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.admin.cash_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Allow Credit Terms</p>
-                    <p className="text-sm text-muted-foreground">Enable credit/deferred payment options</p>
+                    <p className="font-medium">{t("settings_page.admin.credit")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.admin.credit_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Accept Bank Transfers</p>
-                    <p className="text-sm text-muted-foreground">Manual bank transfer verification</p>
+                    <p className="font-medium">{t("settings_page.admin.bank")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.admin.bank_desc")}</p>
                   </div>
                   <Switch defaultChecked />
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Accept Cheques</p>
-                    <p className="text-sm text-muted-foreground">Post-dated cheque payments</p>
+                    <p className="font-medium">{t("settings_page.admin.cheques")}</p>
+                    <p className="text-sm text-muted-foreground">{t("settings_page.admin.cheques_desc")}</p>
                   </div>
                   <Switch />
                 </div>

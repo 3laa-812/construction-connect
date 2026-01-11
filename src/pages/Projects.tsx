@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Project {
   id: string;
@@ -106,12 +107,13 @@ const mockProjects: Project[] = [
 ];
 
 const statusConfig = {
-  active: { color: "success", label: "Active" },
-  completed: { color: "neutral", label: "Completed" },
-  on_hold: { color: "warning", label: "On Hold" },
+  active: { color: "success", labelKey: "projects.status.active" },
+  completed: { color: "neutral", labelKey: "projects.status.completed" },
+  on_hold: { color: "warning", labelKey: "projects.status.on_hold" },
 } as const;
 
 export default function Projects() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newProject, setNewProject] = useState({
@@ -130,8 +132,8 @@ export default function Projects() {
   const handleCreateProject = () => {
     if (newProject.name && newProject.location && newProject.receiverName && newProject.receiverPhone) {
       toast({
-        title: "Project Created",
-        description: `${newProject.name} has been added to your projects.`,
+        title: t("projects.toast.created_title"),
+        description: t("projects.toast.created_desc", { name: newProject.name }),
       });
       setShowCreateDialog(false);
       setNewProject({ name: "", location: "", receiverName: "", receiverPhone: "" });
@@ -144,62 +146,62 @@ export default function Projects() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Projects</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("projects.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Manage your construction sites and delivery locations
+              {t("projects.subtitle")}
             </p>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="w-full sm:w-auto">
                 <Plus className="w-4 h-4 me-2" />
-                New Project
+                {t("projects.create_new")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
+                <DialogTitle>{t("projects.create_dialog.title")}</DialogTitle>
                 <DialogDescription>
-                  Add a new construction project with delivery location details.
+                  {t("projects.create_dialog.desc")}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Project Name *</Label>
+                  <Label htmlFor="name">{t("projects.create_dialog.name")}</Label>
                   <Input
                     id="name"
-                    placeholder="e.g., Riyadh Villa Compound"
+                    placeholder={t("projects.create_dialog.name_placeholder")}
                     value={newProject.name}
                     onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location">Site Location *</Label>
+                  <Label htmlFor="location">{t("projects.create_dialog.location")}</Label>
                   <Textarea
                     id="location"
-                    placeholder="Enter the full address or use Google Maps integration"
+                    placeholder={t("projects.create_dialog.location_placeholder")}
                     value={newProject.location}
                     onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Tip: Include street name, district, and city for accurate deliveries
+                    {t("projects.create_dialog.location_tip")}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="receiver">Receiver Name *</Label>
+                    <Label htmlFor="receiver">{t("projects.create_dialog.receiver")}</Label>
                     <Input
                       id="receiver"
-                      placeholder="Site contact person"
+                      placeholder={t("projects.create_dialog.receiver_placeholder")}
                       value={newProject.receiverName}
                       onChange={(e) => setNewProject({ ...newProject, receiverName: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone">{t("projects.create_dialog.phone")}</Label>
                     <Input
                       id="phone"
-                      placeholder="+966 5X XXX XXXX"
+                      placeholder={t("projects.create_dialog.phone_placeholder")}
                       value={newProject.receiverPhone}
                       onChange={(e) => setNewProject({ ...newProject, receiverPhone: e.target.value })}
                     />
@@ -208,13 +210,13 @@ export default function Projects() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  Cancel
+                  {t("projects.create_dialog.cancel")}
                 </Button>
                 <Button
                   onClick={handleCreateProject}
                   disabled={!newProject.name || !newProject.location || !newProject.receiverName || !newProject.receiverPhone}
                 >
-                  Create Project
+                  {t("projects.create_dialog.submit")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -226,7 +228,7 @@ export default function Projects() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by project name or location..."
+              placeholder={t("projects.search_placeholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -254,7 +256,7 @@ export default function Projects() {
                       size="sm"
                       className="mt-1"
                     >
-                      {statusConfig[project.status].label}
+                      {t(statusConfig[project.status].labelKey)}
                     </StatusBadge>
                   </div>
                 </div>
@@ -267,14 +269,14 @@ export default function Projects() {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>
                       <Edit className="w-4 h-4 me-2" />
-                      Edit Project
+                      {t("projects.actions.edit")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem>View RFQs</DropdownMenuItem>
-                    <DropdownMenuItem>View Orders</DropdownMenuItem>
+                    <DropdownMenuItem>{t("projects.actions.view_rfqs")}</DropdownMenuItem>
+                    <DropdownMenuItem>{t("projects.actions.view_orders")}</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-danger">
                       <Trash2 className="w-4 h-4 me-2" />
-                      Delete Project
+                      {t("projects.actions.delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -299,17 +301,17 @@ export default function Projects() {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
                     <p className="text-lg font-bold tabular-nums">{project.rfqCount}</p>
-                    <p className="text-xs text-muted-foreground">RFQs</p>
+                    <p className="text-xs text-muted-foreground">{t("projects.metrics.rfqs")}</p>
                   </div>
                   <div>
                     <p className="text-lg font-bold tabular-nums">{project.orderCount}</p>
-                    <p className="text-xs text-muted-foreground">Orders</p>
+                    <p className="text-xs text-muted-foreground">{t("projects.metrics.orders")}</p>
                   </div>
                   <div>
                     <p className="text-lg font-bold tabular-nums text-primary">
                       {(project.totalSpent / 1000000).toFixed(1)}M
                     </p>
-                    <p className="text-xs text-muted-foreground">SAR Spent</p>
+                    <p className="text-xs text-muted-foreground">{t("projects.metrics.sar_spent")}</p>
                   </div>
                 </div>
               </div>
@@ -320,9 +322,9 @@ export default function Projects() {
         {filteredProjects.length === 0 && (
           <div className="bg-card rounded-xl border border-border p-12 text-center">
             <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">No projects found</p>
+            <p className="font-medium text-foreground">{t("projects.empty.no_projects")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Create your first project to start managing procurement
+              {t("projects.empty.desc")}
             </p>
           </div>
         )}

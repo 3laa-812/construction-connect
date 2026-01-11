@@ -3,8 +3,10 @@ import { RFQWizard } from "@/components/rfq/RFQWizard";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const RFQBuilder = () => {
+  const { t } = useLanguage();
   return (
     <AppLayout>
       <div className="p-4 lg:p-6 space-y-6">
@@ -16,9 +18,9 @@ const RFQBuilder = () => {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Create RFQ</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("rfq_builder.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Request for Quotation from your supplier network
+              {t("rfq_builder.subtitle")}
             </p>
           </div>
         </div>

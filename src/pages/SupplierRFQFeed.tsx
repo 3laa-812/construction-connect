@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { SupplierQuoteForm } from "@/components/supplier/SupplierQuoteForm";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RFQFeedItem {
   id: string;
@@ -102,12 +103,13 @@ const mockRFQFeed: RFQFeedItem[] = [
 ];
 
 const priorityConfig = {
-  urgent: { label: "Urgent", color: "danger" },
-  high: { label: "High Priority", color: "warning" },
-  normal: { label: "Normal", color: "neutral" },
+  urgent: { labelKey: "supplier_rfq_feed.card.urgent", color: "danger" },
+  high: { labelKey: "supplier_rfq_feed.card.high_priority", color: "warning" },
+  normal: { labelKey: "supplier_rfq_feed.card.normal", color: "neutral" },
 } as const;
 
 export default function SupplierRFQFeed() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedRFQ, setSelectedRFQ] = useState<RFQFeedItem | null>(null);
@@ -135,9 +137,9 @@ export default function SupplierRFQFeed() {
     const diff = closing.getTime() - now.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
-    if (days > 0) return `${days}d ${hours % 24}h left`;
-    if (hours > 0) return `${hours}h left`;
-    return "Closing soon";
+    if (days > 0) return t("supplier_rfq_feed.time.days_left", { days, hours: hours % 24 });
+    if (hours > 0) return t("supplier_rfq_feed.time.hours_left", { hours });
+    return t("supplier_rfq_feed.time.closing_soon");
   };
 
   return (
@@ -146,17 +148,17 @@ export default function SupplierRFQFeed() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">RFQ Feed</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("supplier_rfq_feed.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Browse and bid on open requests for quotation (FR-C04)
+              {t("supplier_rfq_feed.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge variant="primary">
-              {mockRFQFeed.filter((r) => r.isNew).length} New
+              {mockRFQFeed.filter((r) => r.isNew).length} {t("supplier_rfq_feed.filters.new")}
             </StatusBadge>
             <StatusBadge variant="warning">
-              {mockRFQFeed.filter((r) => r.priority === "urgent").length} Urgent
+              {mockRFQFeed.filter((r) => r.priority === "urgent").length} {t("supplier_rfq_feed.filters.urgent")}
             </StatusBadge>
           </div>
         </div>
@@ -167,7 +169,7 @@ export default function SupplierRFQFeed() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search RFQs by title, ID, or buyer..."
+                placeholder={t("supplier_rfq_feed.filters.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -176,10 +178,10 @@ export default function SupplierRFQFeed() {
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder={t("supplier_rfq_feed.filters.category_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t("supplier_rfq_feed.filters.all_categories")}</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
@@ -210,10 +212,10 @@ export default function SupplierRFQFeed() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-muted-foreground">{rfq.id}</span>
                       {rfq.isNew && (
-                        <StatusBadge variant="primary" size="sm">New</StatusBadge>
+                        <StatusBadge variant="primary" size="sm">{t("supplier_rfq_feed.filters.new")}</StatusBadge>
                       )}
                       <StatusBadge variant={priorityConfig[rfq.priority].color as any} size="sm">
-                        {priorityConfig[rfq.priority].label}
+                        {t(priorityConfig[rfq.priority].labelKey)}
                       </StatusBadge>
                     </div>
                     <h3 className="font-semibold text-foreground mt-1">{rfq.title}</h3>
@@ -233,7 +235,7 @@ export default function SupplierRFQFeed() {
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">
-                    Required by: <span className="font-medium tabular-nums">{rfq.requiredDeliveryDate}</span>
+                    {t("supplier_rfq_feed.card.required_by")}: <span className="font-medium tabular-nums">{rfq.requiredDeliveryDate}</span>
                   </span>
                 </div>
               </div>
@@ -241,7 +243,7 @@ export default function SupplierRFQFeed() {
               {/* Line Items Preview */}
               <div className="mt-4 bg-muted/50 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                  Items ({rfq.lineItems.length})
+                  {t("supplier_rfq_feed.card.items")} ({rfq.lineItems.length})
                 </p>
                 <div className="space-y-1">
                   {rfq.lineItems.slice(0, 2).map((item) => (
@@ -254,7 +256,7 @@ export default function SupplierRFQFeed() {
                   ))}
                   {rfq.lineItems.length > 2 && (
                     <p className="text-xs text-muted-foreground">
-                      +{rfq.lineItems.length - 2} more items
+                      +{rfq.lineItems.length - 2} {t("supplier_rfq_feed.card.more_items")}
                     </p>
                   )}
                 </div>
@@ -268,10 +270,10 @@ export default function SupplierRFQFeed() {
                       <span className="font-medium">{getTimeRemaining(rfq.closingDate)}</span>
                     </div>
                     <span className="text-muted-foreground">
-                      {rfq.bidCount} bids
+                      {rfq.bidCount} {t("supplier_rfq_feed.card.bids")}
                     </span>
                     {rfq.allowPartialBids && (
-                      <StatusBadge variant="neutral" size="sm">Partial OK</StatusBadge>
+                      <StatusBadge variant="neutral" size="sm">{t("supplier_rfq_feed.card.partial_ok")}</StatusBadge>
                     )}
                   </div>
                 </div>
@@ -280,11 +282,11 @@ export default function SupplierRFQFeed() {
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" size="sm" className="flex-1">
                   <Eye className="w-4 h-4 me-2" />
-                  View Details
+                  {t("supplier_rfq_feed.card.view_details")}
                 </Button>
                 <Button size="sm" className="flex-1" onClick={() => handleSubmitQuote(rfq)}>
                   <Send className="w-4 h-4 me-2" />
-                  Submit Quote
+                  {t("supplier_rfq_feed.card.submit_quote")}
                 </Button>
               </div>
             </div>
@@ -294,9 +296,9 @@ export default function SupplierRFQFeed() {
         {filteredRFQs.length === 0 && (
           <div className="bg-card rounded-xl border border-border p-12 text-center">
             <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">No RFQs found</p>
+            <p className="font-medium text-foreground">{t("supplier_rfq_feed.empty.title")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Check back later for new opportunities
+              {t("supplier_rfq_feed.empty.desc")}
             </p>
           </div>
         )}
@@ -306,7 +308,7 @@ export default function SupplierRFQFeed() {
       <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Submit Quote</DialogTitle>
+            <DialogTitle>{t("supplier_rfq_feed.dialog.submit_title")}</DialogTitle>
           </DialogHeader>
           {selectedRFQ && (
             <SupplierQuoteForm

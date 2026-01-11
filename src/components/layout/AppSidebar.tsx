@@ -102,9 +102,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div>
               <h1 className="text-sidebar-foreground font-bold text-lg tracking-tight">
-                BidFlow
+                {t("common.app_name")}
               </h1>
-              <p className="text-sidebar-foreground/50 text-xs">Procurement</p>
+              <p className="text-sidebar-foreground/50 text-xs">{t("common.procurement")}</p>
             </div>
           )}
         </div>
@@ -116,7 +116,7 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {isRTL ? "الرئيسية" : "Main"}
+              {t("common.sidebar.main")}
             </p>
           )}
           {mainNavItems.map((item) => (
@@ -130,7 +130,7 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {isRTL ? "الإدارة" : "Management"}
+              {t("common.sidebar.management")}
             </p>
           )}
           {managementNavItems.map((item, index) => (
@@ -144,7 +144,7 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {isRTL ? "المشرف" : "Admin"}
+              {t("common.sidebar.admin")}
             </p>
           )}
           {adminNavItems.map((item) => (
@@ -169,7 +169,7 @@ export function AppSidebar() {
           ) : (
             <>
               {isRTL ? <ChevronRight className="h-4 w-4 me-2" /> : <ChevronLeft className="h-4 w-4 me-2" />}
-              <span>{isRTL ? "طي" : "Collapse"}</span>
+              <span>{t("common.sidebar.collapse")}</span>
             </>
           )}
         </Button>

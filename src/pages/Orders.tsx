@@ -28,6 +28,7 @@ import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { GoodsReceivedNote } from "@/components/orders/GoodsReceivedNote";
 import { SupplierRating } from "@/components/orders/SupplierRating";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Order {
   id: string;
@@ -104,20 +105,21 @@ const mockOrders: Order[] = [
 ];
 
 const statusConfig = {
-  confirmed: { color: "primary", label: "Confirmed", icon: CheckCircle },
-  processing: { color: "warning", label: "Processing", icon: Package },
-  out_for_delivery: { color: "accent", label: "Out for Delivery", icon: Truck },
-  delivered: { color: "success", label: "Delivered", icon: MapPin },
-  completed: { color: "success", label: "Completed", icon: CheckCircle },
+  confirmed: { color: "primary", labelKey: "orders.status.confirmed", icon: CheckCircle },
+  processing: { color: "warning", labelKey: "orders.status.processing", icon: Package },
+  out_for_delivery: { color: "accent", labelKey: "orders.status.out_for_delivery", icon: Truck },
+  delivered: { color: "success", labelKey: "orders.status.delivered", icon: MapPin },
+  completed: { color: "success", labelKey: "orders.status.completed", icon: CheckCircle },
 } as const;
 
 const paymentConfig = {
-  pending: { color: "warning", label: "Payment Pending" },
-  paid: { color: "success", label: "Paid" },
-  overdue: { color: "danger", label: "Overdue" },
+  pending: { color: "warning", labelKey: "orders.payment_status.pending" },
+  paid: { color: "success", labelKey: "orders.payment_status.paid" },
+  overdue: { color: "danger", labelKey: "orders.payment_status.overdue" },
 } as const;
 
 export default function Orders() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -145,14 +147,14 @@ export default function Orders() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Orders</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("orders.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Track and manage your purchase orders
+              {t("orders.subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge variant="accent">
-              {mockOrders.filter((o) => o.status === "out_for_delivery").length} In Transit
+              {t("orders.in_transit_count", { count: mockOrders.filter((o) => o.status === "out_for_delivery").length })}
             </StatusBadge>
           </div>
         </div>
@@ -166,7 +168,7 @@ export default function Orders() {
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{mockOrders.length}</p>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-sm text-muted-foreground">{t("orders.total_orders")}</p>
               </div>
             </div>
           </div>
@@ -179,7 +181,7 @@ export default function Orders() {
                 <p className="text-2xl font-bold tabular-nums">
                   {mockOrders.filter((o) => o.status === "processing").length}
                 </p>
-                <p className="text-sm text-muted-foreground">Processing</p>
+                <p className="text-sm text-muted-foreground">{t("orders.processing")}</p>
               </div>
             </div>
           </div>
@@ -192,7 +194,7 @@ export default function Orders() {
                 <p className="text-2xl font-bold tabular-nums">
                   {mockOrders.filter((o) => o.status === "out_for_delivery").length}
                 </p>
-                <p className="text-sm text-muted-foreground">In Transit</p>
+                <p className="text-sm text-muted-foreground">{t("orders.in_transit")}</p>
               </div>
             </div>
           </div>
@@ -205,7 +207,7 @@ export default function Orders() {
                 <p className="text-2xl font-bold tabular-nums">
                   {mockOrders.filter((o) => o.status === "delivered" || o.status === "completed").length}
                 </p>
-                <p className="text-sm text-muted-foreground">Delivered</p>
+                <p className="text-sm text-muted-foreground">{t("orders.delivered")}</p>
               </div>
             </div>
           </div>
@@ -217,7 +219,7 @@ export default function Orders() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by Order ID, supplier, or project..."
+                placeholder={t("orders.search_placeholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -226,15 +228,15 @@ export default function Orders() {
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t("orders.filter.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="all">{t("orders.filter.all_status")}</SelectItem>
+                <SelectItem value="confirmed">{t("orders.filter.confirmed")}</SelectItem>
+                <SelectItem value="processing">{t("orders.filter.processing")}</SelectItem>
+                <SelectItem value="out_for_delivery">{t("orders.filter.out_for_delivery")}</SelectItem>
+                <SelectItem value="delivered">{t("orders.filter.delivered")}</SelectItem>
+                <SelectItem value="completed">{t("orders.filter.completed")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -246,13 +248,13 @@ export default function Orders() {
             <table className="w-full data-grid">
               <thead>
                 <tr>
-                  <th className="min-w-[200px]">Order Details</th>
-                  <th className="min-w-[150px]">Supplier</th>
-                  <th className="min-w-[180px]">Project</th>
-                  <th className="min-w-[130px]">Amount</th>
-                  <th className="min-w-[130px]">Status</th>
-                  <th className="min-w-[110px]">Payment</th>
-                  <th className="min-w-[100px] text-center">Actions</th>
+                  <th className="min-w-[200px]">{t("orders.order_info")}</th>
+                  <th className="min-w-[150px]">{t("orders.supplier")}</th>
+                  <th className="min-w-[180px]">{t("orders.project")}</th>
+                  <th className="min-w-[130px]">{t("orders.amount")}</th>
+                  <th className="min-w-[130px]">{t("orders.status")}</th>
+                  <th className="min-w-[110px]">{t("orders.payment")}</th>
+                  <th className="min-w-[100px] text-center">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -292,7 +294,7 @@ export default function Orders() {
                           size="sm"
                         >
                           <StatusIcon className="w-3 h-3" />
-                          {statusConfig[order.status].label}
+                          {t(statusConfig[order.status].labelKey)}
                         </StatusBadge>
                       </td>
                       <td>
@@ -300,7 +302,7 @@ export default function Orders() {
                           variant={paymentConfig[order.paymentStatus].color as any}
                           size="sm"
                         >
-                          {paymentConfig[order.paymentStatus].label}
+                          {t(paymentConfig[order.paymentStatus].labelKey)}
                         </StatusBadge>
                       </td>
                       <td className="text-center">
@@ -313,11 +315,11 @@ export default function Orders() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleViewDetails(order)}>
                               <Eye className="w-4 h-4 me-2" />
-                              View Details
+                              {t("orders.view_details")}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Truck className="w-4 h-4 me-2" />
-                              Track Shipment
+                              {t("orders.track")}
                             </DropdownMenuItem>
                             {(order.status === "delivered" || order.status === "out_for_delivery") && (
                               <DropdownMenuItem onClick={() => {
@@ -325,7 +327,7 @@ export default function Orders() {
                                 setShowGRNDialog(true);
                               }}>
                                 <ClipboardCheck className="w-4 h-4 me-2" />
-                                Confirm Receipt (GRN)
+                                {t("orders.grn_confirm")}
                               </DropdownMenuItem>
                             )}
                             {order.status === "completed" && (
@@ -334,17 +336,17 @@ export default function Orders() {
                                 setShowRatingDialog(true);
                               }}>
                                 <Star className="w-4 h-4 me-2" />
-                                Rate Supplier
+                                {t("orders.rate_supplier")}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
                               <FileText className="w-4 h-4 me-2" />
-                              View Invoice
+                              {t("orders.view_invoice")}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Download className="w-4 h-4 me-2" />
-                              Download DN
+                              {t("orders.download_dn")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -359,9 +361,9 @@ export default function Orders() {
           {filteredOrders.length === 0 && (
             <div className="p-12 text-center">
               <ShoppingCart className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="font-medium text-foreground">No orders found</p>
+              <p className="font-medium text-foreground">{t("orders.empty.no_orders")}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Try adjusting your search or filters
+                {t("orders.empty.desc")}
               </p>
             </div>
           )}
@@ -372,7 +374,7 @@ export default function Orders() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+            <DialogTitle>{t("orders.details.title")}</DialogTitle>
           </DialogHeader>
 
           {selectedOrder && (
@@ -381,23 +383,23 @@ export default function Orders() {
                 <div className="space-y-4">
                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                      Order Information
+                      {t("orders.order_info")}
                     </h4>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Order ID</span>
+                        <span className="text-muted-foreground">{t("orders.order_id")}</span>
                         <span className="font-medium">{selectedOrder.id}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">RFQ Reference</span>
+                        <span className="text-muted-foreground">{t("orders.rfq_ref")}</span>
                         <span className="font-medium">{selectedOrder.rfqId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Order Date</span>
+                        <span className="text-muted-foreground">{t("orders.order_date")}</span>
                         <span className="font-medium tabular-nums">{selectedOrder.orderDate}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Amount</span>
+                        <span className="text-muted-foreground">{t("orders.total_amount")}</span>
                         <span className="font-semibold text-primary tabular-nums">
                           SAR {selectedOrder.totalAmount.toLocaleString()}
                         </span>
@@ -407,15 +409,15 @@ export default function Orders() {
 
                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                      Supplier Details
+                      {t("orders.supplier_details")}
                     </h4>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Company</span>
+                        <span className="text-muted-foreground">{t("orders.company")}</span>
                         <span className="font-medium">{selectedOrder.supplier}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Project</span>
+                        <span className="text-muted-foreground">{t("orders.project")}</span>
                         <span className="font-medium">{selectedOrder.project}</span>
                       </div>
                     </div>
@@ -434,11 +436,11 @@ export default function Orders() {
               <div className="flex gap-3 justify-end">
                 <Button variant="outline">
                   <FileText className="w-4 h-4 me-2" />
-                  View Invoice
+                  {t("orders.view_invoice")}
                 </Button>
                 <Button variant="outline">
                   <Download className="w-4 h-4 me-2" />
-                  Download DN
+                  {t("orders.download_dn")}
                 </Button>
               </div>
             </div>

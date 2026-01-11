@@ -104,9 +104,9 @@ export default function Financials() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("financials.title")}</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("financials_page.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              {isRTL ? "الفواتير والمدفوعات وسجل المحفظة" : "Invoices, payments, and wallet ledger (FR-E01 to FR-E04)"}
+              {t("financials_page.subtitle")}
             </p>
           </div>
         </div>
@@ -115,11 +115,11 @@ export default function Financials() {
           <TabsList>
             <TabsTrigger value="invoices" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              {t("financials.invoices")}
+              {t("financials_page.tabs.invoices")}
             </TabsTrigger>
             <TabsTrigger value="wallet" className="flex items-center gap-2">
               <Wallet className="w-4 h-4" />
-              {t("financials.wallet")}
+              {t("financials_page.tabs.wallet")}
             </TabsTrigger>
           </TabsList>
 
@@ -131,7 +131,7 @@ export default function Financials() {
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <FileText className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wider">
-                    {isRTL ? "إجمالي الفواتير" : "Total Invoices"}
+                    {t("financials_page.summary.total_invoices")}
                   </span>
                 </div>
                 <p className="text-2xl font-bold tabular-nums">{mockInvoices.length}</p>
@@ -140,7 +140,7 @@ export default function Financials() {
                 <div className="flex items-center gap-2 text-warning mb-2">
                   <Receipt className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wider">
-                    {isRTL ? "مدفوعات معلقة" : "Pending Payment"}
+                    {t("financials_page.summary.pending_payment")}
                   </span>
                 </div>
                 <p className="text-2xl font-bold text-warning tabular-nums">
@@ -151,7 +151,7 @@ export default function Financials() {
                 <div className="flex items-center gap-2 text-success mb-2">
                   <CreditCard className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wider">
-                    {isRTL ? "المدفوع هذا الشهر" : "Paid This Month"}
+                    {t("financials_page.summary.paid_this_month")}
                   </span>
                 </div>
                 <p className="text-2xl font-bold text-success tabular-nums">
@@ -162,7 +162,7 @@ export default function Financials() {
                 <div className="flex items-center gap-2 text-danger mb-2">
                   <Receipt className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wider">
-                    {isRTL ? "متأخر" : "Overdue"}
+                    {t("financials_page.summary.overdue")}
                   </span>
                 </div>
                 <p className="text-2xl font-bold text-danger tabular-nums">
@@ -178,13 +178,13 @@ export default function Financials() {
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {isRTL ? "الفاتورة" : "Invoice"}
+                        {t("financials_page.table.invoice")}
                       </th>
                       <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {t("bids.supplier")}
+                        {t("financials_page.table.supplier")}
                       </th>
                       <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {isRTL ? "الطلب" : "Order"}
+                        {t("financials_page.table.order")}
                       </th>
                       <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
                         {t("common.date")}
@@ -224,10 +224,10 @@ export default function Financials() {
                             size="sm"
                           >
                             {invoice.status === "paid" 
-                              ? (isRTL ? "مدفوع" : "Paid") 
+                              ? t("financials_page.status.paid") 
                               : invoice.status === "sent" 
-                                ? (isRTL ? "مرسل" : "Sent") 
-                                : (isRTL ? "مسودة" : "Draft")}
+                                ? t("financials_page.status.sent") 
+                                : t("financials_page.status.draft")}
                           </StatusBadge>
                         </td>
                         <td className="p-3">
