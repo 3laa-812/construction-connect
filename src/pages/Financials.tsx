@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WalletLedger } from "@/components/financials/WalletLedger";
 import { InvoiceView } from "@/components/financials/InvoiceView";
 import { PaymentUpload } from "@/components/financials/PaymentUpload";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // Mock data for invoices
 const mockInvoices = [
@@ -87,6 +88,7 @@ const mockTransactions = [
 ];
 
 export default function Financials() {
+  const { t, isRTL } = useLanguage();
   const [selectedInvoice, setSelectedInvoice] = useState<typeof mockInvoices[0] | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -102,9 +104,9 @@ export default function Financials() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Financials</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("financials.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Invoices, payments, and wallet ledger (FR-E01 to FR-E04)
+              {isRTL ? "الفواتير والمدفوعات وسجل المحفظة" : "Invoices, payments, and wallet ledger (FR-E01 to FR-E04)"}
             </p>
           </div>
         </div>
@@ -113,11 +115,11 @@ export default function Financials() {
           <TabsList>
             <TabsTrigger value="invoices" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Invoices
+              {t("financials.invoices")}
             </TabsTrigger>
             <TabsTrigger value="wallet" className="flex items-center gap-2">
               <Wallet className="w-4 h-4" />
-              Wallet & Ledger
+              {t("financials.wallet")}
             </TabsTrigger>
           </TabsList>
 
@@ -128,14 +130,18 @@ export default function Financials() {
               <div className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <FileText className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Total Invoices</span>
+                  <span className="text-xs uppercase tracking-wider">
+                    {isRTL ? "إجمالي الفواتير" : "Total Invoices"}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold tabular-nums">{mockInvoices.length}</p>
               </div>
               <div className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center gap-2 text-warning mb-2">
                   <Receipt className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Pending Payment</span>
+                  <span className="text-xs uppercase tracking-wider">
+                    {isRTL ? "مدفوعات معلقة" : "Pending Payment"}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold text-warning tabular-nums">
                   SAR {pendingAmount.toLocaleString()}
@@ -144,7 +150,9 @@ export default function Financials() {
               <div className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center gap-2 text-success mb-2">
                   <CreditCard className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Paid This Month</span>
+                  <span className="text-xs uppercase tracking-wider">
+                    {isRTL ? "المدفوع هذا الشهر" : "Paid This Month"}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold text-success tabular-nums">
                   SAR {mockInvoices.filter(i => i.status === "paid").reduce((s, i) => s + i.total, 0).toLocaleString()}
@@ -153,7 +161,9 @@ export default function Financials() {
               <div className="bg-card rounded-xl border border-border p-4">
                 <div className="flex items-center gap-2 text-danger mb-2">
                   <Receipt className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wider">Overdue</span>
+                  <span className="text-xs uppercase tracking-wider">
+                    {isRTL ? "متأخر" : "Overdue"}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold text-danger tabular-nums">
                   SAR 0
@@ -167,13 +177,27 @@ export default function Financials() {
                 <table className="w-full">
                   <thead className="bg-muted/50">
                     <tr>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground">Invoice</th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground">Supplier</th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground">Order</th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground">Date</th>
-                      <th className="text-end p-3 text-sm font-medium text-muted-foreground">Amount</th>
-                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                        {isRTL ? "الفاتورة" : "Invoice"}
+                      </th>
+                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                        {t("bids.supplier")}
+                      </th>
+                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                        {isRTL ? "الطلب" : "Order"}
+                      </th>
+                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                        {t("common.date")}
+                      </th>
+                      <th className="text-end p-3 text-sm font-medium text-muted-foreground rtl:text-left">
+                        {t("common.amount")}
+                      </th>
+                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">
+                        {t("common.status")}
+                      </th>
+                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">
+                        {t("common.actions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -187,11 +211,11 @@ export default function Financials() {
                           <p className="font-medium text-foreground">{invoice.invoiceNumber}</p>
                         </td>
                         <td className="p-3">
-                          <p className="font-medium">{invoice.seller.name}</p>
+                          <p className="font-medium">{isRTL ? invoice.seller.nameAr : invoice.seller.name}</p>
                         </td>
                         <td className="p-3 text-muted-foreground">{invoice.orderId}</td>
                         <td className="p-3 text-muted-foreground tabular-nums">{invoice.invoiceDate}</td>
-                        <td className="p-3 text-end font-semibold tabular-nums">
+                        <td className="p-3 text-end font-semibold tabular-nums rtl:text-start">
                           SAR {invoice.total.toLocaleString()}
                         </td>
                         <td className="p-3 text-center">
@@ -199,7 +223,11 @@ export default function Financials() {
                             variant={invoice.status === "paid" ? "success" : invoice.status === "sent" ? "primary" : "warning"}
                             size="sm"
                           >
-                            {invoice.status === "paid" ? "Paid" : invoice.status === "sent" ? "Sent" : "Draft"}
+                            {invoice.status === "paid" 
+                              ? (isRTL ? "مدفوع" : "Paid") 
+                              : invoice.status === "sent" 
+                                ? (isRTL ? "مرسل" : "Sent") 
+                                : (isRTL ? "مسودة" : "Draft")}
                           </StatusBadge>
                         </td>
                         <td className="p-3">
@@ -242,7 +270,7 @@ export default function Financials() {
           {/* Wallet Tab */}
           <TabsContent value="wallet">
             <WalletLedger
-              companyName="BuildPro Construction LLC"
+              companyName={isRTL ? "بيلد برو للمقاولات" : "BuildPro Construction LLC"}
               totalSpent={12500000}
               outstandingDues={pendingAmount}
               transactions={mockTransactions}

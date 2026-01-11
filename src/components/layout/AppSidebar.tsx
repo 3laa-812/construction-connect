@@ -19,38 +19,39 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface NavItem {
-  title: string;
-  titleAr: string;
+  titleKey: string;
   href: string;
   icon: React.ElementType;
   badge?: number;
 }
 
 const mainNavItems: NavItem[] = [
-  { title: "Dashboard", titleAr: "لوحة التحكم", href: "/", icon: LayoutDashboard },
-  { title: "RFQs", titleAr: "طلبات عروض الأسعار", href: "/rfqs", icon: FileText, badge: 5 },
-  { title: "Bids", titleAr: "العطاءات", href: "/bids", icon: TrendingUp, badge: 12 },
-  { title: "Orders", titleAr: "الطلبات", href: "/orders", icon: ShoppingCart },
-  { title: "Financials", titleAr: "المالية", href: "/financials", icon: Wallet },
+  { titleKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
+  { titleKey: "nav.rfqs", href: "/rfqs", icon: FileText, badge: 5 },
+  { titleKey: "nav.bids", href: "/bids", icon: TrendingUp, badge: 12 },
+  { titleKey: "nav.orders", href: "/orders", icon: ShoppingCart },
+  { titleKey: "nav.financials", href: "/financials", icon: Wallet },
 ];
 
 const managementNavItems: NavItem[] = [
-  { title: "Suppliers", titleAr: "الموردين", href: "/suppliers", icon: Building2 },
-  { title: "Supplier Portal", titleAr: "بوابة الموردين", href: "/supplier/rfq-feed", icon: Store },
-  { title: "Projects", titleAr: "المشاريع", href: "/projects", icon: ClipboardList },
-  { title: "Users", titleAr: "المستخدمين", href: "/users", icon: Users },
+  { titleKey: "nav.suppliers", href: "/suppliers", icon: Building2 },
+  { titleKey: "nav.supplier_portal", href: "/supplier/rfq-feed", icon: Store },
+  { titleKey: "nav.projects", href: "/projects", icon: ClipboardList },
+  { titleKey: "nav.suppliers", href: "/users", icon: Users },
 ];
 
 const adminNavItems: NavItem[] = [
-  { title: "Approvals", titleAr: "الموافقات", href: "/approvals", icon: Shield, badge: 3 },
-  { title: "Settings", titleAr: "الإعدادات", href: "/settings", icon: Settings },
+  { titleKey: "nav.approvals", href: "/approvals", icon: Shield, badge: 3 },
+  { titleKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { t, isRTL } = useLanguage();
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
@@ -70,7 +71,7 @@ export function AppSidebar() {
       <item.icon className="h-5 w-5 shrink-0" />
       {!collapsed && (
         <>
-          <span className="flex-1 truncate">{item.title}</span>
+          <span className="flex-1 truncate">{t(item.titleKey)}</span>
           {item.badge && (
             <span className="bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
               {item.badge}
@@ -84,7 +85,8 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        "hidden lg:flex flex-col bg-sidebar border-sidebar-border transition-all duration-300",
+        isRTL ? "border-l" : "border-r",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -114,7 +116,7 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              Main
+              {isRTL ? "الرئيسية" : "Main"}
             </p>
           )}
           {mainNavItems.map((item) => (
@@ -128,11 +130,11 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              Management
+              {isRTL ? "الإدارة" : "Management"}
             </p>
           )}
-          {managementNavItems.map((item) => (
-            <NavItemComponent key={item.href} item={item} />
+          {managementNavItems.map((item, index) => (
+            <NavItemComponent key={`${item.href}-${index}`} item={item} />
           ))}
         </div>
 
@@ -142,7 +144,7 @@ export function AppSidebar() {
         <div className="space-y-1">
           {!collapsed && (
             <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              Admin
+              {isRTL ? "المشرف" : "Admin"}
             </p>
           )}
           {adminNavItems.map((item) => (
@@ -163,11 +165,11 @@ export function AppSidebar() {
           )}
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
           ) : (
             <>
-              <ChevronLeft className="h-4 w-4 me-2" />
-              <span>Collapse</span>
+              {isRTL ? <ChevronRight className="h-4 w-4 me-2" /> : <ChevronLeft className="h-4 w-4 me-2" />}
+              <span>{isRTL ? "طي" : "Collapse"}</span>
             </>
           )}
         </Button>

@@ -7,23 +7,25 @@ import {
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface NavItem {
-  title: string;
+  titleKey: string;
   href: string;
   icon: React.ElementType;
 }
 
 const mobileNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "RFQs", href: "/rfqs", icon: FileText },
-  { title: "Bids", href: "/bids", icon: TrendingUp },
-  { title: "Orders", href: "/orders", icon: ShoppingCart },
-  { title: "More", href: "/menu", icon: Menu },
+  { titleKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
+  { titleKey: "nav.rfqs", href: "/rfqs", icon: FileText },
+  { titleKey: "nav.bids", href: "/bids", icon: TrendingUp },
+  { titleKey: "nav.orders", href: "/orders", icon: ShoppingCart },
+  { titleKey: "nav.more", href: "/menu", icon: Menu },
 ];
 
 export function MobileNav() {
   const location = useLocation();
+  const { t } = useLanguage();
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
@@ -51,7 +53,7 @@ export function MobileNav() {
               "text-xs font-medium truncate",
               isActive(item.href) && "text-primary"
             )}>
-              {item.title}
+              {t(item.titleKey)}
             </span>
           </NavLink>
         ))}

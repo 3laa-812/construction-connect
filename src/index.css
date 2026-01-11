@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 /* Industrial Professional Design System */
 @layer base {
   :root {
@@ -112,6 +112,10 @@
   /* RTL Support */
   [dir="rtl"] {
     direction: rtl;
+  }
+
+  [lang="ar"] {
+    font-family: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
   }
 }
 

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface StatsCardProps {
   title: string;
@@ -21,6 +22,8 @@ const iconColorMap = {
 };
 
 export function StatsCard({ title, value, change, icon: Icon, iconColor = "primary" }: StatsCardProps) {
+  const { isRTL, t } = useLanguage();
+
   return (
     <div className="bg-card rounded-xl border border-border p-6 animate-fade-in">
       <div className="flex items-start justify-between">
@@ -37,7 +40,7 @@ export function StatsCard({ title, value, change, icon: Icon, iconColor = "prima
               >
                 {change.type === "increase" ? "+" : "-"}{Math.abs(change.value)}%
               </span>
-              <span className="text-xs text-muted-foreground">vs last month</span>
+              <span className="text-xs text-muted-foreground">{t("dashboard.vs_last_month")}</span>
             </div>
           )}
         </div>

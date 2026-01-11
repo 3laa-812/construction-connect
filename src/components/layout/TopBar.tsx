@@ -1,4 +1,4 @@
-import { Bell, Search, User, Globe } from "lucide-react";
+import { Bell, Search, User, Globe, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,8 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { cn } from "@/lib/utils";
 
 export function TopBar() {
+  const { language, setLanguage, t, isRTL } = useLanguage();
+
   return (
     <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between gap-4">
       {/* Mobile Logo */}
@@ -25,10 +29,13 @@ export function TopBar() {
       {/* Search - Desktop */}
       <div className="hidden lg:flex flex-1 max-w-md">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className={cn(
+            "absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+            isRTL ? "right-3" : "left-3"
+          )} />
           <Input
-            placeholder="Search RFQs, Orders, Suppliers..."
-            className="pl-10 bg-secondary border-0"
+            placeholder={t("common.search_placeholder")}
+            className={cn("bg-secondary border-0", isRTL ? "pr-10" : "pl-10")}
           />
         </div>
       </div>
@@ -42,9 +49,21 @@ export function TopBar() {
               <Globe className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>English</DropdownMenuItem>
-            <DropdownMenuItem>العربية</DropdownMenuItem>
+          <DropdownMenuContent align={isRTL ? "start" : "end"}>
+            <DropdownMenuItem 
+              onClick={() => setLanguage("en")}
+              className="flex items-center justify-between gap-2"
+            >
+              <span>{t("language.english")}</span>
+              {language === "en" && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setLanguage("ar")}
+              className="flex items-center justify-between gap-2"
+            >
+              <span>{t("language.arabic")}</span>
+              {language === "ar" && <Check className="h-4 w-4 text-primary" />}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -53,22 +72,25 @@ export function TopBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative text-muted-foreground">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full" />
+              <span className={cn(
+                "absolute top-1 w-2 h-2 bg-danger rounded-full",
+                isRTL ? "left-1" : "right-1"
+              )} />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+          <DropdownMenuContent align={isRTL ? "start" : "end"} className="w-80">
+            <DropdownMenuLabel>{t("common.notifications")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
               <div className="flex items-center gap-2">
-                <StatusBadge variant="primary" size="sm">New Bid</StatusBadge>
+                <StatusBadge variant="primary" size="sm">{t("notification.new_bid")}</StatusBadge>
                 <span className="text-xs text-muted-foreground">2 min ago</span>
               </div>
               <p className="text-sm">Saudi Ceramics submitted a bid for RFQ-2024-0158</p>
             </DropdownMenuItem>
             <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
               <div className="flex items-center gap-2">
-                <StatusBadge variant="success" size="sm">Delivered</StatusBadge>
+                <StatusBadge variant="success" size="sm">{t("notification.delivered")}</StatusBadge>
                 <span className="text-xs text-muted-foreground">1 hour ago</span>
               </div>
               <p className="text-sm">Order #ORD-2024-0842 has been delivered</p>
@@ -85,7 +107,7 @@ export function TopBar() {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align={isRTL ? "start" : "end"}>
             <DropdownMenuLabel>
               <div>
                 <p className="font-medium">Ahmed Al-Rashid</p>
@@ -93,10 +115,10 @@ export function TopBar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
+            <DropdownMenuItem>{t("common.profile")}</DropdownMenuItem>
+            <DropdownMenuItem>{t("nav.settings")}</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-danger">Sign out</DropdownMenuItem>
+            <DropdownMenuItem className="text-danger">{t("common.sign_out")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
