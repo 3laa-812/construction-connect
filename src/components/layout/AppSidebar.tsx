@@ -13,6 +13,8 @@ import {
   ClipboardList,
   TrendingUp,
   Shield,
+  Wallet,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,11 +33,12 @@ const mainNavItems: NavItem[] = [
   { title: "RFQs", titleAr: "طلبات عروض الأسعار", href: "/rfqs", icon: FileText, badge: 5 },
   { title: "Bids", titleAr: "العطاءات", href: "/bids", icon: TrendingUp, badge: 12 },
   { title: "Orders", titleAr: "الطلبات", href: "/orders", icon: ShoppingCart },
-  { title: "Products", titleAr: "المنتجات", href: "/products", icon: Package },
+  { title: "Financials", titleAr: "المالية", href: "/financials", icon: Wallet },
 ];
 
 const managementNavItems: NavItem[] = [
   { title: "Suppliers", titleAr: "الموردين", href: "/suppliers", icon: Building2 },
+  { title: "Supplier Portal", titleAr: "بوابة الموردين", href: "/supplier/rfq-feed", icon: Store },
   { title: "Projects", titleAr: "المشاريع", href: "/projects", icon: ClipboardList },
   { title: "Users", titleAr: "المستخدمين", href: "/users", icon: Users },
 ];

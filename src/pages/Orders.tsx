@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Filter, ShoppingCart, Clock, Package, Truck, MapPin, CheckCircle, FileText, Download, Eye, MoreHorizontal } from "lucide-react";
+import { Search, Filter, ShoppingCart, Clock, Package, Truck, MapPin, CheckCircle, FileText, Download, Eye, MoreHorizontal, ClipboardCheck, Star } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { GoodsReceivedNote } from "@/components/orders/GoodsReceivedNote";
+import { SupplierRating } from "@/components/orders/SupplierRating";
 import { cn } from "@/lib/utils";
 
 interface Order {
@@ -120,6 +122,8 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showGRNDialog, setShowGRNDialog] = useState(false);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   const filteredOrders = mockOrders.filter((order) => {
     const matchesSearch =
@@ -315,6 +319,24 @@ export default function Orders() {
                               <Truck className="w-4 h-4 me-2" />
                               Track Shipment
                             </DropdownMenuItem>
+                            {(order.status === "delivered" || order.status === "out_for_delivery") && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setShowGRNDialog(true);
+                              }}>
+                                <ClipboardCheck className="w-4 h-4 me-2" />
+                                Confirm Receipt (GRN)
+                              </DropdownMenuItem>
+                            )}
+                            {order.status === "completed" && (
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedOrder(order);
+                                setShowRatingDialog(true);
+                              }}>
+                                <Star className="w-4 h-4 me-2" />
+                                Rate Supplier
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
                               <FileText className="w-4 h-4 me-2" />
@@ -423,6 +445,35 @@ export default function Orders() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* GRN Dialog */}
+      {selectedOrder && (
+        <GoodsReceivedNote
+          orderId={selectedOrder.id}
+          supplier={selectedOrder.supplier}
+          lineItems={[
+            { id: "1", productName: selectedOrder.items.split(" - ")[0] || selectedOrder.items, quantity: 5000, unit: "bags" }
+          ]}
+          open={showGRNDialog}
+          onOpenChange={setShowGRNDialog}
+          onConfirm={() => {
+            setShowGRNDialog(false);
+          }}
+        />
+      )}
+
+      {/* Supplier Rating Dialog */}
+      {selectedOrder && (
+        <SupplierRating
+          orderId={selectedOrder.id}
+          supplier={selectedOrder.supplier}
+          open={showRatingDialog}
+          onOpenChange={setShowRatingDialog}
+          onSubmit={() => {
+            setShowRatingDialog(false);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }
