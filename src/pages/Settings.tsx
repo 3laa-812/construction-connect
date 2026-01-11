@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Globe, CreditCard, Percent, Save } from "lucide-react";
+import { Settings as SettingsIcon, User, Building2, Bell, Shield, Palette, Globe, CreditCard, Percent, Save, Users, Package } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { TeamManagement } from "@/components/admin/TeamManagement";
+import { CatalogManagement } from "@/components/admin/CatalogManagement";
 
 export default function Settings() {
   const [commissionRate, setCommissionRate] = useState("2.5");
@@ -38,7 +40,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="bg-card border border-border">
+          <TabsList className="bg-card border border-border flex-wrap h-auto">
             <TabsTrigger value="profile">
               <User className="w-4 h-4 me-2" />
               Profile
@@ -50,6 +52,14 @@ export default function Settings() {
             <TabsTrigger value="notifications">
               <Bell className="w-4 h-4 me-2" />
               Notifications
+            </TabsTrigger>
+            <TabsTrigger value="team">
+              <Users className="w-4 h-4 me-2" />
+              Team
+            </TabsTrigger>
+            <TabsTrigger value="catalog">
+              <Package className="w-4 h-4 me-2" />
+              Catalog
             </TabsTrigger>
             <TabsTrigger value="admin">
               <Shield className="w-4 h-4 me-2" />
@@ -234,6 +244,16 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          {/* Team Tab - FR-A04 */}
+          <TabsContent value="team" className="space-y-6">
+            <TeamManagement />
+          </TabsContent>
+
+          {/* Catalog Tab - FR-F02 */}
+          <TabsContent value="catalog" className="space-y-6">
+            <CatalogManagement />
           </TabsContent>
 
           {/* Admin Tab - FR-F03 Commission Config */}
