@@ -1,4 +1,4 @@
-import { FileText, ShoppingCart, TrendingUp, Package, Plus, ArrowRight } from "lucide-react";
+import { FileText, ShoppingCart, TrendingUp, Package, Plus, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -7,53 +7,57 @@ import { BidComparisonTable } from "@/components/bids/BidComparisonTable";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { KYBApprovalCard } from "@/components/admin/KYBApprovalCard";
 import { Button } from "@/components/ui/button";
-
-const stats = [
-  {
-    title: "Active RFQs",
-    value: 12,
-    change: { value: 8, type: "increase" as const },
-    icon: FileText,
-    iconColor: "primary" as const,
-  },
-  {
-    title: "Pending Bids",
-    value: 47,
-    change: { value: 12, type: "increase" as const },
-    icon: TrendingUp,
-    iconColor: "success" as const,
-  },
-  {
-    title: "Orders This Month",
-    value: 156,
-    change: { value: 5, type: "decrease" as const },
-    icon: ShoppingCart,
-    iconColor: "accent" as const,
-  },
-  {
-    title: "Deliveries Pending",
-    value: 23,
-    icon: Package,
-    iconColor: "warning" as const,
-  },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Index = () => {
+  const { t, isRTL } = useLanguage();
+  const ArrowIcon = isRTL ? ArrowLeft : ArrowRight;
+
+  const stats = [
+    {
+      title: t("dashboard.active_rfqs"),
+      value: 12,
+      change: { value: 8, type: "increase" as const },
+      icon: FileText,
+      iconColor: "primary" as const,
+    },
+    {
+      title: t("dashboard.pending_orders"),
+      value: 47,
+      change: { value: 12, type: "increase" as const },
+      icon: TrendingUp,
+      iconColor: "success" as const,
+    },
+    {
+      title: isRTL ? "الطلبات هذا الشهر" : "Orders This Month",
+      value: 156,
+      change: { value: 5, type: "decrease" as const },
+      icon: ShoppingCart,
+      iconColor: "accent" as const,
+    },
+    {
+      title: isRTL ? "التسليمات المعلقة" : "Deliveries Pending",
+      value: 23,
+      icon: Package,
+      iconColor: "warning" as const,
+    },
+  ];
+
   return (
     <AppLayout>
       <div className="p-4 lg:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("dashboard.title")}</h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, Ahmed. Here's your procurement overview.
+              {isRTL ? "مرحباً بعودتك، أحمد. إليك نظرة عامة على المشتريات." : "Welcome back, Ahmed. Here's your procurement overview."}
             </p>
           </div>
           <Link to="/rfqs/new">
             <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 me-2" />
-              New RFQ
+              {isRTL ? "طلب عرض أسعار جديد" : "New RFQ"}
             </Button>
           </Link>
         </div>
@@ -88,7 +92,9 @@ const Index = () => {
           
           {/* Quick Links */}
           <div className="bg-card rounded-xl border border-border p-6">
-            <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
+            <h3 className="font-semibold text-foreground mb-4">
+              {isRTL ? "إجراءات سريعة" : "Quick Actions"}
+            </h3>
             <div className="grid gap-3">
               <Link
                 to="/rfqs/new"
@@ -99,11 +105,15 @@ const Index = () => {
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">Create New RFQ</p>
-                    <p className="text-sm text-muted-foreground">Request quotes from suppliers</p>
+                    <p className="font-medium text-foreground">
+                      {isRTL ? "إنشاء طلب عرض أسعار جديد" : "Create New RFQ"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isRTL ? "طلب عروض أسعار من الموردين" : "Request quotes from suppliers"}
+                    </p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                <ArrowIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </Link>
 
               <Link
@@ -115,11 +125,15 @@ const Index = () => {
                     <TrendingUp className="w-5 h-5 text-accent" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">Manage Suppliers</p>
-                    <p className="text-sm text-muted-foreground">View and manage supplier network</p>
+                    <p className="font-medium text-foreground">
+                      {isRTL ? "إدارة الموردين" : "Manage Suppliers"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isRTL ? "عرض وإدارة شبكة الموردين" : "View and manage supplier network"}
+                    </p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors" />
+                <ArrowIcon className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors" />
               </Link>
 
               <Link
@@ -131,11 +145,15 @@ const Index = () => {
                     <Package className="w-5 h-5 text-success" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">Track Orders</p>
-                    <p className="text-sm text-muted-foreground">Monitor deliveries and fulfillment</p>
+                    <p className="font-medium text-foreground">
+                      {isRTL ? "تتبع الطلبات" : "Track Orders"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {isRTL ? "مراقبة التسليم والتنفيذ" : "Monitor deliveries and fulfillment"}
+                    </p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-success transition-colors" />
+                <ArrowIcon className="w-5 h-5 text-muted-foreground group-hover:text-success transition-colors" />
               </Link>
             </div>
           </div>
