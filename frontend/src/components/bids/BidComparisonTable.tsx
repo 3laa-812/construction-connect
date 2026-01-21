@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Award, ChevronDown, ChevronUp, Star, Truck, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -13,8 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
-interface Bid {
+interface AdaptedBid {
   id: string;
   supplierName: string;
   supplierRating: number;
@@ -28,63 +30,82 @@ interface Bid {
   isEarliestDelivery?: boolean;
 }
 
-const mockBids: Bid[] = [
-  {
-    id: "bid-001",
-    supplierName: "Saudi Ceramics",
-    supplierRating: 4.8,
-    unitPrice: 45.00,
-    totalPrice: 225000,
-    deliveryDate: "2024-02-15",
-    deliveryDays: 7,
-    score: 92,
-    isLowestPrice: false,
-    isEarliestDelivery: true,
-  },
-  {
-    id: "bid-002",
-    supplierName: "Ezz Steel Industries",
-    supplierRating: 4.5,
-    unitPrice: 42.50,
-    totalPrice: 212500,
-    deliveryDate: "2024-02-18",
-    deliveryDays: 10,
-    score: 88,
-    isLowestPrice: true,
-    isEarliestDelivery: false,
-  },
-  {
-    id: "bid-003",
-    supplierName: "Arabian Cement Co.",
-    supplierRating: 4.2,
-    unitPrice: 44.00,
-    totalPrice: 220000,
-    deliveryDate: "2024-02-20",
-    deliveryDays: 12,
-    score: 85,
-    notes: "Bulk discount available for orders > 10,000 units",
-  },
-  {
-    id: "bid-004",
-    supplierName: "Al-Bawani Materials",
-    supplierRating: 4.6,
-    unitPrice: 46.50,
-    totalPrice: 232500,
-    deliveryDate: "2024-02-17",
-    deliveryDays: 9,
-    score: 90,
-  },
-];
+type ApiBid = {
+  id: string;
+  total_price?: number;
+  valid_until?: string | null;
+  created_at?: string;
+  supplier?: { name?: string };
+  items?: Array<{ unit_price?: number | null }>;
+};
+
+type ApiRFQ = {
+  id: string;
+  deadline?: string | null;
+  items?: Array<{ product_name?: string }>;
+  bids?: ApiBid[];
+};
 
 type SortKey = "totalPrice" | "deliveryDays" | "score" | "supplierRating";
 
 export function BidComparisonTable() {
   const { t } = useLanguage();
-  const [bids, setBids] = useState(mockBids);
+  const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
+    queryKey: ["rfqs", "bid-comparison"],
+    queryFn: async () => (await api.get("/rfqs")).data,
+  });
+
+  const [selectedBid, setSelectedBid] = useState<AdaptedBid | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("score");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
   const [showAwardDialog, setShowAwardDialog] = useState(false);
+
+  const { rfqTitle, bids } = useMemo(() => {
+    if (!data || data.length === 0) {
+      return { rfqTitle: "", bids: [] as AdaptedBid[] };
+    }
+    const rfqWithBids = data.find((r) => (r.bids?.length || 0) > 0) || data[0];
+    const title = rfqWithBids.items?.[0]?.product_name || rfqWithBids.id;
+
+    const adapted: AdaptedBid[] = (rfqWithBids.bids || []).map((bid) => {
+      const unitPrice = bid.items?.[0]?.unit_price ? Number(bid.items[0].unit_price) : 0;
+      const totalPrice = Number(bid.total_price || unitPrice);
+      const now = Date.now();
+      const deliveryDays = bid.valid_until
+        ? Math.max(1, Math.round((new Date(bid.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)))
+        : 7;
+      const deliveryDate = bid.valid_until
+        ? new Date(bid.valid_until).toISOString().split("T")[0]
+        : new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+      const priceScore = totalPrice > 0 ? Math.min(100, (Math.min(...(rfqWithBids.bids || []).map((b) => Number(b.total_price || unitPrice))) / totalPrice) * 100) : 0;
+      const deliveryScore = Math.max(0, 100 - deliveryDays * 3);
+      const score = Math.round((priceScore * 0.6 + deliveryScore * 0.4));
+
+      return {
+        id: bid.id,
+        supplierName: bid.supplier?.name || "Supplier",
+        supplierRating: 4.5,
+        unitPrice,
+        totalPrice,
+        deliveryDate,
+        deliveryDays,
+        score,
+        notes: undefined,
+      };
+    });
+
+    if (adapted.length > 0) {
+      const minPrice = Math.min(...adapted.map((b) => b.totalPrice));
+      const minDelivery = Math.min(...adapted.map((b) => b.deliveryDays));
+      adapted.forEach((b) => {
+        b.isLowestPrice = b.totalPrice === minPrice;
+        b.isEarliestDelivery = b.deliveryDays === minDelivery;
+      });
+    }
+
+    return { rfqTitle: title, bids: adapted };
+  }, [data]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -100,7 +121,7 @@ export function BidComparisonTable() {
     return (a[sortKey] - b[sortKey]) * multiplier;
   });
 
-  const handleAward = (bid: Bid) => {
+  const handleAward = (bid: AdaptedBid) => {
     setSelectedBid(bid);
     setShowAwardDialog(true);
   };
@@ -141,7 +162,9 @@ export function BidComparisonTable() {
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-foreground">{t("bids.comparison.title")}</h3>
-            <p className="text-sm text-muted-foreground">RFQ-2024-0162 · Portland Cement Type I</p>
+            <p className="text-sm text-muted-foreground">
+              {isLoading || isError || !rfqTitle ? t("bids.comparison.empty_rfq") : rfqTitle}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge variant="primary">{bids.length} {t("bids.comparison.total_bids")}</StatusBadge>
@@ -169,7 +192,26 @@ export function BidComparisonTable() {
               </tr>
             </thead>
             <tbody>
-              {sortedBids.map((bid, index) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    Loading bids...
+                  </td>
+                </tr>
+              ) : isError ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-danger">
+                    Failed to load bids
+                  </td>
+                </tr>
+              ) : sortedBids.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    {t("bids.comparison.no_bids")}
+                  </td>
+                </tr>
+              ) : (
+              sortedBids.map((bid, index) => (
                 <tr
                   key={bid.id}
                   className={cn(
@@ -253,7 +295,8 @@ export function BidComparisonTable() {
                     </Button>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

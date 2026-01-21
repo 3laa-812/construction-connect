@@ -41,6 +41,32 @@ export function WalletLedger({
 }: WalletLedgerProps) {
   const [periodFilter, setPeriodFilter] = useState("all");
 
+  const handleDownload = () => {
+    const csvRows = [
+      ["Date", "Description", "Reference", "Type", "Amount", "Balance", "Status"],
+      ...filteredTransactions.map((tx) => [
+        tx.date,
+        tx.description,
+        tx.orderId || tx.invoiceId || "-",
+        tx.type === "credit" ? "Credit" : "Debit",
+        `SAR ${tx.amount.toLocaleString()}`,
+        `SAR ${tx.balance.toLocaleString()}`,
+        tx.status,
+      ]),
+    ];
+
+    const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `wallet-transactions-${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredTransactions = transactions.filter((t) => {
     if (periodFilter === "all") return true;
     const txDate = new Date(t.date);
@@ -89,7 +115,7 @@ export function WalletLedger({
               <SelectItem value="90d">Last 90 Days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handleDownload} title="Download transactions as CSV">
             <Download className="w-4 h-4" />
           </Button>
         </div>

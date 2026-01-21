@@ -45,11 +45,18 @@
     "no_data": "No data available",
     "app_name": "Construction Connect",
     "procurement": "Procurement Management",
+    "procurement_manager": "Procurement Manager",
     "sidebar": {
       "main": "Main",
       "management": "Management",
       "admin": "Admin",
       "collapse": "Collapse Sidebar"
+    },
+    "notification_items": {
+      "new_bid_title": "New Bid",
+      "new_bid_desc": "TechSteel Ltd submitted a bid for 'Steel Rebar'",
+      "delivered_title": "Delivered",
+      "delivered_desc": "Cement delivery at Site A confirmed"
     }
   },
   "dashboard": {
@@ -869,5 +876,49 @@
   "language": {
     "english": "English",
     "arabic": "العربية"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Sign in to your account",
+      "email": "Email",
+      "password": "Password",
+      "forgot_password": "Forgot password?",
+      "sign_in": "Sign In",
+      "signing_in": "Signing in...",
+      "no_account": "Don't have an account?",
+      "sign_up": "Sign up"
+    },
+    "register": {
+      "title": "Create Account",
+      "subtitle": "Join the Construction Connect Network",
+      "step1_title": "Basic Information",
+      "step1_desc": "Let's start with your personal details",
+      "step2_title": "Company Details",
+      "step2_desc": "Tell us about your business",
+      "step3_title": "Verification",
+      "step3_desc": "Enter the code sent to your phone",
+      "full_name": "Full Name",
+      "phone": "Phone Number",
+      "email": "Email",
+      "password": "Password",
+      "iam": "I am a...",
+      "contractor": "Buyer (Contractor)",
+      "supplier": "Seller (Supplier)",
+      "company_name": "Company Name",
+      "cr_number": "CR Number",
+      "tax_id": "Tax ID / VAT",
+      "upload_cr": "Upload CR Certificate",
+      "upload_cr_desc": "PDF, JPG up to 5MB",
+      "otp_sent": "We sent a 6-digit code to",
+      "otp_placeholder": "• • • • • •",
+      "otp_tip": "Tip: Enter any 6 digits to verify (Mock Mode)",
+      "back": "Back",
+      "next": "Next",
+      "verify": "Verify & Create Account",
+      "verifying": "Verifying...",
+      "has_account": "Already have an account?",
+      "sign_in": "Sign in"
+    }
   }
 }

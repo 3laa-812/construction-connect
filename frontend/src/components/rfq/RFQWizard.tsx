@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const lineItemSchema = z.object({
   productName: z.string().min(1, "Product name is required"),
@@ -43,12 +46,10 @@ const rfqSchema = z.object({
 
 type RFQFormData = z.infer<typeof rfqSchema>;
 
-const projects = [
-  { id: "proj-001", name: "Al-Faisaliah Tower Renovation" },
-  { id: "proj-002", name: "King Abdullah Financial District - Phase 3" },
-  { id: "proj-003", name: "Riyadh Metro Station Finishing" },
-  { id: "proj-004", name: "Jeddah Waterfront Development" },
-];
+type ApiProject = {
+  id: string;
+  name: string;
+};
 
 const categories = [
   "Building Materials",
@@ -96,8 +97,19 @@ const steps = [
 
 export function RFQWizard() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+  const { data: projectsData, isLoading: projectsLoading, isError: projectsError } = useQuery<ApiProject[]>({
+    queryKey: ["projects", "for-rfq"],
+    queryFn: async () => {
+      const response = await api.get("/projects");
+      return response.data;
+    },
+  });
+
+  const projects = useMemo(() => projectsData || [], [projectsData]);
 
   const form = useForm<RFQFormData>({
     resolver: zodResolver(rfqSchema),
@@ -149,11 +161,56 @@ export function RFQWizard() {
     }
   };
 
-  const handleSubmit = () => {
-    toast({
-      title: t("rfq_builder.toast.submitted"),
-      description: t("rfq_builder.toast.submitted_desc"),
-    });
+  const handleSubmit = async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Not authenticated",
+        description: "Please log in again to submit an RFQ.",
+      });
+      return;
+    }
+
+    try {
+      const values = form.getValues();
+
+      const paymentTermValue = (() => {
+        if (values.paymentTerms.startsWith("credit")) return "CREDIT";
+        if (values.paymentTerms === "cash") return "CASH";
+        if (values.paymentTerms === "cheque" || values.paymentTerms === "lc") return "CHEQUE";
+        return null;
+      })();
+
+      await api.post("/rfqs", {
+        project: { connect: { id: values.projectId } },
+        created_user: { connect: { id: user.id } },
+        deadline: values.deliveryDate ? new Date(values.deliveryDate) : null,
+        payment_terms: paymentTermValue,
+        delivery_date_required: values.deliveryDate ? new Date(values.deliveryDate) : null,
+        items: {
+          create: values.lineItems.map((item) => ({
+            product_name: item.productName,
+            quantity: item.quantity,
+            unit: item.unit,
+          })),
+        },
+      });
+
+      toast({
+        title: t("rfq_builder.toast.submitted"),
+        description: t("rfq_builder.toast.submitted_desc"),
+      });
+      form.reset();
+      setUploadedFiles([]);
+      setCurrentStep(1);
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Failed to submit RFQ",
+        description: error?.response?.data?.message || "Please try again later.",
+      });
+    }
   };
 
   const selectedProject = projects.find((p) => p.id === watchedValues.projectId);
@@ -213,21 +270,27 @@ export function RFQWizard() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="project">{t("rfq_builder.form.project_label")}</Label>
-                  <Select
-                    value={watchedValues.projectId}
-                    onValueChange={(value) => form.setValue("projectId", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("rfq_builder.form.project_placeholder")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {projectsLoading ? (
+                    <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
+                  ) : projectsError ? (
+                    <div className="text-sm text-danger">Failed to load projects</div>
+                  ) : (
+                    <Select
+                      value={watchedValues.projectId}
+                      onValueChange={(value) => form.setValue("projectId", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("rfq_builder.form.project_placeholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {form.formState.errors.projectId && (
                     <p className="text-sm text-danger">{form.formState.errors.projectId.message}</p>
                   )}

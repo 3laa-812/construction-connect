@@ -43,8 +43,50 @@ model Company {
   // Relations: Finance
   invoices_as_supplier Invoice[] @relation("SupplierInvoices")
   invoices_as_buyer    Invoice[] @relation("BuyerInvoices")
+  wallets           Wallet[]
+  settings          CompanySettings?
   
   @@map("companies")
+}
+
+model Wallet {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  balance     Decimal  @default(0.00) @db.Decimal(15, 2)
+  currency    String   @default("SAR") @db.VarChar(3)
+  created_at  DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@map("wallets")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  REFUND
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  wallet_id   String
+  wallet      Wallet          @relation(fields: [wallet_id], references: [id])
+  amount      Decimal         @db.Decimal(15, 2)
+  type        TransactionType
+  reference   String?         // External Ref ID
+  description String?
+  
+  // Optional links
+  invoice_id  String?
+  invoice     Invoice?        @relation(fields: [invoice_id], references: [id])
+  po_id       String?
+  purchase_order PurchaseOrder? @relation(fields: [po_id], references: [id])
+
+  created_at  DateTime        @default(now())
+
+  @@map("transactions")
 }
 
 model User {
@@ -234,6 +276,8 @@ model PurchaseOrder {
   delivery_notes DeliveryNote[]
   invoices    Invoice[]
 
+  transactions Transaction[]
+
   @@map("purchase_orders")
 }
 
@@ -324,7 +368,23 @@ model Invoice {
   status      InvoiceStatus @default(DRAFT)
   created_at  DateTime      @default(now())
 
+  transactions Transaction[]
+
   @@map("invoices")
+}
+
+// 7. Company-level Settings (Notifications, Catalog, Admin config)
+model CompanySettings {
+  id          String   @id @default(uuid())
+  company_id  String   @unique
+  company     Company  @relation(fields: [company_id], references: [id])
+
+  // Arbitrary JSON blobs for flexible MVP configuration
+  notifications Json?
+  catalog       Json?
+  admin         Json?
+
+  @@map("company_settings")
 }
 
 // 6. Offline-First Sync

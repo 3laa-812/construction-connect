@@ -9,6 +9,8 @@ export interface User {
   // KYB Info (Partial)
   companyName?: string;
   crNumber?: string;
+  companyId?: string;
+  companyType?: 'CONTRACTOR' | 'SUPPLIER';
 }
 
 export interface AuthState {

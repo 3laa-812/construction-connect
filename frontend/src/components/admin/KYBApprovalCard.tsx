@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Building2, FileText, Check, X, Eye, ExternalLink, Clock, AlertTriangle } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,101 +15,86 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
-interface KYBRequest {
+type ApiCompany = {
   id: string;
-  companyName: string;
-  companyNameAr: string;
-  crNumber: string;
-  submittedAt: string;
-  documentUrl: string;
-  status: "pending" | "approved" | "rejected";
-  contactName: string;
-  contactEmail: string;
-}
-
-const mockRequests: KYBRequest[] = [
-  {
-    id: "kyb-001",
-    companyName: "Saudi Ceramics Trading Co.",
-    companyNameAr: "شركة السيراميك السعودي للتجارة",
-    crNumber: "1010234567",
-    submittedAt: "2024-01-18 14:30",
-    documentUrl: "/cr-document.pdf",
-    status: "pending",
-    contactName: "Mohammed Al-Qahtani",
-    contactEmail: "m.qahtani@saudiceramics.com",
-  },
-  {
-    id: "kyb-002",
-    companyName: "Gulf Steel Industries",
-    companyNameAr: "صناعات الخليج للحديد",
-    crNumber: "1010345678",
-    submittedAt: "2024-01-17 09:15",
-    documentUrl: "/cr-document.pdf",
-    status: "pending",
-    contactName: "Khalid Ibrahim",
-    contactEmail: "k.ibrahim@gulfsteel.com",
-  },
-  {
-    id: "kyb-003",
-    companyName: "Al-Madinah Building Materials",
-    companyNameAr: "مواد البناء المدينة",
-    crNumber: "1010456789",
-    submittedAt: "2024-01-16 16:45",
-    documentUrl: "/cr-document.pdf",
-    status: "pending",
-    contactName: "Fahad Al-Otaibi",
-    contactEmail: "f.otaibi@madinahbm.com",
-  },
-];
+  name: string;
+  type: "CONTRACTOR" | "SUPPLIER";
+  commercial_reg_no?: string | null;
+  tax_id?: string | null;
+  is_verified: boolean;
+  created_at?: string;
+  users?: Array<{ email?: string | null }>;
+};
 
 export function KYBApprovalCard() {
   const { t } = useLanguage();
-  const [requests, setRequests] = useState(mockRequests);
-  const [selectedRequest, setSelectedRequest] = useState<KYBRequest | null>(null);
+  const { data, isLoading, isError, refetch } = useQuery<ApiCompany[]>({
+    queryKey: ["companies", "kyb-unverified"],
+    queryFn: async () => (await api.get("/companies", { params: { is_verified: false } })).data,
+  });
+
+  const pendingRequests = useMemo(() => (data || []).filter((c) => !c.is_verified), [data]);
+
+  const [selectedRequest, setSelectedRequest] = useState<ApiCompany | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const handleReview = (request: KYBRequest) => {
+  const handleReview = (request: ApiCompany) => {
     setSelectedRequest(request);
     setShowReviewDialog(true);
     setRejectionReason("");
     setIsRejecting(false);
   };
 
-  const handleApprove = () => {
-    if (selectedRequest) {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === selectedRequest.id ? { ...r, status: "approved" as const } : r
-        )
-      );
+  const approveMutation = useMutation({
+    mutationFn: async (companyId: string) => api.patch(`/companies/${companyId}`, { is_verified: true }),
+    onSuccess: async () => {
       toast({
         title: t("approvals.toast.approved_title"),
-        description: t("approvals.toast.approved_desc", { name: selectedRequest.companyName }),
+        description: t("approvals.toast.approved_desc", { name: selectedRequest?.name || "" }),
       });
       setShowReviewDialog(false);
-    }
+      await refetch();
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Approval Failed",
+        description: error.response?.data?.message || "Could not approve company",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (companyId: string) => api.patch(`/companies/${companyId}`, { is_verified: false }),
+    onSuccess: async () => {
+      toast({
+        title: t("approvals.toast.rejected_title"),
+        description: t("approvals.toast.rejected_desc", { name: selectedRequest?.name || "" }),
+      });
+      setShowReviewDialog(false);
+      setRejectionReason("");
+      await refetch();
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Rejection Failed",
+        description: error.response?.data?.message || "Could not reject company",
+      });
+    },
+  });
+
+  const handleApprove = () => {
+    if (selectedRequest) approveMutation.mutate(selectedRequest.id);
   };
 
   const handleReject = () => {
-    if (selectedRequest && rejectionReason.trim()) {
-      setRequests((prev) =>
-        prev.map((r) =>
-          r.id === selectedRequest.id ? { ...r, status: "rejected" as const } : r
-        )
-      );
-      toast({
-        title: t("approvals.toast.rejected_title"),
-        description: t("approvals.toast.rejected_desc", { name: selectedRequest.companyName }),
-      });
-      setShowReviewDialog(false);
-    }
+    if (selectedRequest && rejectionReason.trim()) rejectMutation.mutate(selectedRequest.id);
   };
-
-  const pendingRequests = requests.filter((r) => r.status === "pending");
 
   return (
     <>
@@ -127,7 +113,11 @@ export function KYBApprovalCard() {
         </div>
 
         <div className="divide-y divide-border">
-          {pendingRequests.length === 0 ? (
+          {isLoading ? (
+            <div className="px-6 py-12 text-center text-muted-foreground">Loading...</div>
+          ) : isError ? (
+            <div className="px-6 py-12 text-center text-danger">Failed to load requests</div>
+          ) : pendingRequests.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <Check className="w-12 h-12 text-success mx-auto mb-4" />
               <p className="font-medium text-foreground">{t("approvals.widget.all_caught_up")}</p>
@@ -146,16 +136,16 @@ export function KYBApprovalCard() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground truncate">{request.companyName}</p>
+                    <p className="font-medium text-foreground truncate">{request.name}</p>
                     <StatusBadge variant="warning" size="sm">
                       <Clock className="w-3 h-3" />
                       {t("approvals.widget.pending_badge")}
                     </StatusBadge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{request.companyNameAr}</p>
+                  <p className="text-sm text-muted-foreground">{request.type}</p>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                    <span>{t("approvals.widget.cr_prefix")}: {request.crNumber}</span>
-                    <span>{t("approvals.widget.submitted_prefix")}: {request.submittedAt}</span>
+                    <span>{t("approvals.widget.cr_prefix")}: {request.commercial_reg_no || "—"}</span>
+                    <span>{t("approvals.widget.submitted_prefix")}: {new Date(request.created_at || Date.now()).toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -197,7 +187,7 @@ export function KYBApprovalCard() {
                       {t("approvals.dialog.doc_preview_placeholder")}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      CR-{selectedRequest.crNumber}.pdf
+                      CR-{selectedRequest.commercial_reg_no || "N/A"}.pdf
                     </p>
                   </div>
                 </div>
@@ -212,15 +202,15 @@ export function KYBApprovalCard() {
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_en")}</p>
-                      <p className="font-medium">{selectedRequest.companyName}</p>
+                      <p className="font-medium">{selectedRequest.name}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_ar")}</p>
-                      <p className="font-medium" dir="rtl">{selectedRequest.companyNameAr}</p>
+                      <p className="font-medium" dir="rtl">{selectedRequest.name}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.cr_number")}</p>
-                      <p className="font-medium tabular-nums">{selectedRequest.crNumber}</p>
+                      <p className="font-medium tabular-nums">{selectedRequest.commercial_reg_no || "—"}</p>
                     </div>
                   </div>
                 </div>
@@ -232,11 +222,11 @@ export function KYBApprovalCard() {
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.contact_person")}</p>
-                      <p className="font-medium">{selectedRequest.contactName}</p>
+                      <p className="font-medium">{selectedRequest.users?.[0]?.email || "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.email")}</p>
-                      <p className="font-medium">{selectedRequest.contactEmail}</p>
+                      <p className="font-medium">{selectedRequest.users?.[0]?.email || "—"}</p>
                     </div>
                   </div>
                 </div>

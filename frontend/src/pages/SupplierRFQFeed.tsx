@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Filter, Clock, MapPin, Calendar, Package, Eye, Send, Building2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
 import { SupplierQuoteForm } from "@/components/supplier/SupplierQuoteForm";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
 interface RFQFeedItem {
   id: string;
@@ -43,64 +45,15 @@ interface RFQFeedItem {
   priority: "urgent" | "high" | "normal";
 }
 
-// FR-C04: Supplier RFQ Feed
-const mockRFQFeed: RFQFeedItem[] = [
-  {
-    id: "RFQ-2024-0170",
-    title: "Portland Cement for KAFD Project",
-    buyerCompany: "BuildPro Construction LLC",
-    category: "Building Materials",
-    lineItems: [
-      { id: "item-1", productName: "Portland Cement Type I", quantity: 5000, unit: "Bags" },
-      { id: "item-2", productName: "Portland Cement Type II", quantity: 2000, unit: "Bags" },
-    ],
-    deliveryLocation: "King Abdullah Financial District, Riyadh",
-    requiredDeliveryDate: "2024-02-01",
-    paymentTerms: "Credit 30 Days",
-    allowPartialBids: true,
-    closingDate: "2024-01-22 18:00",
-    bidCount: 3,
-    isNew: true,
-    priority: "urgent",
-  },
-  {
-    id: "RFQ-2024-0169",
-    title: "Structural Steel for Metro Station",
-    buyerCompany: "Al-Rashid Engineering",
-    category: "Steel & Metal",
-    lineItems: [
-      { id: "item-1", productName: "H-Beam Steel 200x200", quantity: 50, unit: "Tons" },
-      { id: "item-2", productName: "Steel Plates 10mm", quantity: 25, unit: "Tons" },
-      { id: "item-3", productName: "Steel Rebars 16mm", quantity: 100, unit: "Tons" },
-    ],
-    deliveryLocation: "Riyadh Metro Line 3, Station 15",
-    requiredDeliveryDate: "2024-02-15",
-    paymentTerms: "Cash",
-    allowPartialBids: true,
-    closingDate: "2024-01-25 12:00",
-    bidCount: 5,
-    isNew: false,
-    priority: "high",
-  },
-  {
-    id: "RFQ-2024-0168",
-    title: "Electrical Cables and Conduits",
-    buyerCompany: "Saudi Contracting Co.",
-    category: "Electrical",
-    lineItems: [
-      { id: "item-1", productName: "Power Cable 4x25mm", quantity: 5000, unit: "Meters" },
-      { id: "item-2", productName: "PVC Conduit 25mm", quantity: 2000, unit: "Meters" },
-    ],
-    deliveryLocation: "Jeddah Industrial Area",
-    requiredDeliveryDate: "2024-02-10",
-    paymentTerms: "Credit 60 Days",
-    allowPartialBids: false,
-    closingDate: "2024-01-28 18:00",
-    bidCount: 2,
-    isNew: true,
-    priority: "normal",
-  },
-];
+type ApiRFQ = {
+  id: string;
+  project?: { name?: string; company?: { name?: string } };
+  deadline?: string;
+  created_at?: string;
+  payment_terms?: string;
+  items?: Array<{ id: string; product_name?: string; quantity?: number; unit?: string }>;
+  bids?: Array<unknown>;
+};
 
 const priorityConfig = {
   urgent: { labelKey: "supplier_rfq_feed.card.urgent", color: "danger" },
@@ -115,9 +68,51 @@ export default function SupplierRFQFeed() {
   const [selectedRFQ, setSelectedRFQ] = useState<RFQFeedItem | null>(null);
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
 
-  const categories = [...new Set(mockRFQFeed.map((rfq) => rfq.category))];
+  const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
+    queryKey: ["rfqs", "supplier-feed"],
+    queryFn: async () => {
+      const response = await api.get("/rfqs");
+      return response.data;
+    },
+  });
 
-  const filteredRFQs = mockRFQFeed.filter((rfq) => {
+  const feedItems: RFQFeedItem[] = useMemo(() => {
+    if (!data) return [];
+    const now = Date.now();
+    return data.map((rfq) => {
+      const firstItem = rfq.items?.[0];
+      const deadline = rfq.deadline ? new Date(rfq.deadline) : null;
+      const ageDays = rfq.created_at ? (now - new Date(rfq.created_at).getTime()) / (1000 * 60 * 60 * 24) : 0;
+      const daysToDeadline = deadline ? (deadline.getTime() - now) / (1000 * 60 * 60 * 24) : null;
+      const priority: RFQFeedItem["priority"] =
+        daysToDeadline !== null && daysToDeadline <= 3 ? "urgent" : "normal";
+
+      return {
+        id: rfq.id,
+        title: firstItem?.product_name || "RFQ",
+        buyerCompany: rfq.project?.company?.name || rfq.project?.name || "Buyer",
+        category: firstItem?.unit || "General",
+        lineItems: (rfq.items || []).map((item) => ({
+          id: item.id,
+          productName: item.product_name || "Item",
+          quantity: Number(item.quantity || 0),
+          unit: item.unit || "",
+        })),
+        deliveryLocation: rfq.project?.name || "Delivery location TBD",
+        requiredDeliveryDate: deadline ? deadline.toLocaleDateString() : "TBD",
+        paymentTerms: rfq.payment_terms || "Not set",
+        allowPartialBids: true,
+        closingDate: deadline ? deadline.toISOString() : "",
+        bidCount: rfq.bids?.length || 0,
+        isNew: ageDays <= 7,
+        priority,
+      };
+    });
+  }, [data]);
+
+  const categories = [...new Set(feedItems.map((rfq) => rfq.category))];
+
+  const filteredRFQs = feedItems.filter((rfq) => {
     const matchesSearch =
       rfq.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rfq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -132,6 +127,7 @@ export default function SupplierRFQFeed() {
   };
 
   const getTimeRemaining = (closingDate: string) => {
+    if (!closingDate) return t("supplier_rfq_feed.time.closing_soon");
     const closing = new Date(closingDate);
     const now = new Date();
     const diff = closing.getTime() - now.getTime();
@@ -155,10 +151,10 @@ export default function SupplierRFQFeed() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge variant="primary">
-              {mockRFQFeed.filter((r) => r.isNew).length} {t("supplier_rfq_feed.filters.new")}
+              {feedItems.filter((r) => r.isNew).length} {t("supplier_rfq_feed.filters.new")}
             </StatusBadge>
             <StatusBadge variant="warning">
-              {mockRFQFeed.filter((r) => r.priority === "urgent").length} {t("supplier_rfq_feed.filters.urgent")}
+              {feedItems.filter((r) => r.priority === "urgent").length} {t("supplier_rfq_feed.filters.urgent")}
             </StatusBadge>
           </div>
         </div>
@@ -194,106 +190,116 @@ export default function SupplierRFQFeed() {
 
         {/* RFQ Cards */}
         <div className="grid lg:grid-cols-2 gap-4">
-          {filteredRFQs.map((rfq, index) => (
-            <div
-              key={rfq.id}
-              className={cn(
-                "bg-card rounded-xl border p-5 hover:shadow-md transition-shadow animate-fade-in",
-                rfq.isNew ? "border-primary/50" : "border-border"
-              )}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-primary" />
+          {isLoading ? (
+            <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
+              Loading RFQs...
+            </div>
+          ) : isError ? (
+            <div className="bg-card rounded-xl border border-border p-12 text-center text-danger">
+              Failed to load RFQs
+            </div>
+          ) : (
+            filteredRFQs.map((rfq, index) => (
+              <div
+                key={rfq.id}
+                className={cn(
+                  "bg-card rounded-xl border p-5 hover:shadow-md transition-shadow animate-fade-in",
+                  rfq.isNew ? "border-primary/50" : "border-border"
+                )}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-muted-foreground">{rfq.id}</span>
+                        {rfq.isNew && (
+                          <StatusBadge variant="primary" size="sm">{t("supplier_rfq_feed.filters.new")}</StatusBadge>
+                        )}
+                        <StatusBadge variant={priorityConfig[rfq.priority].color as any} size="sm">
+                          {t(priorityConfig[rfq.priority].labelKey)}
+                        </StatusBadge>
+                      </div>
+                      <h3 className="font-semibold text-foreground mt-1">{rfq.title}</h3>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-muted-foreground">{rfq.id}</span>
-                      {rfq.isNew && (
-                        <StatusBadge variant="primary" size="sm">{t("supplier_rfq_feed.filters.new")}</StatusBadge>
-                      )}
-                      <StatusBadge variant={priorityConfig[rfq.priority].color as any} size="sm">
-                        {t(priorityConfig[rfq.priority].labelKey)}
-                      </StatusBadge>
-                    </div>
-                    <h3 className="font-semibold text-foreground mt-1">{rfq.title}</h3>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground">{rfq.buyerCompany}</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">{rfq.buyerCompany}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground truncate">{rfq.deliveryLocation}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">
-                    {t("supplier_rfq_feed.card.required_by")}: <span className="font-medium tabular-nums">{rfq.requiredDeliveryDate}</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Line Items Preview */}
-              <div className="mt-4 bg-muted/50 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
-                  {t("supplier_rfq_feed.card.items")} ({rfq.lineItems.length})
-                </p>
-                <div className="space-y-1">
-                  {rfq.lineItems.slice(0, 2).map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-foreground">{item.productName}</span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {item.quantity} {item.unit}
-                      </span>
-                    </div>
-                  ))}
-                  {rfq.lineItems.length > 2 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{rfq.lineItems.length - 2} {t("supplier_rfq_feed.card.more_items")}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1 text-warning">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-medium">{getTimeRemaining(rfq.closingDate)}</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground truncate">{rfq.deliveryLocation}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
                     <span className="text-muted-foreground">
-                      {rfq.bidCount} {t("supplier_rfq_feed.card.bids")}
+                      {t("supplier_rfq_feed.card.required_by")}: <span className="font-medium tabular-nums">{rfq.requiredDeliveryDate}</span>
                     </span>
-                    {rfq.allowPartialBids && (
-                      <StatusBadge variant="neutral" size="sm">{t("supplier_rfq_feed.card.partial_ok")}</StatusBadge>
+                  </div>
+                </div>
+
+                {/* Line Items Preview */}
+                <div className="mt-4 bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">
+                    {t("supplier_rfq_feed.card.items")} ({rfq.lineItems.length})
+                  </p>
+                  <div className="space-y-1">
+                    {rfq.lineItems.slice(0, 2).map((item) => (
+                      <div key={item.id} className="flex justify-between text-sm">
+                        <span className="text-foreground">{item.productName}</span>
+                        <span className="text-muted-foreground tabular-nums">
+                          {item.quantity} {item.unit}
+                        </span>
+                      </div>
+                    ))}
+                    {rfq.lineItems.length > 2 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{rfq.lineItems.length - 2} {t("supplier_rfq_feed.card.more_items")}
+                      </p>
                     )}
                   </div>
                 </div>
-              </div>
 
-              <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Eye className="w-4 h-4 me-2" />
-                  {t("supplier_rfq_feed.card.view_details")}
-                </Button>
-                <Button size="sm" className="flex-1" onClick={() => handleSubmitQuote(rfq)}>
-                  <Send className="w-4 h-4 me-2" />
-                  {t("supplier_rfq_feed.card.submit_quote")}
-                </Button>
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1 text-warning">
+                        <Clock className="w-4 h-4" />
+                        <span className="font-medium">{getTimeRemaining(rfq.closingDate)}</span>
+                      </div>
+                      <span className="text-muted-foreground">
+                        {rfq.bidCount} {t("supplier_rfq_feed.card.bids")}
+                      </span>
+                      {rfq.allowPartialBids && (
+                        <StatusBadge variant="neutral" size="sm">{t("supplier_rfq_feed.card.partial_ok")}</StatusBadge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-4">
+                  <Button variant="outline" size="sm" className="flex-1">
+                    <Eye className="w-4 h-4 me-2" />
+                    {t("supplier_rfq_feed.card.view_details")}
+                  </Button>
+                  <Button size="sm" className="flex-1" onClick={() => handleSubmitQuote(rfq)}>
+                    <Send className="w-4 h-4 me-2" />
+                    {t("supplier_rfq_feed.card.submit_quote")}
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
-        {filteredRFQs.length === 0 && (
+        {!isLoading && !isError && filteredRFQs.length === 0 && (
           <div className="bg-card rounded-xl border border-border p-12 text-center">
             <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="font-medium text-foreground">{t("supplier_rfq_feed.empty.title")}</p>

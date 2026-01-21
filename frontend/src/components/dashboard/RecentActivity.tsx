@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { FileText, Package, TrendingUp, CheckCircle, Clock, Truck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
 interface Activity {
   id: string;
@@ -16,68 +19,23 @@ interface Activity {
   status?: "success" | "warning" | "neutral";
 }
 
-const activities: Activity[] = [
-  {
-    id: "1",
-    type: "bid",
-    title: "dashboard.activities.new_bid.title",
-    titleAr: "",
-    description: "dashboard.activities.new_bid.desc",
-    descriptionAr: "",
-    time: "dashboard.time.min_ago",
-    timeAr: "",
-    timeVal: 5,
-    status: "success",
-  },
-  {
-    id: "2",
-    type: "order",
-    title: "dashboard.activities.order_confirmed.title",
-    titleAr: "",
-    description: "dashboard.activities.order_confirmed.desc",
-    descriptionAr: "",
-    time: "dashboard.time.min_ago",
-    timeAr: "",
-    timeVal: 32,
-    status: "success",
-  },
-  {
-    id: "3",
-    type: "delivery",
-    title: "dashboard.activities.out_for_delivery.title",
-    titleAr: "",
-    description: "dashboard.activities.out_for_delivery.desc",
-    descriptionAr: "",
-    time: "dashboard.time.hour_ago",
-    timeAr: "",
-    timeVal: 1,
-    status: "warning",
-  },
-  {
-    id: "4",
-    type: "rfq",
-    title: "dashboard.activities.rfq_closing.title",
-    titleAr: "",
-    description: "dashboard.activities.rfq_closing.desc",
-    descriptionAr: "",
-    time: "dashboard.time.hours_ago",
-    timeAr: "",
-    timeVal: 2,
-    status: "warning",
-  },
-  {
-    id: "5",
-    type: "delivery",
-    title: "dashboard.activities.delivery_completed.title",
-    titleAr: "",
-    description: "dashboard.activities.delivery_completed.desc",
-    descriptionAr: "",
-    time: "dashboard.time.hours_ago",
-    timeAr: "",
-    timeVal: 3,
-    status: "success",
-  },
-];
+type ApiRFQ = {
+  id: string;
+  status?: string;
+  deadline?: string | null;
+  created_at?: string;
+};
+
+type ApiPurchaseOrder = {
+  id: string;
+  status?: string;
+  created_at?: string;
+  delivery_notes?: Array<{
+    id: string;
+    status?: string;
+    delivery_date?: string;
+  }>;
+};
 
 const iconMap = {
   rfq: FileText,
@@ -94,7 +52,92 @@ const iconColorMap = {
 };
 
 export function RecentActivity() {
-  const { isRTL, t } = useLanguage();
+  const { t } = useLanguage();
+
+  const { data: rfqs } = useQuery<ApiRFQ[]>({
+    queryKey: ["rfqs", "recent-activity"],
+    queryFn: async () => (await api.get("/rfqs")).data,
+  });
+
+  const { data: purchaseOrders } = useQuery<ApiPurchaseOrder[]>({
+    queryKey: ["purchase-orders", "recent-activity"],
+    queryFn: async () => (await api.get("/purchase-orders")).data,
+  });
+
+  const activities: Activity[] = useMemo(() => {
+    const now = Date.now();
+    const list: (Activity & { timestamp: number })[] = [];
+
+    (rfqs || []).forEach((rfq) => {
+      if (!rfq.created_at) return;
+      const createdAt = new Date(rfq.created_at).getTime();
+      const minutesAgo = Math.max(1, Math.round((now - createdAt) / (1000 * 60)));
+
+      list.push({
+        id: `rfq-${rfq.id}`,
+        type: "rfq",
+        title: "dashboard.activities.rfq_created.title",
+        titleAr: "",
+        description: "dashboard.activities.rfq_created.desc",
+        descriptionAr: "",
+        time: "dashboard.time.min_ago",
+        timeAr: "",
+        timeVal: minutesAgo,
+        status: "neutral",
+        timestamp: createdAt,
+      });
+    });
+
+    (purchaseOrders || []).forEach((po) => {
+      if (po.created_at) {
+        const createdAt = new Date(po.created_at).getTime();
+        const minutesAgo = Math.max(1, Math.round((now - createdAt) / (1000 * 60)));
+        list.push({
+          id: `po-${po.id}`,
+          type: "order",
+          title: "dashboard.activities.order_confirmed.title",
+          titleAr: "",
+          description: "dashboard.activities.order_confirmed.desc",
+          descriptionAr: "",
+          time: "dashboard.time.min_ago",
+          timeAr: "",
+          timeVal: minutesAgo,
+          status: "success",
+          timestamp: createdAt,
+        });
+      }
+
+      (po.delivery_notes || []).forEach((dn) => {
+        if (!dn.delivery_date) return;
+        const deliveryAt = new Date(dn.delivery_date).getTime();
+        const hoursAgo = Math.max(1, Math.round((now - deliveryAt) / (1000 * 60 * 60)));
+        const isDelivered = (dn.status || "").toUpperCase() === "DELIVERED";
+
+        list.push({
+          id: `dn-${dn.id}`,
+          type: "delivery",
+          title: isDelivered
+            ? "dashboard.activities.delivery_completed.title"
+            : "dashboard.activities.out_for_delivery.title",
+          titleAr: "",
+          description: isDelivered
+            ? "dashboard.activities.delivery_completed.desc"
+            : "dashboard.activities.out_for_delivery.desc",
+          descriptionAr: "",
+          time: hoursAgo === 1 ? "dashboard.time.hour_ago" : "dashboard.time.hours_ago",
+          timeAr: "",
+          timeVal: hoursAgo,
+          status: isDelivered ? "success" : "warning",
+          timestamp: deliveryAt,
+        });
+      });
+    });
+
+    return list
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 5)
+      .map(({ timestamp, ...rest }) => rest);
+  }, [rfqs, purchaseOrders]);
 
   return (
     <div className="bg-card rounded-xl border border-border">

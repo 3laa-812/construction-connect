@@ -1,4 +1,4 @@
-import { Bell, Search, User, Globe, Check } from "lucide-react";
+import { Bell, Search, User, Globe, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,13 +11,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useSync } from "@/hooks/useSync";
 
 export function TopBar() {
   const { language, setLanguage, t, isRTL } = useLanguage();
+  const { sync, isSyncing } = useSync();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
-    <header className="h-16 bg-card border-b border-border px-4 lg:px-6 flex items-center justify-between gap-4">
+    <header className="h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40 px-4 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-50">
       {/* Mobile Logo */}
       <div className="lg:hidden flex items-center gap-2">
         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -35,13 +41,25 @@ export function TopBar() {
           )} />
           <Input
             placeholder={t("common.search_placeholder")}
-            className={cn("bg-secondary border-0", isRTL ? "pr-10" : "pl-10")}
+            className={cn("bg-muted/20 border-border/50 focus-visible:bg-background transition-colors placeholder:text-muted-foreground/70", isRTL ? "pr-10" : "pl-10")}
           />
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+         {/* Sync Button */}
+         <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn("text-muted-foreground transition-all", isSyncing && "animate-spin text-primary")}
+          onClick={sync}
+          disabled={isSyncing}
+          title="Sync Data"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </Button>
+
         {/* Language Toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -110,15 +128,39 @@ export function TopBar() {
           <DropdownMenuContent align={isRTL ? "start" : "end"}>
             <DropdownMenuLabel>
               <div>
-                <p className="font-medium">Ahmed Al-Rashid</p>
-                <p className="text-xs text-muted-foreground">{t("common.procurement_manager")}</p>
+                <p className="font-medium">{user?.name || "User"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user?.role === "contractor" ? t("common.procurement_manager") : 
+                   user?.role === "supplier" ? "Supplier" : 
+                   user?.role === "admin" ? "Administrator" : 
+                   t("common.procurement_manager")}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>{t("common.profile")}</DropdownMenuItem>
-            <DropdownMenuItem>{t("nav.settings")}</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                navigate("/settings");
+              }}
+            >
+              {t("common.profile")}
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                navigate("/settings");
+              }}
+            >
+              {t("nav.settings")}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-danger">{t("common.sign_out")}</DropdownMenuItem>
+            <DropdownMenuItem 
+              className="text-danger"
+              onClick={() => {
+                logout();
+              }}
+            >
+              {t("common.sign_out")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

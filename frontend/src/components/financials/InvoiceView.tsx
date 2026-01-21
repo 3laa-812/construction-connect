@@ -73,13 +73,41 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
   };
 
   const handleDownload = () => {
-    // In production, would generate PDF
-    console.log("Downloading invoice:", invoice.invoiceNumber);
+    // Lightweight "download" until backend PDF endpoint exists:
+    // create a simple text snapshot so the button does something useful.
+    const content = [
+      `Invoice ${invoice.invoiceNumber}`,
+      `Status: ${invoice.status}`,
+      `Invoice Date: ${invoice.invoiceDate}`,
+      `Due Date: ${invoice.dueDate}`,
+      `Order ID: ${invoice.orderId}`,
+      ``,
+      `Seller: ${invoice.seller.name} (CR: ${invoice.seller.crNumber}, VAT: ${invoice.seller.vatNumber})`,
+      `Buyer: ${invoice.buyer.name} (CR: ${invoice.buyer.crNumber}, VAT: ${invoice.buyer.vatNumber})`,
+      ``,
+      `Subtotal: ${invoice.subtotal}`,
+      `VAT (${invoice.vatRate}%): ${invoice.vatAmount}`,
+      `Total: ${invoice.total}`,
+    ].join("\n");
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `invoice-${invoice.invoiceNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleEmail = () => {
-    // In production, would send email
-    console.log("Emailing invoice:", invoice.invoiceNumber);
+    const subject = encodeURIComponent(`Invoice ${invoice.invoiceNumber}`);
+    const body = encodeURIComponent(
+      `Invoice ${invoice.invoiceNumber}\n\nTotal: SAR ${invoice.total}\nDue: ${invoice.dueDate}\nOrder: ${invoice.orderId}\n\n`
+    );
+    // No recipient available in data yet; open mail client.
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
   return (

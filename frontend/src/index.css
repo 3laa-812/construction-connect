@@ -1,73 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 /* Industrial Professional Design System */
 @layer base {
   :root {
-    /* Core Structure - Slate/Zinc for industrial feel */
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    /* Core Structure - Industrial Palette Optimized */
+    /* Background: Soft Beige #EAE0CF */
+    --background: 38 30% 86%;
+    /* Foreground: Deep Navy #213448 */
+    --foreground: 211 37% 21%;
     
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Cards: Slightly off-white for harmony with beige, avoids stark contrast */
+    --card: 38 30% 96%;
+    --card-foreground: 211 37% 21%;
     
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 38 30% 96%;
+    --popover-foreground: 211 37% 21%;
     
-    /* Safety Blue - Primary brand color */
-    --primary: 224 76% 48%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: Deep Navy #213448 */
+    --primary: 211 37% 21%;
+    --primary-foreground: 38 30% 86%;
     
-    /* Neutral secondary */
-    --secondary: 215 20% 95%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary: Steel Blue #547792 */
+    --secondary: 206 27% 45%;
+    --secondary-foreground: 0 0% 100%;
     
-    /* Muted surfaces */
-    --muted: 215 20% 94%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted: Light Blue-Grey #94B4C1 */
+    --muted: 197 26% 85%; /* Lightened for backgrounds */
+    --muted-foreground: 206 27% 35%; /* Darker for readable text */
     
-    /* Construction Orange - Actions/Alerts */
+    /* Accent: Construction Orange (Kept for alerts) */
     --accent: 24 95% 53%;
     --accent-foreground: 0 0% 100%;
     
-    /* Status Colors */
-    --success: 142 76% 36%;
+    /* Status Colors - Harmonized brightness */
+    --success: 142 60% 36%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 0%;
-    --danger: 0 84% 60%;
+    --warning-foreground: 211 37% 21%;
+    --danger: 0 70% 60%;
     --danger-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 0 70% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    /* Borders & Inputs */
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 224 76% 48%;
+    /* Borders: Soft Steel #94B4C1 */
+    --border: 197 26% 80%; /* Softer border */
+    --input: 197 26% 80%;
+    --ring: 206 27% 45%;
     
-    --radius: 0.5rem;
+    /* Radius: Slightly sharper for industrial feel */
+    --radius: 0.35rem;
     
-    /* Sidebar */
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 224 76% 48%;
+    /* Sidebar: Deep Navy #213448 */
+    --sidebar-background: 211 37% 21%;
+    --sidebar-foreground: 38 30% 90%;
+    --sidebar-primary: 206 27% 45%; /* Secondary Steel Blue for highlighting */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 224 76% 48%;
+    --sidebar-accent: 211 37% 15%; /* Darker Navy */
+    --sidebar-accent-foreground: 38 30% 96%;
+    --sidebar-border: 211 37% 25%;
+    --sidebar-ring: 206 27% 45%;
     
     /* Custom Industrial Tokens */
-    --industrial-steel: 215 14% 34%;
-    --industrial-concrete: 210 11% 71%;
-    --industrial-highlight: 224 76% 48%;
+    --industrial-steel: 206 27% 45%;
+    --industrial-concrete: 197 26% 67%;
+    --industrial-highlight: 211 37% 21%;
     --data-positive: 142 76% 36%;
     --data-negative: 0 84% 60%;
-    --data-neutral: 215 16% 47%;
+    --data-neutral: 197 26% 67%;
   }
 
   .dark {
@@ -131,7 +135,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground tracking-tight leading-relaxed;
   }
 
   /* Tabular numbers for data tables */

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, FolderTree, Package, Scale, Search, MoreHorizontal, Save } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
 
 interface Category {
   id: string;
@@ -48,27 +51,40 @@ interface UnitOfMeasure {
 
 // FR-F02: Catalog Management Component
 export function CatalogManagement() {
-  const [categories, setCategories] = useState<Category[]>([
-    { id: "cat-1", name: "Building Materials", nameAr: "مواد البناء", parentId: null, productCount: 245 },
-    { id: "cat-2", name: "Steel & Metal", nameAr: "الحديد والمعادن", parentId: null, productCount: 89 },
-    { id: "cat-3", name: "Electrical", nameAr: "كهربائي", parentId: null, productCount: 156 },
-    { id: "cat-4", name: "Plumbing", nameAr: "السباكة", parentId: null, productCount: 78 },
-    { id: "cat-5", name: "HVAC", nameAr: "التكييف", parentId: null, productCount: 45 },
-    { id: "cat-6", name: "Cement", nameAr: "أسمنت", parentId: "cat-1", productCount: 34 },
-    { id: "cat-7", name: "Bricks", nameAr: "طوب", parentId: "cat-1", productCount: 28 },
-    { id: "cat-8", name: "Reinforcement Steel", nameAr: "حديد التسليح", parentId: "cat-2", productCount: 52 },
-  ]);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [units, setUnits] = useState<UnitOfMeasure[]>([
-    { id: "unit-1", name: "Kilogram", nameAr: "كيلوغرام", symbol: "kg", type: "weight" },
-    { id: "unit-2", name: "Ton", nameAr: "طن", symbol: "ton", type: "weight" },
-    { id: "unit-3", name: "Meter", nameAr: "متر", symbol: "m", type: "length" },
-    { id: "unit-4", name: "Square Meter", nameAr: "متر مربع", symbol: "m²", type: "area" },
-    { id: "unit-5", name: "Cubic Meter", nameAr: "متر مكعب", symbol: "m³", type: "volume" },
-    { id: "unit-6", name: "Piece", nameAr: "قطعة", symbol: "pc", type: "count" },
-    { id: "unit-7", name: "Bag", nameAr: "كيس", symbol: "bag", type: "count" },
-    { id: "unit-8", name: "Box", nameAr: "صندوق", symbol: "box", type: "count" },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
+
+  const { data: companySettings } = useQuery<{
+    catalog?: { categories?: Category[]; units?: UnitOfMeasure[] };
+  }>({
+    queryKey: ["company-settings", user?.companyId],
+    queryFn: async () => {
+      if (!user?.companyId) return {} as any;
+      const response = await api.get(`/settings/company/${user.companyId}`);
+      return response.data;
+    },
+    enabled: !!user?.companyId,
+  });
+
+  useEffect(() => {
+    if (companySettings?.catalog) {
+      setCategories(companySettings.catalog.categories || []);
+      setUnits(companySettings.catalog.units || []);
+    } else {
+      // Fallback demo data
+      setCategories([
+        { id: "cat-1", name: "Building Materials", nameAr: "مواد البناء", parentId: null, productCount: 245 },
+        { id: "cat-2", name: "Steel & Metal", nameAr: "الحديد والمعادن", parentId: null, productCount: 89 },
+      ]);
+      setUnits([
+        { id: "unit-1", name: "Kilogram", nameAr: "كيلوغرام", symbol: "kg", type: "weight" },
+        { id: "unit-6", name: "Piece", nameAr: "قطعة", symbol: "pc", type: "count" },
+      ]);
+    }
+  }, [companySettings]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
@@ -175,6 +191,35 @@ export function CatalogManagement() {
     setUnits((prev) => prev.filter((u) => u.id !== unit.id));
     toast({ title: "Unit Deleted", description: `${unit.name} has been removed` });
   };
+
+  const saveCatalogMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.companyId) {
+        throw new Error("Company ID not found. Please log out and log back in.");
+      }
+      try {
+        const response = await api.patch(`/settings/company/${user.companyId}`, {
+          catalog: { categories, units },
+        });
+        return response;
+      } catch (error: any) {
+        console.error("Catalog save error:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["company-settings", user?.companyId] });
+      toast({ title: "Catalog Saved", description: "Catalog configuration has been updated" });
+    },
+    onError: (error: any) => {
+      console.error("Catalog mutation error:", error);
+      toast({
+        variant: "destructive",
+        title: "Save Failed",
+        description: error.message || error.response?.data?.message || "Could not save catalog configuration",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -486,6 +531,16 @@ export function CatalogManagement() {
           </div>
         </TabsContent>
       </Tabs>
+      <div className="flex justify-end">
+        <Button
+          className="mt-2"
+          onClick={() => saveCatalogMutation.mutate()}
+          disabled={saveCatalogMutation.isPending}
+        >
+          <Save className="w-4 h-4 me-2" />
+          {saveCatalogMutation.isPending ? "Saving..." : "Save Catalog"}
+        </Button>
+      </div>
     </div>
   );
 }

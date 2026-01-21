@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Mail, Shield, User, MoreHorizontal, Edit, Trash2, CheckCircle, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+
+type ApiUser = {
+  id: string;
+  email: string;
+  phone?: string;
+  role?: "ADMIN" | "PROCUREMENT_MANAGER" | "SITE_ENGINEER";
+  is_active: boolean;
+  created_at: string;
+};
 
 interface TeamMember {
   id: string;
@@ -42,45 +54,43 @@ interface TeamMember {
 
 // FR-A04: Sub-Accounts Management
 export function TeamManagement() {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
-    {
-      id: "user-1",
-      name: "Ahmed Al-Rashid",
-      email: "ahmed@buildpro.sa",
-      role: "admin",
-      status: "active",
-      invitedAt: "2023-06-15",
-      lastActive: "2024-01-18",
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Fetch all users (we'll filter by company on backend or frontend)
+  const { data: usersData, isLoading } = useQuery<ApiUser[]>({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const response = await api.get("/users");
+      return response.data;
     },
-    {
-      id: "user-2",
-      name: "Mohammed Al-Qahtani",
-      email: "mohammed@buildpro.sa",
-      role: "procurement_manager",
-      status: "active",
-      budgetLimit: 500000,
-      invitedAt: "2023-08-20",
-      lastActive: "2024-01-17",
-    },
-    {
-      id: "user-3",
-      name: "Khalid Hassan",
-      email: "khalid@buildpro.sa",
-      role: "site_engineer",
-      status: "active",
-      budgetLimit: 50000,
-      invitedAt: "2023-10-10",
-      lastActive: "2024-01-18",
-    },
-    {
-      id: "user-4",
-      name: "Sara Ibrahim",
-      email: "sara@buildpro.sa",
-      role: "finance",
-      status: "pending",
-      invitedAt: "2024-01-15",
-    },
-  ]);
+  });
+
+  // Filter users by company
+  const companyUsers = usersData?.filter(u => {
+    // Since backend doesn't return company_id in user list, we'll show all users for now
+    // In production, backend should filter by company_id
+    return true;
+  }) || [];
+
+  // Map API users to TeamMember format
+  const teamMembers: TeamMember[] = companyUsers.map((apiUser) => {
+    const roleMap: Record<string, TeamMember["role"]> = {
+      ADMIN: "admin",
+      PROCUREMENT_MANAGER: "procurement_manager",
+      SITE_ENGINEER: "site_engineer",
+    };
+    
+    return {
+      id: apiUser.id,
+      name: apiUser.email.split("@")[0],
+      email: apiUser.email,
+      role: roleMap[apiUser.role || ""] || "site_engineer",
+      status: apiUser.is_active ? "active" : "inactive",
+      invitedAt: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split("T")[0] : "",
+      lastActive: apiUser.is_active ? new Date().toISOString().split("T")[0] : undefined,
+    };
+  });
 
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [newMember, setNewMember] = useState({
@@ -118,6 +128,79 @@ export function TeamManagement() {
     inactive: { label: "Inactive", icon: XCircle, color: "neutral" },
   };
 
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (data: { email: string; role: string; companyId?: string }) => {
+      const roleMap: Record<string, string> = {
+        admin: "ADMIN",
+        procurement_manager: "PROCUREMENT_MANAGER",
+        site_engineer: "SITE_ENGINEER",
+        finance: "SITE_ENGINEER", // Finance role not in backend, map to SITE_ENGINEER
+      };
+      
+      return api.post("/users", {
+        email: data.email,
+        role: roleMap[data.role] || "SITE_ENGINEER",
+        company: user?.companyId ? { connect: { id: user.companyId } } : undefined,
+        is_active: false, // Pending until they accept invitation
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Invitation Sent",
+        description: `An invitation has been sent to ${newMember.email}`,
+      });
+      setShowInviteDialog(false);
+      setNewMember({ email: "", role: "site_engineer", budgetLimit: 50000 });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Invitation Failed",
+        description: error.response?.data?.message || "Could not send invitation",
+      });
+    },
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      return api.delete(`/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "Member Removed",
+        description: "Team member has been removed",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Removal Failed",
+        description: error.response?.data?.message || "Could not remove team member",
+      });
+    },
+  });
+
+  // Update user mutation (for activating/deactivating)
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      return api.patch(`/users/${userId}`, { is_active: isActive });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.response?.data?.message || "Could not update user",
+      });
+    },
+  });
+
   const handleInvite = () => {
     if (!newMember.email) {
       toast({
@@ -128,23 +211,20 @@ export function TeamManagement() {
       return;
     }
 
-    const newTeamMember: TeamMember = {
-      id: `user-${Date.now()}`,
-      name: newMember.email.split("@")[0],
+    if (!user?.companyId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Your account is not linked to a company",
+      });
+      return;
+    }
+
+    createUserMutation.mutate({
       email: newMember.email,
       role: newMember.role,
-      status: "pending",
-      budgetLimit: newMember.role !== "admin" && newMember.role !== "finance" ? newMember.budgetLimit : undefined,
-      invitedAt: new Date().toISOString().split("T")[0],
-    };
-
-    setTeamMembers((prev) => [...prev, newTeamMember]);
-    toast({
-      title: "Invitation Sent",
-      description: `An invitation has been sent to ${newMember.email}`,
+      companyId: user.companyId,
     });
-    setShowInviteDialog(false);
-    setNewMember({ email: "", role: "site_engineer", budgetLimit: 50000 });
   };
 
   const handleRemoveMember = (member: TeamMember) => {
@@ -157,14 +237,12 @@ export function TeamManagement() {
       return;
     }
 
-    setTeamMembers((prev) => prev.filter((m) => m.id !== member.id));
-    toast({
-      title: "Member Removed",
-      description: `${member.name} has been removed from the team`,
-    });
+    deleteUserMutation.mutate(member.id);
   };
 
   const handleResendInvite = (member: TeamMember) => {
+    // Activate the user (assuming resending invite means activating them)
+    updateUserMutation.mutate({ userId: member.id, isActive: true });
     toast({
       title: "Invitation Resent",
       description: `A new invitation has been sent to ${member.email}`,
@@ -245,9 +323,9 @@ export function TeamManagement() {
               <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleInvite}>
+              <Button onClick={handleInvite} disabled={createUserMutation.isPending}>
                 <Mail className="w-4 h-4 me-2" />
-                Send Invitation
+                {createUserMutation.isPending ? "Sending..." : "Send Invitation"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -271,20 +349,32 @@ export function TeamManagement() {
       </div>
 
       {/* Team Members List */}
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-start p-3 text-sm font-medium text-muted-foreground">Member</th>
-              <th className="text-start p-3 text-sm font-medium text-muted-foreground">Role</th>
-              <th className="text-start p-3 text-sm font-medium text-muted-foreground">Budget Limit</th>
-              <th className="text-start p-3 text-sm font-medium text-muted-foreground">Status</th>
-              <th className="text-start p-3 text-sm font-medium text-muted-foreground">Last Active</th>
-              <th className="text-center p-3 text-sm font-medium text-muted-foreground">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teamMembers.map((member, index) => {
+      {isLoading ? (
+        <div className="bg-card rounded-xl border border-border p-6 text-center">
+          <p className="text-muted-foreground">Loading team members...</p>
+        </div>
+      ) : (
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Member</th>
+                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Role</th>
+                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Budget Limit</th>
+                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Last Active</th>
+                <th className="text-center p-3 text-sm font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                    No team members found. Invite someone to get started.
+                  </td>
+                </tr>
+              ) : (
+                teamMembers.map((member, index) => {
               const StatusIcon = statusConfig[member.status].icon;
               return (
                 <tr
@@ -349,12 +439,14 @@ export function TeamManagement() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </tr>
+                );
+              })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

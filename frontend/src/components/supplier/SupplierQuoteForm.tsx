@@ -25,6 +25,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 // FR-C05: Quote submission schema
 const quoteSchema = z.object({
@@ -89,6 +91,7 @@ export function SupplierQuoteForm({
   onCancel,
 }: SupplierQuoteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema),
@@ -125,11 +128,45 @@ export function SupplierQuoteForm({
   const biddingItemsCount = watchedLineItems.filter((item) => item.bidOnItem).length;
 
   const handleSubmit = async (data: QuoteFormData) => {
+    if (!user?.companyId) {
+      toast({
+        variant: "destructive",
+        title: "Missing company info",
+        description: "Your account is not linked to a company. Please contact support.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      const now = new Date();
+      const validityMap: Record<QuoteFormData["quoteValidity"], number> = {
+        "24h": 1,
+        "48h": 2,
+        "72h": 3,
+        "7d": 7,
+        "14d": 14,
+        "30d": 30,
+      };
+      const daysToAdd = validityMap[data.quoteValidity] || 2;
+      const validUntil = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+
+      await api.post(`/rfqs/${rfqId}/bids`, {
+        rfq: { connect: { id: rfqId } },
+        supplier: { connect: { id: user.companyId } },
+        total_price: grandTotal,
+        valid_until: validUntil,
+        items: {
+          create: data.lineItems
+            .filter((li) => li.bidOnItem)
+            .map((li) => ({
+              rfq_item: { connect: { id: li.productId } },
+              unit_price: li.unitPrice,
+              note: li.brand || undefined,
+            })),
+        },
+      });
+
       toast({
         title: "Quote Submitted Successfully",
         description: `Your quote for ${rfqId} has been sent to ${buyerCompany}`,

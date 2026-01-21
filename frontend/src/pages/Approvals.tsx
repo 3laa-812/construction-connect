@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, Filter, Building2, FileText, CheckCircle, XCircle, Clock, Eye, AlertTriangle, Users, Package } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,102 +25,94 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
-interface KYBRequest {
+type ApiCompany = {
   id: string;
-  type: "supplier" | "contractor";
-  companyName: string;
-  companyNameAr: string;
-  crNumber: string;
-  vatNumber: string;
-  categories?: string[];
-  submittedAt: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  documents: string[];
-}
-
-const mockKYBRequests: KYBRequest[] = [
-  {
-    id: "kyb-001",
-    type: "supplier",
-    companyName: "Saudi Ceramics Trading Co.",
-    companyNameAr: "شركة السيراميك السعودي للتجارة",
-    crNumber: "1010234567",
-    vatNumber: "300012345600003",
-    categories: ["Building Materials", "Finishing Materials"],
-    submittedAt: "2024-01-18 14:30",
-    contactName: "Mohammed Al-Qahtani",
-    contactEmail: "m.qahtani@saudiceramics.com",
-    contactPhone: "+966 50 123 4567",
-    documents: ["CR Certificate", "VAT Certificate", "Company Logo"],
-  },
-  {
-    id: "kyb-002",
-    type: "supplier",
-    companyName: "Gulf Steel Industries",
-    companyNameAr: "صناعات الخليج للحديد",
-    crNumber: "1010345678",
-    vatNumber: "300023456700004",
-    categories: ["Steel & Metal"],
-    submittedAt: "2024-01-17 09:15",
-    contactName: "Khalid Ibrahim",
-    contactEmail: "k.ibrahim@gulfsteel.com",
-    contactPhone: "+966 55 987 6543",
-    documents: ["CR Certificate", "VAT Certificate", "Category License"],
-  },
-  {
-    id: "kyb-003",
-    type: "contractor",
-    companyName: "Al-Madinah Construction LLC",
-    companyNameAr: "شركة المدينة للمقاولات",
-    crNumber: "1010456789",
-    vatNumber: "300034567800005",
-    submittedAt: "2024-01-16 16:45",
-    contactName: "Fahad Al-Otaibi",
-    contactEmail: "f.otaibi@madinahconst.com",
-    contactPhone: "+966 56 456 7890",
-    documents: ["CR Certificate", "Tax ID", "Company Logo"],
-  },
-  {
-    id: "kyb-004",
-    type: "supplier",
-    companyName: "Riyadh Electrical Supplies",
-    companyNameAr: "مستلزمات الرياض الكهربائية",
-    crNumber: "1010567890",
-    vatNumber: "300045678900006",
-    categories: ["Electrical"],
-    submittedAt: "2024-01-19 10:00",
-    contactName: "Abdullah Nasser",
-    contactEmail: "a.nasser@riyadhelectrical.com",
-    contactPhone: "+966 54 321 0987",
-    documents: ["CR Certificate", "VAT Certificate"],
-  },
-];
+  name: string;
+  type: "CONTRACTOR" | "SUPPLIER";
+  commercial_reg_no?: string | null;
+  tax_id?: string | null;
+  is_verified: boolean;
+  created_at?: string;
+  users?: Array<{ email: string; phone: string | null }>;
+};
 
 export default function Approvals() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedRequest, setSelectedRequest] = useState<KYBRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ApiCompany | null>(null);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const filteredRequests = mockKYBRequests.filter((request) => {
-    const matchesSearch =
-      request.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.crNumber.includes(searchTerm) ||
-      request.contactEmail.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || request.type === typeFilter;
-    return matchesSearch && matchesType;
+  const { data, isLoading, isError } = useQuery<ApiCompany[]>({
+    queryKey: ["companies"],
+    queryFn: async () => {
+      const response = await api.get("/companies");
+      return response.data;
+    },
   });
+
+  const approveMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      await api.patch(`/companies/${companyId}`, { is_verified: true });
+    },
+    onSuccess: () => {
+      toast({ title: t("approvals.toast.approved_title"), description: t("approvals.toast.approved_desc", { name: selectedRequest?.name || "" }) });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      setShowReviewDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to approve",
+        description: error?.response?.data?.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      // No rejection flag in schema; keep unverified but we still record intent.
+      await api.patch(`/companies/${companyId}`, { is_verified: false });
+    },
+    onSuccess: () => {
+      toast({ title: t("approvals.toast.rejected_title"), description: t("approvals.toast.rejected_desc", { name: selectedRequest?.name || "" }) });
+      queryClient.invalidateQueries({ queryKey: ["companies"] });
+      setShowReviewDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to reject",
+        description: error?.response?.data?.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const pendingRequests = useMemo(() => {
+    return (data || []).filter((c) => !c.is_verified);
+  }, [data]);
+
+  const filteredRequests = useMemo(() => {
+    return pendingRequests.filter((request) => {
+      const contactEmail = request.users?.[0]?.email?.toLowerCase() || "";
+      const matchesSearch =
+        request.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.commercial_reg_no || "").includes(searchTerm) ||
+        contactEmail.includes(searchTerm.toLowerCase());
+      const matchesType = typeFilter === "all" || request.type.toLowerCase() === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [pendingRequests, searchTerm, typeFilter]);
 
   const supplierRequests = filteredRequests.filter((r) => r.type === "supplier");
   const contractorRequests = filteredRequests.filter((r) => r.type === "contractor");
 
-  const handleReview = (request: KYBRequest) => {
+  const handleReview = (request: ApiCompany) => {
     setSelectedRequest(request);
     setShowReviewDialog(true);
     setRejectionReason("");
@@ -127,80 +120,69 @@ export default function Approvals() {
   };
 
   const handleApprove = () => {
-    if (selectedRequest) {
-      toast({
-        title: t("approvals.toast.approved_title"),
-        description: t("approvals.toast.approved_desc", { name: selectedRequest.companyName }),
-      });
-      setShowReviewDialog(false);
-    }
+    if (selectedRequest) approveMutation.mutate(selectedRequest.id);
   };
 
   const handleReject = () => {
-    if (selectedRequest && rejectionReason.trim()) {
-      toast({
-        title: t("approvals.toast.rejected_title"),
-        description: t("approvals.toast.rejected_desc", { name: selectedRequest.companyName }),
-      });
-      setShowReviewDialog(false);
-    }
+    if (selectedRequest && rejectionReason.trim()) rejectMutation.mutate(selectedRequest.id);
   };
 
-  const RequestCard = ({ request }: { request: KYBRequest }) => (
-    <div className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-shadow animate-fade-in">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-            <Building2 className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">{request.companyName}</h3>
-            <p className="text-sm text-muted-foreground" dir="rtl">{request.companyNameAr}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <StatusBadge variant="warning" size="sm">
-                <Clock className="w-3 h-3" />
-                {t("approvals.card.pending_review")}
-              </StatusBadge>
-              <StatusBadge variant="neutral" size="sm">
-                {request.type === "supplier" ? t("approvals.card.supplier") : t("approvals.card.contractor")}
-              </StatusBadge>
+  const RequestCard = ({ request }: { request: ApiCompany }) => {
+    const contact = request.users?.[0];
+    return (
+      <div className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-shadow animate-fade-in">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+              <Building2 className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">{request.name}</h3>
+              <p className="text-sm text-muted-foreground">{request.type}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <StatusBadge variant="warning" size="sm">
+                  <Clock className="w-3 h-3" />
+                  {t("approvals.card.pending_review")}
+                </StatusBadge>
+                <StatusBadge variant="neutral" size="sm">
+                  {request.type === "SUPPLIER" ? t("approvals.card.supplier") : t("approvals.card.contractor")}
+                </StatusBadge>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">{t("approvals.card.cr_number")}</span>
-          <span className="font-medium tabular-nums">{request.crNumber}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">{t("approvals.card.contact")}</span>
-          <span className="font-medium">{request.contactName}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">{t("approvals.card.submitted")}</span>
-          <span className="font-medium">{request.submittedAt}</span>
-        </div>
-        {request.categories && (
-          <div className="flex flex-wrap gap-1 pt-2">
-            {request.categories.map((cat) => (
-              <StatusBadge key={cat} variant="neutral" size="sm">
-                {cat}
-              </StatusBadge>
-            ))}
+        <div className="mt-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t("approvals.card.cr_number")}</span>
+            <span className="font-medium tabular-nums">{request.commercial_reg_no || "—"}</span>
           </div>
-        )}
-      </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t("approvals.card.contact")}</span>
+            <span className="font-medium">{contact?.email || "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">{t("approvals.card.submitted")}</span>
+            <span className="font-medium">{new Date(request.created_at || Date.now()).toLocaleDateString()}</span>
+          </div>
+          <div className="flex flex-wrap gap-1 pt-2">
+            {request.tax_id && (
+              <StatusBadge variant="neutral" size="sm">
+                VAT: {request.tax_id}
+              </StatusBadge>
+            )}
+          </div>
+        </div>
 
-      <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-        <Button variant="outline" className="flex-1" onClick={() => handleReview(request)}>
-          <Eye className="w-4 h-4 me-2" />
-          {t("approvals.card.review")}
-        </Button>
+        <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+          <Button variant="outline" className="flex-1" onClick={() => handleReview(request)}>
+            <Eye className="w-4 h-4 me-2" />
+            {t("approvals.card.review")}
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <AppLayout>
@@ -219,7 +201,7 @@ export default function Approvals() {
             </div>
           </div>
           <StatusBadge variant="warning" className="text-lg px-4 py-2">
-            {t("approvals.pending_count", { count: mockKYBRequests.length })}
+            {t("approvals.pending_count", { count: filteredRequests.length })}
           </StatusBadge>
         </div>
 
@@ -231,7 +213,7 @@ export default function Approvals() {
                 <Clock className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold tabular-nums">{mockKYBRequests.length}</p>
+                <p className="text-2xl font-bold tabular-nums">{filteredRequests.length}</p>
                 <p className="text-sm text-muted-foreground">{t("approvals.summary.pending")}</p>
               </div>
             </div>
@@ -307,9 +289,19 @@ export default function Approvals() {
 
           <TabsContent value="all" className="space-y-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRequests.map((request) => (
-                <RequestCard key={request.id} request={request} />
-              ))}
+              {isLoading ? (
+                <div className="col-span-full bg-card rounded-xl border border-border p-10 text-center text-muted-foreground">
+                  Loading requests...
+                </div>
+              ) : isError ? (
+                <div className="col-span-full bg-card rounded-xl border border-border p-10 text-center text-danger">
+                  Failed to load requests
+                </div>
+              ) : (
+                filteredRequests.map((request) => (
+                  <RequestCard key={request.id} request={request} />
+                ))
+              )}
             </div>
           </TabsContent>
 
@@ -359,19 +351,14 @@ export default function Approvals() {
                   <span className="text-sm font-medium">{t("approvals.dialog.uploaded_docs")}</span>
                 </div>
                 <div className="flex-1 p-4 space-y-3">
-                  {selectedRequest.documents.map((doc, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border"
-                    >
-                      <FileText className="w-5 h-5 text-primary" />
-                      <span className="flex-1 text-sm font-medium">{doc}</span>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="w-4 h-4 me-1" />
-                        {t("approvals.dialog.view")}
-                      </Button>
-                    </div>
-                  ))}
+                  <div className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <span className="flex-1 text-sm font-medium">CR / VAT documents</span>
+                    <Button variant="ghost" size="sm" disabled>
+                      <Eye className="w-4 h-4 me-1" />
+                      {t("approvals.dialog.view")}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -384,34 +371,18 @@ export default function Approvals() {
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_en")}</p>
-                      <p className="font-medium">{selectedRequest.companyName}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">{t("approvals.dialog.company_name_ar")}</p>
-                      <p className="font-medium" dir="rtl">{selectedRequest.companyNameAr}</p>
+                      <p className="font-medium">{selectedRequest.name}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-muted-foreground">{t("approvals.dialog.cr_number")}</p>
-                        <p className="font-medium tabular-nums">{selectedRequest.crNumber}</p>
+                        <p className="font-medium tabular-nums">{selectedRequest.commercial_reg_no || "—"}</p>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">{t("approvals.dialog.vat_number")}</p>
-                        <p className="font-medium tabular-nums">{selectedRequest.vatNumber}</p>
+                        <p className="font-medium tabular-nums">{selectedRequest.tax_id || "—"}</p>
                       </div>
                     </div>
-                    {selectedRequest.categories && (
-                      <div>
-                        <p className="text-xs text-muted-foreground">{t("approvals.dialog.categories")}</p>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {selectedRequest.categories.map((cat) => (
-                            <StatusBadge key={cat} variant="neutral" size="sm">
-                              {cat}
-                            </StatusBadge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -422,15 +393,15 @@ export default function Approvals() {
                   <div className="space-y-3">
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.contact_person")}</p>
-                      <p className="font-medium">{selectedRequest.contactName}</p>
+                      <p className="font-medium">{selectedRequest.users?.[0]?.email || "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.email")}</p>
-                      <p className="font-medium">{selectedRequest.contactEmail}</p>
+                      <p className="font-medium">{selectedRequest.users?.[0]?.email || "—"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">{t("approvals.dialog.phone")}</p>
-                      <p className="font-medium tabular-nums">{selectedRequest.contactPhone}</p>
+                      <p className="font-medium tabular-nums">{selectedRequest.users?.[0]?.phone || "—"}</p>
                     </div>
                   </div>
                 </div>

@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { FileText, ShoppingCart, TrendingUp, Package, Plus, ArrowRight, ArrowLeft } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
@@ -8,40 +10,65 @@ import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { KYBApprovalCard } from "@/components/admin/KYBApprovalCard";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
 const Index = () => {
   const { t, isRTL } = useLanguage();
   const ArrowIcon = isRTL ? ArrowLeft : ArrowRight;
 
-  const stats = [
-    {
-      title: t("dashboard.active_rfqs"),
-      value: 12,
-      change: { value: 8, type: "increase" as const },
-      icon: FileText,
-      iconColor: "primary" as const,
-    },
-    {
-      title: t("dashboard.pending_orders"),
-      value: 47,
-      change: { value: 12, type: "increase" as const },
-      icon: TrendingUp,
-      iconColor: "success" as const,
-    },
-    {
-      title: t("dashboard.orders_this_month"),
-      value: 156,
-      change: { value: 5, type: "decrease" as const },
-      icon: ShoppingCart,
-      iconColor: "accent" as const,
-    },
-    {
-      title: t("dashboard.deliveries_pending"),
-      value: 23,
-      icon: Package,
-      iconColor: "warning" as const,
-    },
-  ];
+  const { data: rfqsData } = useQuery({
+    queryKey: ["rfqs", "dashboard"],
+    queryFn: async () => (await api.get("/rfqs")).data as any[],
+  });
+  const { data: ordersData } = useQuery({
+    queryKey: ["purchase-orders", "dashboard"],
+    queryFn: async () => (await api.get("/purchase-orders")).data as any[],
+  });
+
+  const stats = useMemo(() => {
+    const activeRfqs = (rfqsData || []).filter((r) => (r.status || "").toString().toUpperCase() === "OPEN").length;
+    const processingOrders = (ordersData || []).filter((o) => (o.status || "").toString().toUpperCase() === "PROCESSING").length;
+    const now = new Date();
+    const ordersThisMonth = (ordersData || []).filter((o) => {
+      if (!o.created_at) return false;
+      const created = new Date(o.created_at);
+      return created.getMonth() === now.getMonth() && created.getFullYear() === now.getFullYear();
+    }).length;
+    const deliveriesPending = (ordersData || []).reduce((count, order) => {
+      const pendingDeliveries = (order.delivery_notes || []).filter((d: any) => (d.status || "").toUpperCase() !== "DELIVERED").length;
+      return count + pendingDeliveries;
+    }, 0);
+
+    return [
+      {
+        title: t("dashboard.active_rfqs"),
+        value: activeRfqs,
+        change: { value: activeRfqs, type: "increase" as const },
+        icon: FileText,
+        iconColor: "primary" as const,
+      },
+      {
+        title: t("dashboard.pending_orders"),
+        value: processingOrders,
+        change: { value: processingOrders, type: "increase" as const },
+        icon: TrendingUp,
+        iconColor: "success" as const,
+      },
+      {
+        title: t("dashboard.orders_this_month"),
+        value: ordersThisMonth,
+        change: { value: ordersThisMonth, type: "increase" as const },
+        icon: ShoppingCart,
+        iconColor: "accent" as const,
+      },
+      {
+        title: t("dashboard.deliveries_pending"),
+        value: deliveriesPending,
+        icon: Package,
+        iconColor: "warning" as const,
+      },
+    ];
+  }, [ordersData, rfqsData, t]);
 
   return (
     <AppLayout>

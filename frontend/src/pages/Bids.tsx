@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, Filter, TrendingUp, Clock, CheckCircle, XCircle, Eye, MoreHorizontal, DollarSign, Award } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
+
+type ApiBid = {
+  id: string;
+  total_price?: number;
+  valid_until?: string;
+  status?: string;
+  created_at?: string;
+  supplier?: { name?: string };
+  items?: Array<{ unit_price?: number; note?: string }>;
+};
+
+type ApiRFQ = {
+  id: string;
+  items?: Array<{ product_name?: string; quantity?: number }>;
+  bids?: ApiBid[];
+};
 
 interface Bid {
   id: string;
@@ -45,71 +63,6 @@ interface Bid {
   submittedAt: string;
   notes?: string;
 }
-
-const mockBids: Bid[] = [
-  {
-    id: "BID-001",
-    rfqId: "RFQ-2024-0162",
-    rfqTitle: "Portland Cement Type I",
-    supplier: "Saudi Ceramics",
-    unitPrice: 45.0,
-    totalPrice: 225000,
-    deliveryDays: 7,
-    quoteValidity: "48 hours",
-    status: "pending",
-    submittedAt: "2024-01-18 14:30",
-    notes: "Price includes delivery to site",
-  },
-  {
-    id: "BID-002",
-    rfqId: "RFQ-2024-0162",
-    rfqTitle: "Portland Cement Type I",
-    supplier: "Ezz Steel Industries",
-    unitPrice: 42.5,
-    totalPrice: 212500,
-    deliveryDays: 10,
-    quoteValidity: "72 hours",
-    status: "pending",
-    submittedAt: "2024-01-18 10:15",
-  },
-  {
-    id: "BID-003",
-    rfqId: "RFQ-2024-0161",
-    rfqTitle: "Structural Steel Beams",
-    supplier: "Arabian Cement Co.",
-    unitPrice: 850.0,
-    totalPrice: 425000,
-    deliveryDays: 14,
-    quoteValidity: "7 days",
-    status: "accepted",
-    submittedAt: "2024-01-15 09:00",
-  },
-  {
-    id: "BID-004",
-    rfqId: "RFQ-2024-0160",
-    rfqTitle: "Electrical Cables",
-    supplier: "Gulf Steel Industries",
-    unitPrice: 125.0,
-    totalPrice: 156000,
-    deliveryDays: 5,
-    quoteValidity: "48 hours",
-    status: "rejected",
-    submittedAt: "2024-01-12 16:45",
-    notes: "Brand is Ezz Steel, Grade A quality",
-  },
-  {
-    id: "BID-005",
-    rfqId: "RFQ-2024-0158",
-    rfqTitle: "HVAC Units",
-    supplier: "Al-Bawani Materials",
-    unitPrice: 15000.0,
-    totalPrice: 450000,
-    deliveryDays: 21,
-    quoteValidity: "5 days",
-    status: "pending",
-    submittedAt: "2024-01-19 11:20",
-  },
-];
 
 const statusConfig = {
   pending: { color: "warning", labelKey: "bids.status.pending", icon: Clock },
@@ -126,7 +79,45 @@ export default function Bids() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const filteredBids = mockBids.filter((bid) => {
+  const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
+    queryKey: ["rfqs", "bids"],
+    queryFn: async () => {
+      const response = await api.get("/rfqs");
+      return response.data;
+    },
+  });
+
+  const bids: Bid[] = useMemo(() => {
+    if (!data) return [];
+    const dayMs = 1000 * 60 * 60 * 24;
+    return data.flatMap((rfq) => {
+      const rfqTitle = rfq.items?.[0]?.product_name || rfq.id;
+      return (rfq.bids || []).map((bid) => {
+        const status = (bid.status || "pending").toLowerCase() as Bid["status"];
+        const validUntil = bid.valid_until ? new Date(bid.valid_until) : null;
+        const deliveryDays = validUntil ? Math.max(0, Math.round((validUntil.getTime() - Date.now()) / dayMs)) : 0;
+        const unitPrice = bid.items?.[0]?.unit_price ? Number(bid.items[0].unit_price) : 0;
+
+        return {
+          id: bid.id,
+          rfqId: rfq.id,
+          rfqTitle,
+          supplier: bid.supplier?.name || "Unknown supplier",
+          unitPrice,
+          totalPrice: Number(bid.total_price || 0),
+          deliveryDays,
+          quoteValidity: validUntil ? validUntil.toLocaleDateString() : t("bids.quote_valid") || "N/A",
+          status: statusConfig[status] ? status : "pending",
+          submittedAt: bid.created_at
+            ? new Date(bid.created_at).toLocaleString()
+            : "",
+          notes: bid.items?.[0]?.note,
+        };
+      });
+    });
+  }, [data, t]);
+
+  const filteredBids = bids.filter((bid) => {
     const matchesSearch =
       bid.supplier.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bid.rfqId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -326,7 +317,15 @@ export default function Bids() {
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4">
-            {pendingBids.length === 0 ? (
+            {isLoading ? (
+              <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
+                Loading bids...
+              </div>
+            ) : isError ? (
+              <div className="bg-card rounded-xl border border-border p-12 text-center text-danger">
+                Failed to load bids
+              </div>
+            ) : pendingBids.length === 0 ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
                 <p className="font-medium text-foreground">{t("bids.empty.caught_up")}</p>
@@ -344,7 +343,15 @@ export default function Bids() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">
-            {historyBids.length === 0 ? (
+            {isLoading ? (
+              <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
+                Loading bids...
+              </div>
+            ) : isError ? (
+              <div className="bg-card rounded-xl border border-border p-12 text-center text-danger">
+                Failed to load bids
+              </div>
+            ) : historyBids.length === 0 ? (
               <div className="bg-card rounded-xl border border-border p-12 text-center">
                 <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="font-medium text-foreground">{t("bids.empty.no_history")}</p>

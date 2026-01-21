@@ -14,11 +14,11 @@ export default function Login() {
   const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"contractor" | "supplier" | "admin">("contractor");
-
+  // Role is determined by the backend user account, not the login form
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, role);
+    await login(email, password);
   };
 
   return (
@@ -34,21 +34,15 @@ export default function Login() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("auth.login.title") || "Welcome Back"}</CardTitle>
-            <CardDescription>{t("auth.login.subtitle") || "Sign in to your account"}</CardDescription>
+            <CardTitle>{t("auth.login.title")}</CardTitle>
+            <CardDescription>{t("auth.login.subtitle")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Tabs value={role} onValueChange={(v) => setRole(v as any)} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="contractor">Buyer</TabsTrigger>
-                  <TabsTrigger value="supplier">Seller</TabsTrigger>
-                  <TabsTrigger value="admin">Admin</TabsTrigger>
-                </TabsList>
-              </Tabs>
+
 
               <div className="space-y-2">
-                <Label htmlFor="email">{t("auth.login.email") || "Email"}</Label>
+                <Label htmlFor="email">{t("auth.login.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -60,12 +54,12 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">{t("auth.login.password") || "Password"}</Label>
+                  <Label htmlFor="password">{t("auth.login.password")}</Label>
                   <Link
                     to="/forgot-password"
                     className="text-xs text-primary hover:underline"
                   >
-                    Forgot password?
+                    {t("auth.login.forgot_password")}
                   </Link>
                 </div>
                 <Input
@@ -78,15 +72,15 @@ export default function Login() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isLoading ? t("auth.login.signing_in") : t("auth.login.sign_in")}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              {t("auth.login.no_account")}{" "}
               <Link to="/register" className="text-primary hover:underline font-medium">
-                Sign up
+                {t("auth.login.sign_up")}
               </Link>
             </p>
           </CardFooter>

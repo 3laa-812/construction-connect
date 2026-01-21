@@ -46,8 +46,8 @@ export default function Register() {
           <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
             <Construction className="w-6 h-6 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold">Create Account</h1>
-          <p className="text-muted-foreground text-sm">Join the Construction Connect Network</p>
+          <h1 className="text-2xl font-bold">{t("auth.register.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("auth.register.subtitle")}</p>
         </div>
 
         <Card>
@@ -73,14 +73,14 @@ export default function Register() {
               ))}
             </div>
             <CardTitle>
-              {step === 1 ? "Basic Information" : step === 2 ? "Company Details" : "Verification"}
+              {step === 1 ? t("auth.register.step1_title") : step === 2 ? t("auth.register.step2_title") : t("auth.register.step3_title")}
             </CardTitle>
             <CardDescription>
               {step === 1
-                ? "Let's start with your personal details"
+                ? t("auth.register.step1_desc")
                 : step === 2
-                ? "Tell us about your business"
-                : "Enter the code sent to your phone"}
+                ? t("auth.register.step2_desc")
+                : t("auth.register.step3_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -89,32 +89,32 @@ export default function Register() {
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
+                      <Label htmlFor="fullName">{t("auth.register.full_name")}</Label>
                       <Input id="fullName" value={formData.fullName} onChange={handleChange} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
+                      <Label htmlFor="phone">{t("auth.register.phone")}</Label>
                       <Input id="phone" value={formData.phone} onChange={handleChange} required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("auth.register.email")}</Label>
                     <Input id="email" type="email" value={formData.email} onChange={handleChange} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">{t("auth.register.password")}</Label>
                     <Input id="password" type="password" value={formData.password} onChange={handleChange} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>I am a...</Label>
+                    <Label>{t("auth.register.iam")}</Label>
                     <Tabs
                       value={formData.role}
                       onValueChange={(v) => setFormData({ ...formData, role: v })}
                       className="w-full"
                     >
                       <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="contractor">Buyer (Contractor)</TabsTrigger>
-                        <TabsTrigger value="supplier">Seller (Supplier)</TabsTrigger>
+                        <TabsTrigger value="contractor">{t("auth.register.contractor")}</TabsTrigger>
+                        <TabsTrigger value="supplier">{t("auth.register.supplier")}</TabsTrigger>
                       </TabsList>
                     </Tabs>
                   </div>
@@ -124,24 +124,24 @@ export default function Register() {
               {step === 2 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name</Label>
+                    <Label htmlFor="companyName">{t("auth.register.company_name")}</Label>
                     <Input id="companyName" value={formData.companyName} onChange={handleChange} required />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="crNumber">CR Number</Label>
+                      <Label htmlFor="crNumber">{t("auth.register.cr_number")}</Label>
                       <Input id="crNumber" value={formData.crNumber} onChange={handleChange} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="taxId">Tax ID / VAT</Label>
+                      <Label htmlFor="taxId">{t("auth.register.tax_id")}</Label>
                       <Input id="taxId" value={formData.taxId} onChange={handleChange} required />
                     </div>
                   </div>
                   
                   <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
                     <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm font-medium">Upload CR Certificate</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG up to 5MB</p>
+                    <p className="text-sm font-medium">{t("auth.register.upload_cr")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t("auth.register.upload_cr_desc")}</p>
                   </div>
                 </div>
               )}
@@ -150,7 +150,7 @@ export default function Register() {
                 <div className="space-y-6 animate-fade-in text-center">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      We sent a 6-digit code to <strong>{formData.phone}</strong>
+                      {t("auth.register.otp_sent")} <strong>{formData.phone}</strong>
                     </p>
                     <Input
                       id="otp"
@@ -158,11 +158,11 @@ export default function Register() {
                       onChange={handleChange}
                       className="text-center text-2xl tracking-widest h-14"
                       maxLength={6}
-                      placeholder="• • • • • •"
+                      placeholder={t("auth.register.otp_placeholder")}
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      Tip: Enter any 6 digits to verify (Mock Mode)
+                      {t("auth.register.otp_tip")}
                     </p>
                   </div>
                 </div>
@@ -171,15 +171,15 @@ export default function Register() {
               <div className="flex gap-3 pt-4">
                 {step > 1 && (
                   <Button type="button" variant="outline" onClick={() => setStep((p) => p - 1)} className="flex-1">
-                    Back
+                    {t("auth.register.back")}
                   </Button>
                 )}
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {step === 3
                     ? isLoading
-                      ? "Verifying..."
-                      : "Verify & Create Account"
-                    : "Next"}
+                      ? t("auth.register.verifying")
+                      : t("auth.register.verify")
+                    : t("auth.register.next")}
                 </Button>
               </div>
             </form>
@@ -187,9 +187,9 @@ export default function Register() {
           {step === 1 && (
             <CardFooter className="flex justify-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account?{" "}
+                {t("auth.register.has_account")}{" "}
                 <Link to="/login" className="text-primary hover:underline font-medium">
-                  Sign in
+                  {t("auth.register.sign_in")}
                 </Link>
               </p>
             </CardFooter>
