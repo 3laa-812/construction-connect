@@ -80,6 +80,7 @@ export class SyncService {
         'purchase_orders', 'po_items',
         'delivery_notes', 'grn_items',
         'invoices', 
+        'daily_logs', 'log_photos',
         'wallets', 'transactions'
       ];
 
@@ -169,7 +170,9 @@ export class SyncService {
           'users': 'user',
           'companies': 'company',
           'wallets': 'wallet',
-          'transactions': 'transaction'
+          'transactions': 'transaction',
+          'daily_logs': 'dailyLog',
+          'log_photos': 'logPhoto'
       };
       return map[tableName] || null;
   }
