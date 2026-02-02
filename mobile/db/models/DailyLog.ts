@@ -1,19 +1,32 @@
-import { Model } from '@nozbe/watermelondb'
-import { field, text, date, json, children } from '@nozbe/watermelondb/decorators'
+import { Model, Relation, Query } from '@nozbe/watermelondb'
+import { field, date, readonly, relation, children, json } from '@nozbe/watermelondb/decorators'
+import Project from './Project'
+import User from './User'
+import LogPhoto from './LogPhoto'
 
 export default class DailyLog extends Model {
   static table = 'daily_logs'
-  static associations = {
-    log_photos: { type: 'has_many', foreignKey: 'daily_log_id' },
+
+  @relation('projects', 'project_id') project!: Relation<Project>
+  @relation('users', 'user_id') user!: Relation<User>
+  @date('log_date') logDate!: number
+  @json('weather_data', (raw) => raw) weatherData: any
+  @json('attendance_data', (raw) => raw) attendanceData: any
+  @json('material_receipt_data', (raw) => raw) materialReceiptData: any
+  @field('status') status!: string
+  @readonly @date('created_at') createdAt!: number
+  @readonly @date('updated_at') updatedAt!: number
+
+  @children('log_photos') photos!: Query<LogPhoto>
+
+  async addPhoto(localPath: string, gpsLat?: number, gpsLong?: number) {
+    return this.database.write(async () => {
+      await this.collections.get<LogPhoto>('log_photos').create(photo => {
+        photo.dailyLog.set(this)
+        photo.localPath = localPath
+        photo.gpsLat = gpsLat!
+        photo.gpsLong = gpsLong!
+      })
+    })
   }
-
-  @field('project_id') projectId
-  @field('user_id') userId
-  @date('log_date') logDate
-  @json('weather_data', (raw) => raw) weatherData
-  @field('status') status
-  @date('created_at') createdAt
-  @date('updated_at') updatedAt
-
-  @children('log_photos') photos
 }

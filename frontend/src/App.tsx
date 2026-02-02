@@ -53,10 +53,13 @@ const App = () => (
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/approvals" element={<Approvals />} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="/supplier/rfq-feed" element={<SupplierRFQFeed />} />
+                  <Route
+                    path="/supplier/rfq-feed"
+                    element={<SupplierRFQFeed />}
+                  />
                   <Route path="/financials" element={<Financials />} />
                 </Route>
-                
+
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

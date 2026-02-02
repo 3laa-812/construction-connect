@@ -64,8 +64,9 @@ export function AppSidebar() {
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
         "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-        isActive(item.href) && "bg-sidebar-accent text-sidebar-foreground font-medium",
-        collapsed && "justify-center px-2"
+        isActive(item.href) &&
+          "bg-sidebar-accent text-sidebar-foreground font-medium",
+        collapsed && "justify-center px-2",
       )}
     >
       <item.icon className="h-5 w-5 shrink-0" />
@@ -87,14 +88,16 @@ export function AppSidebar() {
       className={cn(
         "hidden lg:flex flex-col bg-sidebar border-sidebar-border transition-all duration-300",
         isRTL ? "border-l" : "border-r",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-64",
       )}
     >
       {/* Logo */}
-      <div className={cn(
-        "h-16 flex items-center border-b border-sidebar-border px-4",
-        collapsed && "justify-center px-2"
-      )}>
+      <div
+        className={cn(
+          "h-16 flex items-center border-b border-sidebar-border px-4",
+          collapsed && "justify-center px-2",
+        )}
+      >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="h-5 w-5 text-primary-foreground" />
@@ -104,7 +107,9 @@ export function AppSidebar() {
               <h1 className="text-sidebar-foreground font-bold text-lg tracking-tight">
                 {t("common.app_name")}
               </h1>
-              <p className="text-sidebar-foreground/50 text-xs">{t("common.procurement")}</p>
+              <p className="text-sidebar-foreground/50 text-xs">
+                {t("common.procurement")}
+              </p>
             </div>
           )}
         </div>
@@ -161,14 +166,22 @@ export function AppSidebar() {
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
             "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-            collapsed && "px-2"
+            collapsed && "px-2",
           )}
         >
           {collapsed ? (
-            isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+            isRTL ? (
+              <ChevronLeft className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )
           ) : (
             <>
-              {isRTL ? <ChevronRight className="h-4 w-4 me-2" /> : <ChevronLeft className="h-4 w-4 me-2" />}
+              {isRTL ? (
+                <ChevronRight className="h-4 w-4 me-2" />
+              ) : (
+                <ChevronLeft className="h-4 w-4 me-2" />
+              )}
               <span>{t("common.sidebar.collapse")}</span>
             </>
           )}

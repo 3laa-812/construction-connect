@@ -1,16 +1,15 @@
-import { Model } from '@nozbe/watermelondb'
-import { field, text, date, relation } from '@nozbe/watermelondb/decorators'
+import { Model, Relation } from '@nozbe/watermelondb'
+import { field, date, readonly, relation } from '@nozbe/watermelondb/decorators'
+import DailyLog from './DailyLog'
 
 export default class LogPhoto extends Model {
   static table = 'log_photos'
-  static associations = {
-    daily_logs: { type: 'belongs_to', key: 'daily_log_id' },
-  }
 
-  @relation('daily_logs', 'daily_log_id') dailyLog
-  @text('local_path') localPath
-  @text('s3_url') s3Url
-  @field('gps_lat') gpsLat
-  @field('gps_long') gpsLong
-  @date('created_at') createdAt
+  @relation('daily_logs', 'daily_log_id') dailyLog!: Relation<DailyLog>
+  @field('local_path') localPath: string | null
+  @field('s3_url') s3Url: string | null
+  @field('gps_lat') gpsLat: number | null
+  @field('gps_long') gpsLong: number | null
+  @readonly @date('created_at') createdAt!: number
+  @readonly @date('updated_at') updatedAt!: number
 }

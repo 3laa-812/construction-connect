@@ -13,6 +13,8 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { SyncModule } from './sync/sync.module';
 import { SettingsModule } from './settings/settings.module';
 import { WalletsModule } from './wallets/wallets.module';
+import { MaterialsModule } from './materials/materials.module';
+import { DailyLogsModule } from './daily-logs/daily-logs.module';
 
 @Module({
   imports: [
@@ -26,7 +28,9 @@ import { WalletsModule } from './wallets/wallets.module';
     InvoicesModule,
     SyncModule,
     SettingsModule,
-    WalletsModule
+    WalletsModule,
+    MaterialsModule,
+    DailyLogsModule
   ],
   controllers: [AppController],
   providers: [AppService],

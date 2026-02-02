@@ -1,30 +1,25 @@
-import { Slot } from "expo-router";
-import { useEffect, useState } from "react";
-import { View, Text } from "react-native";
-import { database } from "../db";
-import { DatabaseProvider } from "@nozbe/watermelondb/DatabaseProvider";
-
 import "../global.css";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { View } from "react-native";
 
-export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    // Check if DB is ready or perform any initialization
-    setIsReady(true);
-  }, []);
-
-  if (!isReady) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text>Loading Database...</Text>
-      </View>
-    );
-  }
-
+export default function Layout() {
   return (
-    <DatabaseProvider database={database}>
-        <Slot />
-    </DatabaseProvider>
+    <View className="flex-1 bg-background">
+      <StatusBar style="light" />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "transparent" },
+        }}
+      >
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="daily-log/[id]"
+          options={{ presentation: "card", title: "Daily Log" }}
+        />
+      </Stack>
+    </View>
   );
 }

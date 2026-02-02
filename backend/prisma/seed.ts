@@ -23,6 +23,9 @@ async function main() {
   console.log('Cleaning up existing data...');
   await prisma.transaction.deleteMany();
   await prisma.syncChange.deleteMany();
+  await prisma.logPhoto.deleteMany();
+  await prisma.dailyLog.deleteMany();
+  await prisma.companySettings.deleteMany();
   await prisma.gRNItem.deleteMany();
   await prisma.deliveryNote.deleteMany();
   await prisma.pOItem.deleteMany();

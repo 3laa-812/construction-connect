@@ -1,5 +1,5 @@
 import { Database } from '@nozbe/watermelondb'
-import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
+import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs'
 
 import { schema } from './schema'
 import User from './models/User'
@@ -10,14 +10,12 @@ import LogPhoto from './models/LogPhoto'
 import Material from './models/Material'
 import PurchaseOrder from './models/PurchaseOrder'
 
-const adapter = new SQLiteAdapter({
+const adapter = new LokiJSAdapter({
   schema,
-  // (You might want to comment out migration events for now if not using them yet)
-  // migrations, 
-  // dbName: 'construction_connect', 
-  // jsi: true, /* Platform.OS === 'ios' */
-  onSetUpError: error => {
-    console.error("Database failed to load", error)
+  useWebWorker: false,
+  useIncrementalIndexedDB: true,
+  onSetUpError: (error) => {
+    console.error("LokiJS failed to load", error)
   }
 })
 
