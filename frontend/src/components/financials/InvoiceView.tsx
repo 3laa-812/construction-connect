@@ -1,4 +1,5 @@
-import { Download, Printer, Mail, QrCode, FileText, Building2, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Download, Printer, Mail, FileText, Building2, MapPin, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -8,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import QRCode from "qrcode";
 
 interface InvoiceLineItem {
   id: string;
@@ -50,12 +52,15 @@ interface InvoiceData {
   vatRate: number;
   vatAmount: number;
   total: number;
+  currency?: string;
   // ZATCA QR Code data for KSA compliance (FR-E02)
   zatcaQrCode?: string;
 }
 
 interface InvoiceViewProps {
   invoice: InvoiceData;
+  /** Server invoice UUID — enables real PDF download. */
+  invoiceId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -67,12 +72,47 @@ const statusConfig = {
   overdue: { color: "danger", label: "Overdue" },
 } as const;
 
-export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
+export function InvoiceView({ invoice, invoiceId, open, onOpenChange }: InvoiceViewProps) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const cur = invoice.currency || "SAR";
+
+  useEffect(() => {
+    let cancelled = false;
+    const tlv = invoice.zatcaQrCode;
+    if (!tlv) {
+      setQrDataUrl(null);
+      return;
+    }
+    QRCode.toDataURL(tlv, { width: 160, margin: 1 })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setQrDataUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invoice.zatcaQrCode]);
+
   const handlePrint = () => {
     window.print();
   };
 
-  const handleDownload = () => {
+  const handleDownloadPdf = async () => {
+    if (invoiceId) {
+      try {
+        const res = await api.get<{ url: string }>(`/invoices/${invoiceId}/pdf`);
+        window.open(res.data.url, "_blank", "noopener,noreferrer");
+        return;
+      } catch {
+        /* fall back */
+      }
+    }
+    handleDownloadTextFallback();
+  };
+
+  const handleDownloadTextFallback = () => {
     // Lightweight "download" until backend PDF endpoint exists:
     // create a simple text snapshot so the button does something useful.
     const content = [
@@ -94,7 +134,7 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invoice-${invoice.invoiceNumber}.txt`;
+    a.download = `invoice-${invoice.invoiceNumber || invoiceId || "export"}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -104,7 +144,7 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
   const handleEmail = () => {
     const subject = encodeURIComponent(`Invoice ${invoice.invoiceNumber}`);
     const body = encodeURIComponent(
-      `Invoice ${invoice.invoiceNumber}\n\nTotal: SAR ${invoice.total}\nDue: ${invoice.dueDate}\nOrder: ${invoice.orderId}\n\n`
+      `Invoice ${invoice.invoiceNumber}\n\nTotal: ${cur} ${invoice.total}\nDue: ${invoice.dueDate}\nOrder: ${invoice.orderId}\n\n`
     );
     // No recipient available in data yet; open mail client.
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
@@ -127,7 +167,7 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
               <Printer className="w-4 h-4 me-2" />
               Print
             </Button>
-            <Button size="sm" onClick={handleDownload}>
+            <Button size="sm" onClick={handleDownloadPdf}>
               <Download className="w-4 h-4 me-2" />
               Download PDF
             </Button>
@@ -237,8 +277,8 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
                     <td className="p-3 text-sm font-medium">{item.description}</td>
                     <td className="p-3 text-sm text-center tabular-nums">{item.quantity}</td>
                     <td className="p-3 text-sm text-center">{item.unit}</td>
-                    <td className="p-3 text-sm text-end tabular-nums">SAR {item.unitPrice.toFixed(2)}</td>
-                    <td className="p-3 text-sm text-end tabular-nums font-medium">SAR {item.totalPrice.toFixed(2)}</td>
+                    <td className="p-3 text-sm text-end tabular-nums">{cur} {item.unitPrice.toFixed(2)}</td>
+                    <td className="p-3 text-sm text-end tabular-nums font-medium">{cur} {item.totalPrice.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -250,25 +290,25 @@ export function InvoiceView({ invoice, open, onOpenChange }: InvoiceViewProps) {
             <div className="w-72 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="tabular-nums">SAR {invoice.subtotal.toFixed(2)}</span>
+                <span className="tabular-nums">{cur} {invoice.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">VAT ({invoice.vatRate}%)</span>
-                <span className="tabular-nums">SAR {invoice.vatAmount.toFixed(2)}</span>
+                <span className="tabular-nums">{cur} {invoice.vatAmount.toFixed(2)}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total / المجموع</span>
-                <span className="text-primary tabular-nums">SAR {invoice.total.toFixed(2)}</span>
+                <span className="text-primary tabular-nums">{cur} {invoice.total.toFixed(2)}</span>
               </div>
             </div>
           </div>
 
           {/* ZATCA QR Code - FR-E02 KSA Compliance */}
-          {invoice.zatcaQrCode && (
+          {invoice.zatcaQrCode && qrDataUrl && (
             <div className="border-t border-border pt-6 flex items-center gap-4">
-              <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-muted-foreground" />
+              <div className="w-40 h-40 bg-white rounded-lg flex items-center justify-center border border-border p-1">
+                <img src={qrDataUrl} alt="ZATCA QR" className="w-full h-full object-contain" />
               </div>
               <div className="text-sm">
                 <p className="font-medium">ZATCA Compliant Invoice</p>

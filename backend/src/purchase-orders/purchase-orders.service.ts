@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
+import { InvoicesService } from '../invoices/invoices.service';
 
 const poInclude = {
   project: true,
@@ -28,6 +29,7 @@ export class PurchaseOrdersService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private invoices: InvoicesService,
   ) {}
 
   private readonly supplierTransitions: Record<string, POStatus> = {
@@ -186,6 +188,9 @@ export class PurchaseOrdersService {
         data: { status },
       });
       await this.notifyOrderStatusParties(po, id, status, 'admin');
+      if (status === POStatus.DELIVERED) {
+        await this.invoices.createOnPoDelivered(id);
+      }
       return updated;
     }
 
@@ -219,6 +224,9 @@ export class PurchaseOrdersService {
       status,
       isSupplier ? 'supplier' : 'buyer',
     );
+    if (status === POStatus.DELIVERED) {
+      await this.invoices.createOnPoDelivered(id);
+    }
     return updated;
   }
 

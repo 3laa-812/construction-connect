@@ -7,11 +7,20 @@ import {
   Param,
   Delete,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { InvoicesService } from './invoices.service';
 import { Prisma } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+
+const paymentProofUpload = FileInterceptor('file', {
+  storage: memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+});
 
 @Controller('invoices')
 export class InvoicesController {
@@ -28,6 +37,22 @@ export class InvoicesController {
   @Get()
   findAll(@CurrentUser() user: JwtPayload) {
     return this.invoicesService.findAll(user);
+  }
+
+  @Get(':id/pdf')
+  getPdf(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.invoicesService.getPdfSignedUrl(id, user);
+  }
+
+  @Post(':id/payment-proof')
+  @UseInterceptors(paymentProofUpload)
+  uploadPaymentProof(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { referenceNumber?: string; notes?: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.invoicesService.uploadPaymentProof(id, file, body, user);
   }
 
   @Get(':id')

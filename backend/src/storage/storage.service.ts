@@ -11,7 +11,8 @@ export type StorageFolder =
   | 'kyb-docs'
   | 'rfq-attachments'
   | 'site-photos'
-  | 'delivery-notes';
+  | 'delivery-notes'
+  | 'invoices';
 
 /**
  * S3 uploads with SSE-S3 (AES256). Credentials: default AWS provider chain
@@ -62,6 +63,39 @@ export class StorageService {
       this.logger.error(msg);
       throw new InternalServerErrorException('File upload failed');
     }
+    return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+  }
+
+  /**
+   * Upload and return the S3 object key only (for later presigned GETs).
+   */
+  async uploadBufferAndReturnKey(
+    buffer: Buffer,
+    mimeType: string,
+    folder: StorageFolder,
+  ): Promise<string> {
+    const { bucket } = this.requireBucketConfig();
+    const key = `${folder}/${randomUUID()}-${Date.now()}`;
+    try {
+      await this.getS3().send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: mimeType,
+          ServerSideEncryption: 'AES256',
+        }),
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'S3 upload failed';
+      this.logger.error(msg);
+      throw new InternalServerErrorException('File upload failed');
+    }
+    return key;
+  }
+
+  getPublicObjectUrl(key: string): string {
+    const { bucket, region } = this.requireBucketConfig();
     return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
   }
 

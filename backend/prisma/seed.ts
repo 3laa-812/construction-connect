@@ -48,6 +48,7 @@ async function main() {
     data: {
       name: 'Alpha Construction Co.',
       type: CompanyType.CONTRACTOR,
+      country: 'SA',
       commercial_reg_no: 'CR-1001',
       tax_id: 'TAX-1001',
       is_verified: true,
@@ -59,6 +60,7 @@ async function main() {
     data: {
       name: 'Mega Materials Supply',
       type: CompanyType.SUPPLIER,
+      country: 'SA',
       commercial_reg_no: 'CR-2002',
       tax_id: 'TAX-2002',
       is_verified: true,

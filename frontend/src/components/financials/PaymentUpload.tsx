@@ -14,50 +14,52 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 interface PaymentUploadProps {
+  invoiceId: string;
   orderId: string;
   invoiceNumber: string;
   amount: number;
+  currency?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (data: PaymentData) => void;
-}
-
-interface PaymentData {
-  orderId: string;
-  invoiceNumber: string;
-  paymentMethod: "bank_transfer" | "cheque";
-  amount: number;
-  referenceNumber: string;
-  receiptImage: string;
-  notes: string;
-  submittedAt: string;
+  onSubmit?: (data: { payment_proof_url: string }) => void;
 }
 
 export function PaymentUpload({
+  invoiceId,
   orderId,
   invoiceNumber,
   amount,
+  currency = "SAR",
   open,
   onOpenChange,
   onSubmit,
 }: PaymentUploadProps) {
   const [paymentMethod, setPaymentMethod] = useState<"bank_transfer" | "cheque">("bank_transfer");
   const [referenceNumber, setReferenceNumber] = useState("");
-  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setReceiptImage(URL.createObjectURL(file));
-    }
+    if (!file) return;
+    setReceiptFile(file);
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    setReceiptPreview(URL.createObjectURL(file));
+  };
+
+  const clearReceipt = () => {
+    setReceiptFile(null);
+    if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    setReceiptPreview(null);
   };
 
   const handleSubmit = async () => {
-    if (!receiptImage || !referenceNumber) {
+    if (!receiptFile || !referenceNumber) {
       toast({
         title: "Missing Information",
         description: "Please upload receipt and enter reference number",
@@ -68,27 +70,30 @@ export function PaymentUpload({
 
     setIsSubmitting(true);
     try {
-      const paymentData: PaymentData = {
-        orderId,
-        invoiceNumber,
-        paymentMethod,
-        amount,
-        referenceNumber,
-        receiptImage,
-        notes,
-        submittedAt: new Date().toISOString(),
-      };
+      const fd = new FormData();
+      fd.append("file", receiptFile);
+      fd.append("referenceNumber", referenceNumber);
+      fd.append("notes", notes);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const res = await api.post<{ payment_proof_url: string }>(
+        `/invoices/${invoiceId}/payment-proof`,
+        fd,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
 
       toast({
         title: "Payment Submitted",
-        description: "Your payment is pending supplier verification",
+        description: "Your payment proof has been uploaded.",
       });
 
-      onSubmit?.(paymentData);
+      onSubmit?.(res.data);
+      clearReceipt();
+      setReferenceNumber("");
+      setNotes("");
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast({
         title: "Submission Failed",
         description: "Please try again",
@@ -113,7 +118,6 @@ export function PaymentUpload({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Payment Summary */}
           <div className="bg-muted/50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Order ID</span>
@@ -126,12 +130,11 @@ export function PaymentUpload({
             <div className="flex justify-between pt-2 border-t border-border">
               <span className="font-medium">Amount Due</span>
               <span className="font-bold text-primary tabular-nums">
-                SAR {amount.toLocaleString()}
+                {currency} {amount.toLocaleString()}
               </span>
             </div>
           </div>
 
-          {/* Payment Method */}
           <div className="space-y-3">
             <Label>Payment Method</Label>
             <RadioGroup
@@ -164,7 +167,6 @@ export function PaymentUpload({
             </RadioGroup>
           </div>
 
-          {/* Reference Number */}
           <div className="space-y-2">
             <Label>
               {paymentMethod === "bank_transfer" ? "Transaction Reference" : "Cheque Number"} *
@@ -181,18 +183,18 @@ export function PaymentUpload({
             />
           </div>
 
-          {/* Receipt Upload */}
           <div className="space-y-2">
             <Label>Upload Receipt / Cheque Image *</Label>
-            {receiptImage ? (
+            {receiptPreview ? (
               <div className="relative">
                 <img
-                  src={receiptImage}
+                  src={receiptPreview}
                   alt="Payment receipt"
                   className="w-full h-48 object-cover rounded-lg border border-border"
                 />
                 <button
-                  onClick={() => setReceiptImage(null)}
+                  type="button"
+                  onClick={clearReceipt}
                   className="absolute top-2 end-2 w-8 h-8 bg-danger text-danger-foreground rounded-full flex items-center justify-center"
                 >
                   <X className="w-4 h-4" />
@@ -215,7 +217,6 @@ export function PaymentUpload({
             )}
           </div>
 
-          {/* Notes */}
           <div className="space-y-2">
             <Label>Additional Notes</Label>
             <Textarea
@@ -233,7 +234,7 @@ export function PaymentUpload({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!receiptImage || !referenceNumber || isSubmitting}
+            disabled={!receiptFile || !referenceNumber || isSubmitting}
           >
             <CheckCircle className="w-4 h-4 me-2" />
             {isSubmitting ? "Submitting..." : "Submit Payment"}

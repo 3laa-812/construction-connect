@@ -44,22 +44,42 @@ type ApiWalletSummary = {
 type ApiInvoice = {
   id: string;
   status?: string;
-  total_amount?: number;
+  subtotal?: number | string;
+  vat_rate?: number | string;
+  vat_amount?: number | string;
+  total_amount?: number | string;
+  currency?: string;
+  issue_date?: string | null;
+  due_date?: string | null;
+  qr_code_data?: string | null;
   created_at?: string;
+  purchase_order?: {
+    id: string;
+    project?: { name?: string };
+    items?: Array<{
+      id: string;
+      item_description?: string | null;
+      ordered_qty?: number | string | null;
+      unit_price?: number | string | null;
+    }>;
+  };
   supplier?: { name?: string; commercial_reg_no?: string; tax_id?: string };
-  buyer?: { name?: string; commercial_reg_no?: string; tax_id?: string };
+  buyer?: { name?: string; commercial_reg_no?: string; tax_id?: string; country?: string };
 };
 
 type AdaptedInvoice = {
+  id: string;
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
   orderId: string;
   total: number;
-  status: string;
+  status: "draft" | "sent" | "paid" | "overdue";
+  currency: string;
   subtotal: number;
   vatRate: number;
   vatAmount: number;
+  zatcaQrCode?: string;
   lineItems: Array<{
     id: string;
     description: string;
@@ -88,7 +108,14 @@ type AdaptedInvoice = {
   };
 };
 
-const InvoiceRow = ({ invoice, onSelect, onPayment }: { invoice: AdaptedInvoice & { rawStatus: string; id: string }; onSelect: (inv: any) => void, onPayment: (inv: any) => void }) => {
+function mapInvoiceUiStatus(raw: string | undefined): "draft" | "sent" | "paid" | "overdue" {
+  const u = (raw || "DRAFT").toUpperCase();
+  if (u === "ISSUED" || u === "SUBMITTED") return "sent";
+  if (u === "CLEARED" || u === "REPORTED") return "paid";
+  return "draft";
+}
+
+const InvoiceRow = ({ invoice, onSelect, onPayment }: { invoice: AdaptedInvoice & { rawStatus: string }; onSelect: (inv: AdaptedInvoice) => void, onPayment: (inv: AdaptedInvoice) => void }) => {
     const { t, isRTL } = useLanguage();
     const adapted = invoice;
 
@@ -103,7 +130,7 @@ const InvoiceRow = ({ invoice, onSelect, onPayment }: { invoice: AdaptedInvoice 
         <td className="p-3 text-muted-foreground">{adapted.orderId}</td>
         <td className="p-3 text-muted-foreground tabular-nums">{adapted.invoiceDate}</td>
         <td className="p-3 text-end font-semibold tabular-nums rtl:text-start">
-            SAR {invoice.total_amount?.toLocaleString() || '0'}
+            {invoice.currency} {invoice.total?.toLocaleString() || "0"}
         </td>
         <td className="p-3 text-center">
             <StatusBadge
@@ -139,10 +166,10 @@ const InvoiceRow = ({ invoice, onSelect, onPayment }: { invoice: AdaptedInvoice 
 function Financials() {
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
-  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null); // Using any for adapted type
+  const [selectedInvoice, setSelectedInvoice] = useState<AdaptedInvoice | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [selectedPaymentInvoice, setSelectedPaymentInvoice] = useState<any | null>(null);
+  const [selectedPaymentInvoice, setSelectedPaymentInvoice] = useState<AdaptedInvoice | null>(null);
 
   const { data, isLoading, isError } = useQuery<ApiInvoice[]>({
     queryKey: ["invoices"],
@@ -204,21 +231,47 @@ function Financials() {
 
   const invoices = useMemo(() => {
     if (!data) return [];
-    return data.map((invoice) => {
-      const createdAt = invoice.created_at ? new Date(invoice.created_at) : new Date();
+    return data.map((invoice): AdaptedInvoice & { rawStatus: string } => {
+      const createdAt = invoice.issue_date
+        ? new Date(invoice.issue_date)
+        : invoice.created_at
+          ? new Date(invoice.created_at)
+          : new Date();
+      const due = invoice.due_date ? new Date(invoice.due_date) : new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const subtotal = Number(invoice.subtotal ?? invoice.total_amount ?? 0);
+      const vatAmt = Number(invoice.vat_amount ?? 0);
+      const vr =
+        invoice.vat_rate != null ? Number(invoice.vat_rate) * 100 : (invoice.buyer?.country || "SA") === "SA" ? 15 : 14;
+      const po = invoice.purchase_order;
+      const lineItems =
+        po?.items?.map((it) => {
+          const qty = Number(it.ordered_qty ?? 0);
+          const up = Number(it.unit_price ?? 0);
+          return {
+            id: it.id,
+            description: it.item_description || "Item",
+            quantity: qty,
+            unit: "unit",
+            unitPrice: up,
+            totalPrice: qty * up,
+          };
+        }) ?? [];
+      const uiStatus = mapInvoiceUiStatus(invoice.status);
       return {
         id: invoice.id,
         invoiceNumber: invoice.id.substring(0, 8).toUpperCase(),
         invoiceDate: createdAt.toLocaleDateString(),
-        dueDate: new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        orderId: invoice.id.substring(0, 8),
+        dueDate: due.toLocaleDateString(),
+        orderId: po?.id ? po.id.substring(0, 8) : "—",
         total: Number(invoice.total_amount || 0),
-        subtotal: Number((invoice as any).subtotal || invoice.total_amount || 0),
-        vatRate: 0.15,
-        vatAmount: Number((invoice as any).vat_amount || 0),
-        lineItems: [],
-        status: (invoice.status || "draft").toString().toLowerCase(),
-        rawStatus: (invoice.status || "draft").toString().toLowerCase(),
+        subtotal,
+        vatRate: vr,
+        vatAmount: vatAmt,
+        currency: invoice.currency || ((invoice.buyer?.country || "SA") === "SA" ? "SAR" : "EGP"),
+        lineItems,
+        status: uiStatus,
+        rawStatus: (invoice.status || "DRAFT").toString(),
+        zatcaQrCode: invoice.qr_code_data || undefined,
         seller: {
           name: invoice.supplier?.name || "Unknown",
           nameAr: invoice.supplier?.name || "Unknown",
@@ -235,18 +288,24 @@ function Financials() {
           vatNumber: invoice.buyer?.tax_id || "",
           address: "",
           phone: "",
-          project: "Project",
+          project: po?.project?.name || "Project",
         },
       };
     });
   }, [data]);
 
   const pendingAmount = invoices
-    .filter((inv) => inv.rawStatus !== "cleared" && inv.rawStatus !== "paid")
+    .filter((inv) => {
+      const u = inv.rawStatus.toUpperCase();
+      return u !== "CLEARED" && u !== "REPORTED";
+    })
     .reduce((sum, inv) => sum + (inv.total || 0), 0);
   
   const paidAmount = invoices
-    .filter((inv) => inv.rawStatus === "cleared" || inv.rawStatus === "paid")
+    .filter((inv) => {
+      const u = inv.rawStatus.toUpperCase();
+      return u === "CLEARED" || u === "REPORTED";
+    })
     .reduce((sum, inv) => sum + (inv.total || 0), 0);
 
   return (
@@ -419,6 +478,7 @@ function Financials() {
       {selectedInvoice && (
         <InvoiceView
           invoice={selectedInvoice}
+          invoiceId={selectedInvoice.id}
           open={showInvoiceDialog}
           onOpenChange={setShowInvoiceDialog}
         />
@@ -427,9 +487,11 @@ function Financials() {
       {/* Payment Upload Dialog */}
       {selectedPaymentInvoice && (
         <PaymentUpload
+          invoiceId={selectedPaymentInvoice.id}
           orderId={selectedPaymentInvoice.orderId}
           invoiceNumber={selectedPaymentInvoice.invoiceNumber}
           amount={selectedPaymentInvoice.total}
+          currency={selectedPaymentInvoice.currency}
           open={showPaymentDialog}
           onOpenChange={setShowPaymentDialog}
         />
