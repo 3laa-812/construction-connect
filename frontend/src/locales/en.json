@@ -15,6 +15,10 @@
     "settings": "Settings",
     "more": "More"
   },
+  "notifications": {
+    "mark_all_read": "Mark all read",
+    "empty": "You're all caught up."
+  },
   "common": {
     "search": "Search",
     "search_placeholder": "Search RFQs, Orders, Suppliers...",

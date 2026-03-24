@@ -20,6 +20,7 @@ import { MaterialsModule } from './materials/materials.module';
 import { DailyLogsModule } from './daily-logs/daily-logs.module';
 import { AdminModule } from './admin/admin.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     WalletsModule,
     MaterialsModule,
     DailyLogsModule,
-    AdminModule
+    AdminModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

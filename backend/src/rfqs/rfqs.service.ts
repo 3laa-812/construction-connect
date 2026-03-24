@@ -17,6 +17,7 @@ import {
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { StorageService } from '../storage/storage.service';
 import type { MulterMemoryFile } from '../storage/upload-file.types';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const rfqInclude = {
   project: { include: { company: true } },
@@ -35,6 +36,7 @@ export class RFQsService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private notifications: NotificationsService,
   ) {}
 
   async create(data: Prisma.RFQCreateInput, user: JwtPayload): Promise<RFQ> {
@@ -196,7 +198,20 @@ export class RFQsService {
     if (supplierId !== user.companyId) {
       throw new ForbiddenException('Bid must be placed for your company');
     }
-    return this.prisma.bid.create({ data });
+    const bid = await this.prisma.bid.create({ data });
+    const rfq = await this.prisma.rFQ.findUnique({
+      where: { id: bid.rfq_id },
+      select: { id: true, created_by: true },
+    });
+    if (rfq?.created_by) {
+      await this.notifications.createForUsers([rfq.created_by], {
+        title: 'New bid received',
+        body: 'A supplier submitted a new bid on your RFQ.',
+        type: 'bid_received',
+        entityId: rfq.id,
+      });
+    }
+    return bid;
   }
 
   async findAllBids(rfqId: string, user: JwtPayload): Promise<Bid[]> {
@@ -220,7 +235,6 @@ export class RFQsService {
 
   /**
    * Awards a bid: marks RFQ AWARDED, rejects other pending bids, creates PurchaseOrder + POItems.
-   * TODO(Section 8): emit in-app notification to winning supplier.
    */
   async awardBid(
     rfqId: string,
@@ -231,7 +245,7 @@ export class RFQsService {
       throw new ForbiddenException('Only contractors can award bids');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const po = await this.prisma.$transaction(async (tx) => {
       const rfq = await tx.rFQ.findUnique({
         where: { id: rfqId },
         include: { project: true },
@@ -289,7 +303,7 @@ export class RFQsService {
         data: { status: BidStatus.ACCEPTED },
       });
 
-      const po = await tx.purchaseOrder.create({
+      const createdPo = await tx.purchaseOrder.create({
         data: {
           project: { connect: { id: rfq.project_id } },
           supplier: { connect: { id: bid.supplier_id } },
@@ -317,8 +331,17 @@ export class RFQsService {
         },
       });
 
-      return po;
+      return createdPo;
     });
+
+    await this.notifications.notifyCompanyUsers(po.supplier_id, {
+      title: 'RFQ awarded',
+      body: 'Your bid was selected and a purchase order has been created.',
+      type: 'rfq_awarded',
+      entityId: po.id,
+    });
+
+    return po;
   }
 
   async rejectBid(

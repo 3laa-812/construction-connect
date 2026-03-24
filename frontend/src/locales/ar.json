@@ -15,6 +15,10 @@
     "settings": "الإعدادات",
     "more": "المزيد"
   },
+  "notifications": {
+    "mark_all_read": "تعليم الكل كمقروء",
+    "empty": "لا توجد إشعارات جديدة."
+  },
   "common": {
     "search": "بحث",
     "search_placeholder": "البحث في طلبات الأسعار، الطلبات، الموردين...",

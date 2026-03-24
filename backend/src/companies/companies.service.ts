@@ -9,6 +9,7 @@ import { Company, CompanyType, Prisma } from '@prisma/client';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { StorageService } from '../storage/storage.service';
 import type { MulterMemoryFile } from '../storage/upload-file.types';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const KYB_DOC_TYPES = ['CR', 'TAX_ID', 'VAT_CERT', 'COMPANY_LOGO'] as const;
 
@@ -17,6 +18,7 @@ export class CompaniesService {
   constructor(
     private prisma: PrismaService,
     private storage: StorageService,
+    private notifications: NotificationsService,
   ) {}
 
   async create(data: Prisma.CompanyCreateInput): Promise<Company> {
@@ -81,10 +83,24 @@ export class CompaniesService {
         await this.assertKyDocumentsComplete(id, existing.type);
       }
     }
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data,
     });
+    if (user.role === 'ADMIN') {
+      const becameVerified =
+        this.extractVerifyFlag(data.is_verified) === true &&
+        !existing.is_verified;
+      if (becameVerified) {
+        await this.notifications.notifyCompanyUsers(id, {
+          title: 'KYB approved',
+          body: 'Your company has been verified. You can now use the full marketplace.',
+          type: 'kyb_approved',
+          entityId: id,
+        });
+      }
+    }
+    return updated;
   }
 
   async verifyCompany(id: string): Promise<Company> {
@@ -92,11 +108,21 @@ export class CompaniesService {
     if (!existing) {
       throw new NotFoundException('Company not found');
     }
+    if (existing.is_verified) {
+      return existing;
+    }
     await this.assertKyDocumentsComplete(id, existing.type);
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: { is_verified: true },
     });
+    await this.notifications.notifyCompanyUsers(id, {
+      title: 'KYB approved',
+      body: 'Your company has been verified. You can now use the full marketplace.',
+      type: 'kyb_approved',
+      entityId: id,
+    });
+    return updated;
   }
 
   async uploadDocument(

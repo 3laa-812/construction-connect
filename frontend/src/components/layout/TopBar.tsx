@@ -1,4 +1,4 @@
-import { Bell, Search, User, Globe, Check, RefreshCw } from "lucide-react";
+import { Search, User, Globe, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -85,36 +85,7 @@ export function TopBar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative text-muted-foreground">
-              <Bell className="h-5 w-5" />
-              <span className={cn(
-                "absolute top-1 w-2 h-2 bg-danger rounded-full",
-                isRTL ? "left-1" : "right-1"
-              )} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={isRTL ? "start" : "end"} className="w-80">
-            <DropdownMenuLabel>{t("common.notifications")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <div className="flex items-center gap-2">
-                <StatusBadge variant="primary" size="sm">{t("common.notification_items.new_bid_title")}</StatusBadge>
-                <span className="text-xs text-muted-foreground">{t("dashboard.time.min_ago", { count: 2 })}</span>
-              </div>
-              <p className="text-sm">{t("common.notification_items.new_bid_desc")}</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-              <div className="flex items-center gap-2">
-                <StatusBadge variant="success" size="sm">{t("common.notification_items.delivered_title")}</StatusBadge>
-                <span className="text-xs text-muted-foreground">{t("dashboard.time.hour_ago", { count: 1 })}</span>
-              </div>
-              <p className="text-sm">{t("common.notification_items.delivered_desc")}</p>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationBell />
 
         {/* User Menu */}
         <DropdownMenu>

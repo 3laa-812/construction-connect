@@ -12,6 +12,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const poInclude = {
   project: true,
@@ -24,7 +25,10 @@ const poInclude = {
 
 @Injectable()
 export class PurchaseOrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   private readonly supplierTransitions: Record<string, POStatus> = {
     CONFIRMED: 'PROCESSING',
@@ -171,19 +175,23 @@ export class PurchaseOrdersService {
       return po;
     }
 
+    const isSupplier =
+      !!user.companyId && po.supplier_id === user.companyId;
+    const isBuyer =
+      !!user.companyId && po.project.company_id === user.companyId;
+
     if (user.role === 'ADMIN') {
-      return this.prisma.purchaseOrder.update({
+      const updated = await this.prisma.purchaseOrder.update({
         where: { id },
         data: { status },
       });
+      await this.notifyOrderStatusParties(po, id, status, 'admin');
+      return updated;
     }
 
     if (!user.companyId) {
       throw new ForbiddenException('Access denied');
     }
-
-    const isSupplier = po.supplier_id === user.companyId;
-    const isBuyer = po.project.company_id === user.companyId;
 
     if (isSupplier) {
       if (this.supplierTransitions[current] !== status) {
@@ -201,10 +209,46 @@ export class PurchaseOrdersService {
       throw new ForbiddenException('Access denied');
     }
 
-    return this.prisma.purchaseOrder.update({
+    const updated = await this.prisma.purchaseOrder.update({
       where: { id },
       data: { status },
     });
+    await this.notifyOrderStatusParties(
+      po,
+      id,
+      status,
+      isSupplier ? 'supplier' : 'buyer',
+    );
+    return updated;
+  }
+
+  private async notifyOrderStatusParties(
+    po: PurchaseOrder & { project: { company_id: string } },
+    poId: string,
+    status: POStatus,
+    actor: 'admin' | 'supplier' | 'buyer',
+  ): Promise<void> {
+    const label = String(status).replace(/_/g, ' ');
+    const payload = {
+      title: 'Order status updated',
+      body: `Purchase order is now ${label}.`,
+      type: 'order_status',
+      entityId: poId,
+    };
+    if (actor === 'admin') {
+      await this.notifications.notifyCompanyUsers(
+        po.project.company_id,
+        payload,
+      );
+      await this.notifications.notifyCompanyUsers(po.supplier_id, payload);
+    } else if (actor === 'supplier') {
+      await this.notifications.notifyCompanyUsers(
+        po.project.company_id,
+        payload,
+      );
+    } else {
+      await this.notifications.notifyCompanyUsers(po.supplier_id, payload);
+    }
   }
 
   async createDeliveryNote(

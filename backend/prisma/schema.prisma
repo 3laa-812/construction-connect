@@ -123,7 +123,25 @@ model User {
   sync_changes SyncChange[]
   dailyLogs    DailyLog[]
 
+  notifications Notification[]
+
   @@map("users")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  user_id    String
+  title      String   @db.VarChar(255)
+  body       String   @db.Text
+  type       String   @db.VarChar(64)
+  entity_id  String?
+  is_read    Boolean  @default(false)
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at])
+  @@index([user_id, is_read])
+  @@map("notifications")
 }
 
 // 2. Project & BOQ Management
