@@ -31,6 +31,34 @@ const rfqInclude = {
   },
 } as const;
 
+/** List views: selective fields to avoid loading full Company rows on every bid. */
+const rfqListInclude = {
+  project: {
+    select: {
+      id: true,
+      name: true,
+      company_id: true,
+      company: { select: { id: true, name: true } },
+    },
+  },
+  items: true,
+  attachments: true,
+  bids: {
+    include: {
+      supplier: { select: { id: true, name: true, is_verified: true } },
+      items: {
+        select: {
+          id: true,
+          bid_id: true,
+          rfq_item_id: true,
+          unit_price: true,
+          note: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.RFQInclude;
+
 @Injectable()
 export class RFQsService {
   constructor(
@@ -98,7 +126,7 @@ export class RFQsService {
 
   async findAll(user: JwtPayload): Promise<RFQ[]> {
     if (user.role === 'ADMIN') {
-      return this.prisma.rFQ.findMany({ include: rfqInclude });
+      return this.prisma.rFQ.findMany({ include: rfqListInclude });
     }
     if (!user.companyId) {
       return [];
@@ -106,7 +134,7 @@ export class RFQsService {
     if (user.role === 'CONTRACTOR') {
       return this.prisma.rFQ.findMany({
         where: { project: { company_id: user.companyId } },
-        include: rfqInclude,
+        include: rfqListInclude,
       });
     }
     return this.prisma.rFQ.findMany({
@@ -116,7 +144,7 @@ export class RFQsService {
           { bids: { some: { supplier_id: user.companyId } } },
         ],
       },
-      include: rfqInclude,
+      include: rfqListInclude,
     });
   }
 

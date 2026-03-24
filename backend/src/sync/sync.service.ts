@@ -1,13 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncChange } from '@prisma/client';
+import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service';
 
 @Injectable()
 export class SyncService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(SyncService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private purchaseOrders: PurchaseOrdersService,
+  ) {}
 
   async pullChanges(lastPulledAt: number) {
-    console.log('SyncService.pullChanges called');
+    this.logger.debug(`pullChanges lastPulledAt=${lastPulledAt}`);
     const timestamp = new Date(lastPulledAt);
     const changes = await this.prisma.syncChange.findMany({
       where: {
@@ -70,7 +77,7 @@ export class SyncService {
     };
   }
 
-  async pushChanges(changes: any, userId: string) {
+  async pushChanges(changes: any, user: JwtPayload) {
        // WatermelonDB sends { [tableName]: { created: [], updated: [], deleted: [] } }
       const processOrder = [
         'companies', 'users', 
@@ -105,6 +112,13 @@ export class SyncService {
                       const data = this.sanitizeForPrisma(record);
                       if (tableName === 'daily_logs') {
                         data.status = 'SYNCED';
+                        if (typeof data.progress_notes === 'string') {
+                          try {
+                            data.progress_notes = JSON.parse(data.progress_notes);
+                          } catch {
+                            delete data.progress_notes;
+                          }
+                        }
                       }
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore
@@ -115,7 +129,7 @@ export class SyncService {
                               table_name: tableName,
                               record_id: record.id,
                               operation: 'CREATE',
-                              user_id: userId,
+                              user_id: user.sub,
                           }
                       });
                   }
@@ -127,6 +141,13 @@ export class SyncService {
                        const data = this.sanitizeForPrisma(record);
                       if (tableName === 'daily_logs') {
                         data.status = 'SYNCED';
+                        if (typeof data.progress_notes === 'string') {
+                          try {
+                            data.progress_notes = JSON.parse(data.progress_notes);
+                          } catch {
+                            delete data.progress_notes;
+                          }
+                        }
                       }
                       // Last-Write-Wins (LWW): only apply incoming update when it is not older
                       // than the current server record, using updated_at timestamps.
@@ -157,7 +178,7 @@ export class SyncService {
                               table_name: tableName,
                               record_id: record.id,
                               operation: 'UPDATE',
-                              user_id: userId,
+                              user_id: user.sub,
                           }
                       });
                   }
@@ -175,14 +196,61 @@ export class SyncService {
                               table_name: tableName,
                               record_id: id as string,
                               operation: 'DELETE',
-                              user_id: userId,
+                              user_id: user.sub,
                           }
                       });
                   }
               }
           }
       });
+
+      await this.applyMobileGrnCreates(changes?.grn_records?.created, user);
+
       return { success: true };
+  }
+
+  /** Mobile-only `grn_records` table: create delivery notes + GRN lines on server. */
+  private async applyMobileGrnCreates(
+    records: any[] | undefined,
+    user: JwtPayload,
+  ) {
+    if (!records?.length) return;
+    for (const raw of records) {
+      const poServerId = raw.po_server_id as string | undefined;
+      if (!poServerId?.trim()) continue;
+      let lines: Array<{
+        po_item_id: string;
+        received_qty: number;
+        condition?: string;
+      }> = [];
+      try {
+        lines = JSON.parse(String(raw.items_json ?? '[]'));
+      } catch {
+        continue;
+      }
+      const items = lines
+        .filter(
+          (l) =>
+            l.condition !== 'Rejected' && Number(l.received_qty) > 0,
+        )
+        .map((l) => ({
+          po_item_id: l.po_item_id,
+          delivered_qty: Number(l.received_qty),
+        }));
+      if (!items.length) continue;
+      try {
+        await this.purchaseOrders.createDeliveryNote(
+          poServerId.trim(),
+          { items, status: 'DELIVERED' },
+          user,
+        );
+      } catch (e) {
+        this.logger.error(
+          `GRN sync failed for PO ${poServerId}`,
+          e instanceof Error ? e.stack : e,
+        );
+      }
+    }
   }
   
   private mapTableNameToModel(tableName: string): string | null {

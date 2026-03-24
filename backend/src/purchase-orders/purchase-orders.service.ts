@@ -24,6 +24,32 @@ const poInclude = {
   invoices: true,
 } as const;
 
+/** List views: trim nested relations while keeping line items for table display. */
+const poListInclude = {
+  project: { select: { id: true, name: true, company_id: true } },
+  supplier: { select: { id: true, name: true } },
+  bid: { select: { id: true, total_price: true, status: true } },
+  items: true,
+  delivery_notes: {
+    select: {
+      id: true,
+      po_id: true,
+      delivery_date: true,
+      status: true,
+      pod_image_url: true,
+    },
+  },
+  invoices: {
+    select: {
+      id: true,
+      status: true,
+      total_amount: true,
+      issue_date: true,
+      currency: true,
+    },
+  },
+} satisfies Prisma.PurchaseOrderInclude;
+
 @Injectable()
 export class PurchaseOrdersService {
   constructor(
@@ -75,7 +101,7 @@ export class PurchaseOrdersService {
 
   async findAll(user: JwtPayload): Promise<PurchaseOrder[]> {
     if (user.role === 'ADMIN') {
-      return this.prisma.purchaseOrder.findMany({ include: poInclude });
+      return this.prisma.purchaseOrder.findMany({ include: poListInclude });
     }
     if (!user.companyId) {
       return [];
@@ -87,7 +113,7 @@ export class PurchaseOrdersService {
           { supplier_id: user.companyId },
         ],
       },
-      include: poInclude,
+      include: poListInclude,
     });
   }
 
