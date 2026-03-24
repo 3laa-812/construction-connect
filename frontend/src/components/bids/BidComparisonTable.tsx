@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Award, ChevronDown, ChevronUp, Star, Truck, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -50,9 +51,50 @@ type SortKey = "totalPrice" | "deliveryDays" | "score" | "supplierRating";
 
 export function BidComparisonTable() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
     queryKey: ["rfqs", "bid-comparison"],
     queryFn: async () => (await api.get("/rfqs")).data,
+  });
+
+  const awardMutation = useMutation({
+    mutationFn: async (payload: {
+      rfqId: string;
+      bidId: string;
+      supplierName: string;
+    }) => {
+      const res = await api.patch(
+        `/rfqs/${payload.rfqId}/award/${payload.bidId}`,
+      );
+      return {
+        po: res.data as { id: string },
+        supplierName: payload.supplierName,
+      };
+    },
+    onSuccess: ({ po, supplierName }) => {
+      toast({
+        title: t("bids.comparison.toast.awarded_title"),
+        description: t("bids.comparison.toast.awarded_desc", {
+          supplier: supplierName,
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: ["rfqs"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      setShowAwardDialog(false);
+      setSelectedBid(null);
+      navigate(`/orders?created=${po.id}`);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Award failed";
+      toast({
+        variant: "destructive",
+        title: t("common.error") || "Error",
+        description: String(msg),
+      });
+    },
   });
 
   const [selectedBid, setSelectedBid] = useState<AdaptedBid | null>(null);
@@ -60,9 +102,13 @@ export function BidComparisonTable() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAwardDialog, setShowAwardDialog] = useState(false);
 
-  const { rfqTitle, bids } = useMemo(() => {
+  const { rfqTitle, bids, comparisonRfqId } = useMemo(() => {
     if (!data || data.length === 0) {
-      return { rfqTitle: "", bids: [] as AdaptedBid[] };
+      return {
+        rfqTitle: "",
+        bids: [] as AdaptedBid[],
+        comparisonRfqId: "" as string,
+      };
     }
     const rfqWithBids = data.find((r) => (r.bids?.length || 0) > 0) || data[0];
     const title = rfqWithBids.items?.[0]?.product_name || rfqWithBids.id;
@@ -104,7 +150,11 @@ export function BidComparisonTable() {
       });
     }
 
-    return { rfqTitle: title, bids: adapted };
+    return {
+      rfqTitle: title,
+      bids: adapted,
+      comparisonRfqId: rfqWithBids.id,
+    };
   }, [data]);
 
   const handleSort = (key: SortKey) => {
@@ -127,13 +177,12 @@ export function BidComparisonTable() {
   };
 
   const confirmAward = () => {
-    if (selectedBid) {
-      toast({
-        title: t("bids.comparison.toast.awarded_title"),
-        description: t("bids.comparison.toast.awarded_desc", { supplier: selectedBid.supplierName }),
+    if (selectedBid && comparisonRfqId) {
+      awardMutation.mutate({
+        rfqId: comparisonRfqId,
+        bidId: selectedBid.id,
+        supplierName: selectedBid.supplierName,
       });
-      setShowAwardDialog(false);
-      setSelectedBid(null);
     }
   };
 
@@ -337,10 +386,13 @@ export function BidComparisonTable() {
             </Button>
             <Button
               onClick={confirmAward}
+              disabled={awardMutation.isPending || !comparisonRfqId}
               className="bg-accent hover:bg-accent/90 text-accent-foreground"
             >
               <Award className="w-4 h-4 me-2" />
-              {t("bids.comparison.dialog.confirm")}
+              {awardMutation.isPending
+                ? t("common.loading") || "…"
+                : t("bids.comparison.dialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

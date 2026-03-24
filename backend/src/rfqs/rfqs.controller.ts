@@ -62,6 +62,32 @@ export class RFQsController {
     return this.rfqsService.findAllBids(rfqId, user);
   }
 
+  @Patch(':rfqId/award/:bidId')
+  @Roles('CONTRACTOR', 'ADMIN')
+  awardBid(
+    @Param('rfqId') rfqId: string,
+    @Param('bidId') bidId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.rfqsService.awardBid(rfqId, bidId, user);
+  }
+
+  @Patch(':rfqId/bids/:bidId/reject')
+  @Roles('CONTRACTOR', 'ADMIN')
+  rejectBid(
+    @Param('rfqId') rfqId: string,
+    @Param('bidId') bidId: string,
+    @Body() body: { rejection_reason: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.rfqsService.rejectBid(
+      rfqId,
+      bidId,
+      body.rejection_reason,
+      user,
+    );
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     const rfq = await this.rfqsService.findOne(id, user);

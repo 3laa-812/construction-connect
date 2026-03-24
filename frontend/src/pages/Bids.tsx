@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search, Filter, TrendingUp, Clock, CheckCircle, XCircle, Eye, MoreHorizontal, DollarSign, Award } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,7 @@ const statusConfig = {
 
 export default function Bids() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedBid, setSelectedBid] = useState<Bid | null>(null);
@@ -84,6 +85,70 @@ export default function Bids() {
     queryFn: async () => {
       const response = await api.get("/rfqs");
       return response.data;
+    },
+  });
+
+  const awardMutation = useMutation({
+    mutationFn: (payload: {
+      rfqId: string;
+      bidId: string;
+      supplierName: string;
+    }) =>
+      api.patch(`/rfqs/${payload.rfqId}/award/${payload.bidId}`),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["rfqs"] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast({
+        title: t("bids.toast.accepted_title"),
+        description: t("bids.toast.accepted_desc", {
+          supplier: variables.supplierName,
+        }),
+      });
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Award failed";
+      toast({
+        variant: "destructive",
+        title: t("common.error") || "Error",
+        description: String(msg),
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (payload: {
+      rfqId: string;
+      bidId: string;
+      rejection_reason: string;
+      supplierName: string;
+    }) =>
+      api.patch(
+        `/rfqs/${payload.rfqId}/bids/${payload.bidId}/reject`,
+        { rejection_reason: payload.rejection_reason },
+      ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["rfqs"] });
+      toast({
+        title: t("bids.toast.rejected_title"),
+        description: t("bids.toast.rejected_desc", {
+          supplier: variables.supplierName,
+        }),
+      });
+      setShowRejectDialog(false);
+      setRejectionReason("");
+      setSelectedBid(null);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Reject failed";
+      toast({
+        variant: "destructive",
+        title: t("common.error") || "Error",
+        description: String(msg),
+      });
     },
   });
 
@@ -130,21 +195,21 @@ export default function Bids() {
   const historyBids = filteredBids.filter((b) => b.status !== "pending");
 
   const handleAccept = (bid: Bid) => {
-    toast({
-      title: t("bids.toast.accepted_title"),
-      description: t("bids.toast.accepted_desc", { supplier: bid.supplier }),
+    awardMutation.mutate({
+      rfqId: bid.rfqId,
+      bidId: bid.id,
+      supplierName: bid.supplier,
     });
   };
 
   const handleReject = () => {
     if (selectedBid && rejectionReason.trim()) {
-      toast({
-        title: t("bids.toast.rejected_title"),
-        description: t("bids.toast.rejected_desc", { supplier: selectedBid.supplier }),
+      rejectMutation.mutate({
+        rfqId: selectedBid.rfqId,
+        bidId: selectedBid.id,
+        rejection_reason: rejectionReason.trim(),
+        supplierName: selectedBid.supplier,
       });
-      setShowRejectDialog(false);
-      setRejectionReason("");
-      setSelectedBid(null);
     }
   };
 
@@ -251,6 +316,7 @@ export default function Bids() {
               size="sm"
               className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
               onClick={() => handleAccept(bid)}
+              disabled={awardMutation.isPending}
             >
               <Award className="w-4 h-4 me-2" />
               {t("bids.award")}
@@ -423,7 +489,9 @@ export default function Bids() {
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={!rejectionReason.trim()}
+              disabled={
+                !rejectionReason.trim() || rejectMutation.isPending
+              }
             >
               <XCircle className="w-4 h-4 me-2" />
               {t("bids.dialog.confirm_reject")}

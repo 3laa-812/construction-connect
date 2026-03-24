@@ -167,6 +167,21 @@ model BOQItem {
   @@map("boq_items")
 }
 
+model Product {
+  id             String   @id @default(uuid())
+  server_id      String?  @unique // If mapping to external ID
+  name           String   @db.VarChar(255)
+  category       String   @db.VarChar(100)
+  unit           String   @db.VarChar(50)
+  specifications Json?
+  price          Decimal? @db.Decimal(10, 2)
+  supplier_id    String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@map("products")
+}
+
 // 3. RFQ & Marketplace Engine
 // Handles the bidding process and awarding.
 enum RFQStatus {
@@ -193,8 +208,12 @@ model RFQ {
   delivery_date_required DateTime?
   created_at             DateTime     @default(now())
 
-  items RFQItem[]
-  bids  Bid[]
+  awarded_bid_id String? @unique
+  awarded_bid    Bid?    @relation("RFQAwardedBid", fields: [awarded_bid_id], references: [id])
+
+  items            RFQItem[]
+  bids             Bid[]
+  purchase_orders  PurchaseOrder[]
 
   @@map("rfqs")
 }
@@ -231,10 +250,12 @@ model Bid {
   total_price Decimal?  @db.Decimal(15, 2)
   valid_until DateTime?
   status      BidStatus @default(PENDING)
+  rejection_reason String? @db.Text
   created_at  DateTime  @default(now())
 
   items           BidItem[]
   purchase_orders PurchaseOrder[]
+  rfq_awarded_as  RFQ?   @relation("RFQAwardedBid")
 
   @@map("bids")
 }
@@ -268,6 +289,11 @@ model PurchaseOrder {
   supplier    Company @relation("SupplierPOs", fields: [supplier_id], references: [id])
   bid_id      String?
   bid         Bid?    @relation(fields: [bid_id], references: [id])
+  rfq_id      String?
+  rfq         RFQ?    @relation(fields: [rfq_id], references: [id])
+
+  payment_terms          PaymentTerm?
+  delivery_date_required DateTime?
 
   status       POStatus @default(CONFIRMED)
   total_amount Decimal? @db.Decimal(15, 2)
@@ -423,6 +449,8 @@ model DailyLog {
   user         User           @relation(fields: [user_id], references: [id])
   log_date     DateTime       @db.Date
   weather_data Json? // { temp: 30, condition: "Sunny" }
+  attendance_data Json? // { "Carpenters": 5 }
+  material_receipt_data Json? // List of received items
   status       DailyLogStatus @default(DRAFT)
 
   created_at DateTime @default(now())

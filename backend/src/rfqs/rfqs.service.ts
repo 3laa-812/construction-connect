@@ -5,7 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { RFQ, RFQItem, Bid, BidItem, Prisma } from '@prisma/client';
+import {
+  RFQ,
+  RFQItem,
+  Bid,
+  Prisma,
+  PurchaseOrder,
+  BidStatus,
+  RFQStatus,
+} from '@prisma/client';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 const rfqInclude = {
@@ -164,6 +172,154 @@ export class RFQsService {
         supplier: true,
         items: true,
         rfq: true,
+      },
+    });
+  }
+
+  /**
+   * Awards a bid: marks RFQ AWARDED, rejects other pending bids, creates PurchaseOrder + POItems.
+   * TODO(Section 8): emit in-app notification to winning supplier.
+   */
+  async awardBid(
+    rfqId: string,
+    bidId: string,
+    user: JwtPayload,
+  ): Promise<PurchaseOrder> {
+    if (user.role !== 'CONTRACTOR' && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only contractors can award bids');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const rfq = await tx.rFQ.findUnique({
+        where: { id: rfqId },
+        include: { project: true },
+      });
+      if (!rfq) {
+        throw new NotFoundException('RFQ not found');
+      }
+      if (
+        user.role === 'CONTRACTOR' &&
+        rfq.project.company_id !== user.companyId
+      ) {
+        throw new ForbiddenException('You do not own this RFQ');
+      }
+      if (rfq.status !== RFQStatus.OPEN) {
+        throw new BadRequestException('RFQ is not open for awarding');
+      }
+
+      const bid = await tx.bid.findUnique({
+        where: { id: bidId },
+        include: {
+          items: {
+            include: { rfq_item: true },
+          },
+        },
+      });
+      if (!bid || bid.rfq_id !== rfqId) {
+        throw new NotFoundException('Bid not found');
+      }
+      if (bid.status !== BidStatus.PENDING) {
+        throw new BadRequestException('Bid is not pending');
+      }
+
+      await tx.rFQ.update({
+        where: { id: rfqId },
+        data: {
+          status: RFQStatus.AWARDED,
+          awarded_bid_id: bidId,
+        },
+      });
+
+      await tx.bid.updateMany({
+        where: {
+          rfq_id: rfqId,
+          id: { not: bidId },
+          status: BidStatus.PENDING,
+        },
+        data: {
+          status: BidStatus.REJECTED,
+          rejection_reason: 'Another bid was selected',
+        },
+      });
+
+      await tx.bid.update({
+        where: { id: bidId },
+        data: { status: BidStatus.ACCEPTED },
+      });
+
+      const po = await tx.purchaseOrder.create({
+        data: {
+          project: { connect: { id: rfq.project_id } },
+          supplier: { connect: { id: bid.supplier_id } },
+          bid: { connect: { id: bid.id } },
+          rfq: { connect: { id: rfq.id } },
+          status: 'CONFIRMED',
+          total_amount: bid.total_price ?? undefined,
+          payment_terms: rfq.payment_terms ?? undefined,
+          delivery_date_required: rfq.delivery_date_required ?? undefined,
+          items: {
+            create: bid.items.map((bi) => ({
+              item_description:
+                bi.rfq_item.product_name?.trim() || 'Line item',
+              ordered_qty: bi.rfq_item.quantity ?? undefined,
+              unit_price: bi.unit_price ?? undefined,
+            })),
+          },
+        },
+        include: {
+          items: true,
+          project: true,
+          supplier: true,
+          bid: true,
+          rfq: true,
+        },
+      });
+
+      return po;
+    });
+  }
+
+  async rejectBid(
+    rfqId: string,
+    bidId: string,
+    rejectionReason: string,
+    user: JwtPayload,
+  ): Promise<Bid> {
+    if (user.role !== 'CONTRACTOR' && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Only contractors can reject bids');
+    }
+    const reason = rejectionReason?.trim();
+    if (!reason) {
+      throw new BadRequestException('rejection_reason is required');
+    }
+
+    const rfq = await this.prisma.rFQ.findUnique({
+      where: { id: rfqId },
+      include: { project: true },
+    });
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+    if (
+      user.role === 'CONTRACTOR' &&
+      rfq.project.company_id !== user.companyId
+    ) {
+      throw new ForbiddenException('You do not own this RFQ');
+    }
+
+    const bid = await this.prisma.bid.findUnique({ where: { id: bidId } });
+    if (!bid || bid.rfq_id !== rfqId) {
+      throw new NotFoundException('Bid not found');
+    }
+    if (bid.status !== BidStatus.PENDING) {
+      throw new BadRequestException('Bid is not pending');
+    }
+
+    return this.prisma.bid.update({
+      where: { id: bidId },
+      data: {
+        status: BidStatus.REJECTED,
+        rejection_reason: reason,
       },
     });
   }
