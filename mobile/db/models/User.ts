@@ -6,7 +6,7 @@ export default class User extends Model {
 
   @field('email') email!: string
   @field('role') role!: string
-  @field('company_id') companyId: string | null
+  @field('company_id') companyId!: string | null
   @readonly @date('created_at') createdAt!: number
   @readonly @date('updated_at') updatedAt!: number
 }

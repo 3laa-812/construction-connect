@@ -7,8 +7,8 @@ export default class Site extends Model {
 
   @relation('projects', 'project_id') project!: Relation<Project>
   @field('name') name!: string
-  @field('latitude') latitude: number | null
-  @field('longitude') longitude: number | null
+  @field('latitude') latitude!: number | null
+  @field('longitude') longitude!: number | null
   @json('geofence_polygon', (raw) => raw) geofencePolygon: any
   @readonly @date('created_at') createdAt!: number
   @readonly @date('updated_at') updatedAt!: number

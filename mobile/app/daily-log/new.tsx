@@ -5,13 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
   Alert,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import * as Location from "expo-location";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { database } from "../../db";
 import DailyLog from "../../db/models/DailyLog";
 import Project from "../../db/models/Project";
@@ -26,80 +25,56 @@ import AttendanceSheet, {
 import MaterialReceiptForm, {
   type MaterialReceiptData,
 } from "../../components/MaterialReceiptForm";
+import PhotoCapture from "../../components/PhotoCapture";
+import { CollapsibleSection } from "../../components/CollapsibleSection";
+import {
+  ProgressNotesSection,
+  parseProgressNotes,
+  type ProgressNote,
+} from "../../components/ProgressNotesSection";
 
 export default function NewDailyLog() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-
-  const [workDescription, setWorkDescription] = useState("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [logDate, setLogDate] = useState(() => new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [projectId, setProjectId] = useState("");
+  const [logTitle, setLogTitle] = useState("");
   const [weather, setWeather] = useState<WeatherData>({
     temp: "",
     condition: "",
   });
   const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
+  const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() =>
+    parseProgressNotes(undefined),
+  );
   const [materialData, setMaterialData] = useState<MaterialReceiptData>({
     version: 2,
   });
-  const [localProjectId, setLocalProjectId] = useState("");
+  const [photos, setPhotos] = useState<string[]>([]);
   const [projectServerId, setProjectServerId] = useState<string | null>(null);
 
-  const [photos, setPhotos] = useState<
-    { uri: string; lat?: number; long?: number }[]
-  >([]);
-
   useEffect(() => {
     (async () => {
-      const projects = await database
-        .get<Project>("projects")
-        .query()
-        .fetch();
-      const p = projects[0];
-      setLocalProjectId(p?.id ?? "");
-      setProjectServerId(p?.serverId ?? null);
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      await ImagePicker.requestCameraPermissionsAsync();
-      await Location.requestForegroundPermissionsAsync();
-    })();
-  }, []);
-
-  const takePhoto = async () => {
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7,
-      });
-
-      if (!result.canceled) {
-        let location: Location.LocationObject | null = null;
-        try {
-          location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-        } catch (e) {
-          console.log("Could not get location", e);
-        }
-
-        setPhotos((prev) => [
-          ...prev,
-          {
-            uri: result.assets[0].uri,
-            lat: location?.coords.latitude,
-            long: location?.coords.longitude,
-          },
-        ]);
+      const list = await database.get<Project>("projects").query().fetch();
+      setProjects(list);
+      const first = list[0];
+      if (first) {
+        setProjectId(first.id);
+        setProjectServerId(first.serverId ?? null);
       }
-    } catch {
-      Alert.alert("Error", "Could not take photo");
-    }
-  };
+    })();
+  }, []);
 
-  const saveLog = async () => {
-    if (!workDescription) {
-      Alert.alert("Required", "Please add a work description");
+  useEffect(() => {
+    const p = projects.find((x) => x.id === projectId);
+    setProjectServerId(p?.serverId ?? null);
+  }, [projectId, projects]);
+
+  const persist = async (status: "DRAFT" | "SUBMITTED") => {
+    if (!projectId) {
+      Alert.alert("Project", "Select a project.");
       return;
     }
 
@@ -114,48 +89,45 @@ export default function NewDailyLog() {
     setSubmitting(true);
     try {
       await database.write(async () => {
-        const projects = await database
-          .get<Project>("projects")
-          .query()
-          .fetch();
-        const project = projects[0];
+        const project = await database.get<Project>("projects").find(projectId);
         const users = await database.get<User>("users").query().fetch();
         const user = users[0];
-
-        if (!project || !user) {
-          throw new Error("Missing local project or user");
+        if (!user) {
+          throw new Error("Missing local user — log in and sync.");
         }
+
+        const dayStart = new Date(logDate);
+        dayStart.setHours(12, 0, 0, 0);
 
         const newLog = await database.get<DailyLog>("daily_logs").create(
           (entry) => {
             entry.project.set(project);
             entry.user.set(user);
-            entry.logDate = Date.now();
-            entry.status = "DRAFT";
+            entry.logDate = dayStart.getTime();
+            entry.status = status;
+            entry.logTitle = logTitle.trim() || undefined;
+            entry.progressNotes = JSON.stringify(progressNotes);
             entry.weatherData = weather;
             entry.attendanceData = attendanceRows;
-            entry.materialReceiptData = {
-              ...materialData,
-              work_notes: workDescription,
-            };
+            entry.materialReceiptData = materialData;
           },
         );
 
-        for (const p of photos) {
+        for (const uri of photos) {
           await database.get("log_photos").create((media: any) => {
             media.dailyLog.set(newLog);
-            media.localPath = p.uri;
-            media.gpsLat = p.lat ?? null;
-            media.gpsLong = p.long ?? null;
+            media.localPath = uri;
+            media.gpsLat = null;
+            media.gpsLong = null;
           });
         }
       });
 
-      Alert.alert("Success", "Daily log saved offline.");
+      Alert.alert("Saved", `Daily log ${status === "DRAFT" ? "saved as draft" : "submitted"} offline.`);
       router.back();
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to save log");
+      Alert.alert("Error", "Failed to save log.");
     } finally {
       setSubmitting(false);
     }
@@ -165,79 +137,136 @@ export default function NewDailyLog() {
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ title: "New Daily Log" }} />
       <ScrollView className="flex-1 p-4">
-        <WeatherWidget onWeatherChange={setWeather} initialData={weather} />
-
-        <Text className="font-bold text-foreground mb-2">Work Description</Text>
-        <TextInput
-          className="bg-card border border-border rounded-xl p-4 min-h-[100px] text-foreground mb-4"
-          multiline
-          placeholder="What happened on site today?"
-          placeholderTextColor="#999"
-          value={workDescription}
-          onChangeText={setWorkDescription}
-          textAlignVertical="top"
-        />
-
-        <AttendanceSheet
-          rows={attendanceRows}
-          onChange={setAttendanceRows}
-          maxHoursPerPerson={16}
-        />
-
-        {localProjectId ? (
-          <MaterialReceiptForm
-            projectServerId={projectServerId}
-            localProjectId={localProjectId}
-            value={materialData}
-            onPatch={(p) =>
-              setMaterialData((m) => ({ ...m, ...p, version: 2 }))
-            }
-          />
-        ) : null}
-
-        <Text className="font-bold text-foreground mb-2">
-          Site Photos ({photos.length})
-        </Text>
-        <ScrollView
-          horizontal
-          className="mb-4"
-          showsHorizontalScrollIndicator={false}
-        >
+        <CollapsibleSection title="Header" defaultOpen>
+          <Text className="text-xs text-muted-foreground mb-1">Date</Text>
           <TouchableOpacity
-            onPress={takePhoto}
-            className="w-24 h-24 bg-muted/30 rounded-xl items-center justify-center border border-dashed border-muted-foreground mr-3"
+            onPress={() => setShowDatePicker(true)}
+            className="bg-card border border-border rounded-xl p-4 mb-3 flex-row justify-between items-center"
           >
-            <Feather name="camera" size={24} color="#666" />
-            <Text className="text-xs text-muted-foreground mt-1">
-              Add Photo
+            <Text className="text-foreground text-lg">
+              {logDate.toLocaleDateString()}
             </Text>
+            <Feather name="calendar" size={20} color="#888" />
           </TouchableOpacity>
-          {photos.map((p, i) => (
-            <Image
-              key={i}
-              source={{ uri: p.uri }}
-              className="w-24 h-24 rounded-xl mr-3 bg-muted"
+          {showDatePicker ? (
+            <DateTimePicker
+              value={logDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(_, d) => {
+                setShowDatePicker(Platform.OS === "android" ? false : true);
+                if (d) setLogDate(d);
+              }}
             />
-          ))}
-        </ScrollView>
+          ) : null}
+          {Platform.OS === "ios" && showDatePicker ? (
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(false)}
+              className="py-2"
+            >
+              <Text className="text-primary text-center font-bold">Done</Text>
+            </TouchableOpacity>
+          ) : null}
 
-        <View className="h-20" />
-      </ScrollView>
+          <Text className="text-xs text-muted-foreground mb-1">Project</Text>
+          <View className="flex-row flex-wrap gap-2 mb-3">
+            {projects.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => setProjectId(p.id)}
+                className={`px-3 py-2 rounded-lg border ${projectId === p.id ? "border-primary bg-primary/15" : "border-border bg-card"}`}
+              >
+                <Text className="text-foreground text-sm font-medium" numberOfLines={2}>
+                  {p.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <View className="p-4 border-t border-border bg-card safe-bottom">
-        <TouchableOpacity
-          onPress={saveLog}
-          disabled={submitting}
-          className="bg-primary p-4 rounded-xl items-center"
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" />
+          <Text className="text-xs text-muted-foreground mb-1">
+            Log title (optional)
+          </Text>
+          <TextInput
+            className="bg-card border border-border rounded-xl p-3 text-foreground mb-1"
+            placeholder="e.g. Concrete pour — Zone B"
+            placeholderTextColor="#999"
+            value={logTitle}
+            onChangeText={setLogTitle}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Weather" defaultOpen>
+          <WeatherWidget onWeatherChange={setWeather} initialData={weather} />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Attendance">
+          <AttendanceSheet
+            rows={attendanceRows}
+            onChange={setAttendanceRows}
+            maxHoursPerPerson={16}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Progress notes">
+          <ProgressNotesSection
+            notes={progressNotes}
+            onChange={setProgressNotes}
+          />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Photos">
+          <PhotoCapture initialPhotos={photos} onPhotosChange={setPhotos} />
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Material receipt (GRN)">
+          {projectId ? (
+            <MaterialReceiptForm
+              projectServerId={projectServerId}
+              localProjectId={projectId}
+              value={materialData}
+              onPatch={(p) =>
+                setMaterialData((m) => ({ ...m, ...p, version: 2 }))
+              }
+            />
           ) : (
-            <Text className="text-primary-foreground font-bold text-lg">
-              Save Log
+            <Text className="text-muted-foreground text-sm">
+              Select a project first.
             </Text>
           )}
-        </TouchableOpacity>
+        </CollapsibleSection>
+
+        <View className="h-28" />
+      </ScrollView>
+
+      <View className="p-4 border-t border-border bg-card gap-3 safe-bottom">
+        <View className="flex-row gap-3">
+          <TouchableOpacity
+            onPress={() => persist("DRAFT")}
+            disabled={submitting}
+            className="flex-1 bg-secondary p-4 rounded-xl items-center"
+          >
+            {submitting ? (
+              <ActivityIndicator color="hsl(var(--secondary-foreground))" />
+            ) : (
+              <Text className="text-secondary-foreground font-bold text-base">
+                Save draft
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => persist("SUBMITTED")}
+            disabled={submitting}
+            className="flex-1 bg-primary p-4 rounded-xl items-center"
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-primary-foreground font-bold text-base">
+                Submit
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

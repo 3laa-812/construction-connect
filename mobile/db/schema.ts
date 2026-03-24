@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     // -------------------------------------------------------------------------
     // 1. Identity & Onboarding (Mirrors: Company, User)
@@ -58,7 +58,9 @@ export const schema = appSchema({
             { name: 'weather_data', type: 'string', isOptional: true }, // JSON: { temp, condition, humidity? }
             { name: 'attendance_data', type: 'string', isOptional: true }, // JSON: AttendanceRow[]
             { name: 'material_receipt_data', type: 'string', isOptional: true }, // JSON: MaterialReceiptData or legacy ReceivedItem[]
-            { name: 'status', type: 'string' }, // DRAFT, SUBMITTED
+            { name: 'status', type: 'string' }, // DRAFT | SUBMITTED | SYNCED
+            { name: 'log_title', type: 'string', isOptional: true },
+            { name: 'progress_notes', type: 'string', isOptional: true }, // JSON: ProgressNote[]
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
         ]

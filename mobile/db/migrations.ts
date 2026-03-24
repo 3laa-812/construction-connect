@@ -81,5 +81,17 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 4,
+      steps: [
+        addColumns({
+          table: 'daily_logs',
+          columns: [
+            { name: 'log_title', type: 'string', isOptional: true },
+            { name: 'progress_notes', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 })

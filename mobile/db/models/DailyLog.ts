@@ -13,7 +13,9 @@ export default class DailyLog extends Model {
   @json('weather_data', (raw) => raw) weatherData: any
   @json('attendance_data', (raw) => raw) attendanceData: any
   @json('material_receipt_data', (raw) => raw) materialReceiptData: any
-  @field('status') status!: string
+  @field('status') status!: 'DRAFT' | 'SUBMITTED' | 'SYNCED' | string
+  @field('log_title') logTitle?: string
+  @field('progress_notes') progressNotes?: string
   @readonly @date('created_at') createdAt!: number
   @readonly @date('updated_at') updatedAt!: number
 
