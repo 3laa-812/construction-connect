@@ -18,6 +18,7 @@ import User from "../../db/models/User";
 import { Feather } from "@expo/vector-icons";
 import WeatherWidget, {
   type WeatherData,
+  normalizeWeatherPayload,
 } from "../../components/WeatherWidget";
 import AttendanceSheet, {
   type AttendanceRow,
@@ -41,10 +42,9 @@ export default function NewDailyLog() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [projectId, setProjectId] = useState("");
   const [logTitle, setLogTitle] = useState("");
-  const [weather, setWeather] = useState<WeatherData>({
-    temp: "",
-    condition: "",
-  });
+  const [weather, setWeather] = useState<WeatherData>(() =>
+    normalizeWeatherPayload(null),
+  );
   const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
   const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() =>
     parseProgressNotes(undefined),
@@ -196,7 +196,7 @@ export default function NewDailyLog() {
         </CollapsibleSection>
 
         <CollapsibleSection title="Weather" defaultOpen>
-          <WeatherWidget onWeatherChange={setWeather} initialData={weather} />
+          <WeatherWidget onWeatherChange={setWeather} />
         </CollapsibleSection>
 
         <CollapsibleSection title="Attendance">

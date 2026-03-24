@@ -68,6 +68,9 @@ const LogRowInner = ({
     | undefined;
   const emoji = weatherEmoji(w?.condition);
   const headcount = attendanceHeadcount(log.attendanceData);
+  const hasWeather =
+    (w?.condition != null && String(w.condition).length > 0) ||
+    (w?.temp != null && String(w.temp) !== "");
 
   return (
     <TouchableOpacity
@@ -82,8 +85,8 @@ const LogRowInner = ({
       </View>
       <Text className="text-sm text-muted-foreground">
         {emoji}{" "}
-        {w?.temp != null && w.temp !== ""
-          ? `${w.temp}° ${w.condition ?? ""}`
+        {hasWeather
+          ? `${w?.temp ?? "—"}° ${w?.condition ?? ""}`
           : "No weather"}
       </Text>
       <Text className="text-sm text-muted-foreground mt-1">

@@ -23,6 +23,7 @@ import User from "../../db/models/User";
 import { Feather } from "@expo/vector-icons";
 import WeatherWidget, {
   type WeatherData,
+  normalizeWeatherPayload,
 } from "../../components/WeatherWidget";
 import AttendanceSheet, {
   type AttendanceRow,
@@ -40,16 +41,6 @@ import {
 } from "../../components/ProgressNotesSection";
 
 const MAX_ATTENDANCE_HOURS = 16;
-
-function normalizeWeather(raw: unknown): WeatherData {
-  if (!raw || typeof raw !== "object") return { temp: "", condition: "" };
-  const o = raw as Record<string, unknown>;
-  return {
-    temp: o.temp != null ? String(o.temp) : "",
-    condition: o.condition != null ? String(o.condition) : "",
-    ...(o.humidity != null ? { humidity: String(o.humidity) } : {}),
-  };
-}
 
 function normalizeAttendance(raw: unknown): AttendanceRow[] {
   if (Array.isArray(raw)) {
@@ -115,10 +106,9 @@ export default function DailyLogEditScreen() {
   const [projectId, setProjectId] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [logTitle, setLogTitle] = useState("");
-  const [weather, setWeather] = useState<WeatherData>({
-    temp: "",
-    condition: "",
-  });
+  const [weather, setWeather] = useState<WeatherData>(() =>
+    normalizeWeatherPayload(null),
+  );
   const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
   const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() =>
     parseProgressNotes(undefined),
@@ -155,7 +145,7 @@ export default function DailyLogEditScreen() {
         setLog(foundLog);
         setLogDate(new Date(foundLog.logDate));
         setLogTitle(foundLog.logTitle ?? "");
-        setWeather(normalizeWeather(foundLog.weatherData));
+        setWeather(normalizeWeatherPayload(foundLog.weatherData));
         setAttendanceRows(normalizeAttendance(foundLog.attendanceData));
         setMaterialData(normalizeMaterialReceipt(foundLog.materialReceiptData));
         setProgressNotes(parseProgressNotes(foundLog.progressNotes));
@@ -340,6 +330,7 @@ export default function DailyLogEditScreen() {
             <WeatherWidget
               initialData={weather}
               onWeatherChange={setWeather}
+              autoFetchOnMount={false}
             />
           </CollapsibleSection>
 
