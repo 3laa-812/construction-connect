@@ -9,6 +9,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import VerifyOtp from "./pages/auth/VerifyOtp";
+import Onboarding from "./pages/Onboarding";
 
 import Index from "./pages/Index";
 import RFQBuilder from "./pages/RFQBuilder";
@@ -42,9 +44,11 @@ const App = () => (
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/auth/verify-otp" element={<VerifyOtp />} />
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>
+                  <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/" element={<Index />} />
                   <Route path="/rfqs" element={<RFQs />} />
                   <Route path="/rfqs/new" element={<RFQBuilder />} />

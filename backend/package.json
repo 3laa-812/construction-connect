@@ -32,13 +32,16 @@
     "@prisma/config": "^7.2.0",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
+    "nodemailer": "^8.0.3",
+    "otplib": "^13.4.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.18.0",
     "pg": "^8.17.1",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -51,6 +54,7 @@
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.10.7",
+    "@types/nodemailer": "^7.0.11",
     "@types/passport-jwt": "^4.0.1",
     "@types/pdfkit": "^0.17.5",
     "@types/pg": "^8.16.0",

@@ -4,12 +4,37 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
+function mapBackendUser(loggedInUser: any, emailFallback: string): User {
+  const companyType = loggedInUser.company?.type;
+  let userRole: UserRole = "contractor";
+
+  if (companyType === "SUPPLIER") {
+    userRole = "supplier";
+  } else if (companyType === "CONTRACTOR") {
+    userRole = "contractor";
+  } else if (loggedInUser.role === "ADMIN" && !companyType) {
+    userRole = "admin";
+  }
+
+  return {
+    id: loggedInUser.id,
+    name: loggedInUser.name || emailFallback.split("@")[0],
+    email: loggedInUser.email,
+    role: userRole,
+    companyName: loggedInUser.company?.name || "No Company",
+    crNumber: loggedInUser.company?.commercial_reg_no,
+    companyId: loggedInUser.company?.id,
+    companyType: loggedInUser.company?.type,
+  };
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>;
-  register: (data: any) => Promise<{ access_token: string; user: any } | void>;
+  registerInit: (data: Record<string, unknown>) => Promise<{ message: string; userId: string }>;
+  verifyOtp: (userId: string, otp: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,7 +46,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check localStorage on mount
     const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("access_token");
     if (storedUser && token) {
@@ -33,43 +57,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password?: string) => {
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post("/auth/login", { email, password });
       const { access_token, user: loggedInUser } = response.data;
-      
-      // The backend returns user object, ensure it matches our frontend User type
-      // Adapt as necessary based on backend response structure
-      // Map backend data to frontend User object
-      const companyType = loggedInUser.company?.type;
-      let userRole: UserRole = 'contractor'; // Default fallback
 
-      if (companyType === 'SUPPLIER') {
-        userRole = 'supplier';
-      } else if (companyType === 'CONTRACTOR') {
-        userRole = 'contractor';
-      } else if (loggedInUser.role === 'ADMIN' && !companyType) {
-        userRole = 'admin';
-      }
+      const mapped = mapBackendUser(loggedInUser, email);
 
-      const user: User = {
-        id: loggedInUser.id,
-        name: loggedInUser.name || email.split("@")[0],
-        email: loggedInUser.email,
-        role: userRole,
-        companyName: loggedInUser.company?.name || "No Company",
-        crNumber: loggedInUser.company?.commercial_reg_no,
-        companyId: loggedInUser.company?.id,
-        companyType: loggedInUser.company?.type,
-      };
-
-      setUser(user);
-      localStorage.setItem("user", JSON.stringify(user));
+      setUser(mapped);
+      localStorage.setItem("user", JSON.stringify(mapped));
       localStorage.setItem("access_token", access_token);
-      
+
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${user.name}`,
+        description: `Logged in as ${mapped.name}`,
       });
-      
+
       navigate("/");
     } catch (error: any) {
       console.error(error);
@@ -83,27 +84,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (data: any) => {
+  const registerInit = async (data: Record<string, unknown>) => {
     setIsLoading(true);
     try {
-        const response = await api.post('/auth/register', data);
-        const payload = response.data as { access_token: string; user: any };
-        
-        toast({
-            title: "Account Created",
-            description: "You have successfully registered. Please login.",
-        });
-
-        return payload;
+      const response = await api.post("/auth/register", data);
+      return response.data as { message: string; userId: string };
     } catch (error: any) {
-         console.error(error);
-         toast({
-            variant: "destructive",
-            title: "Registration Failed",
-            description: error.response?.data?.message || "Could not register account",
-         });
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: error.response?.data?.message || "Could not start registration",
+      });
+      throw error;
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const verifyOtp = async (userId: string, otp: string) => {
+    setIsLoading(true);
+    try {
+      const response = await api.post("/auth/verify-otp", { userId, otp });
+      const { access_token, user: loggedInUser } = response.data;
+
+      const mapped = mapBackendUser(loggedInUser, loggedInUser.email);
+
+      setUser(mapped);
+      localStorage.setItem("user", JSON.stringify(mapped));
+      localStorage.setItem("access_token", access_token);
+
+      toast({
+        title: "Verified",
+        description: "Complete your company profile to finish KYB.",
+      });
+
+      navigate("/onboarding");
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Verification failed",
+        description: error.response?.data?.message || "Invalid or expired code",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -119,7 +143,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        registerInit,
+        verifyOtp,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

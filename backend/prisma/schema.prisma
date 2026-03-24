@@ -19,14 +19,23 @@ enum Role {
   PROCUREMENT_MANAGER
 }
 
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+}
+
 model Company {
   id                String      @id @default(uuid())
   name              String      @db.VarChar(255)
   type              CompanyType
+  address           String?     @db.Text
   /** ISO 3166-1 alpha-2 — drives VAT rate / currency defaults for invoicing (e.g. SA, EG). */
   country           String?     @default("SA") @db.VarChar(2)
   commercial_reg_no String?     @db.VarChar(100) // KYB Doc
   tax_id            String?     @db.VarChar(100) // KYB Doc
+  /** Comma-separated supplier categories (MVP). */
+  supplier_categories String?   @db.VarChar(512)
   is_verified       Boolean     @default(false)
   wallet_balance    Decimal     @default(0.00) @db.Decimal(15, 2) // Internal Ledger
   created_at        DateTime    @default(now())
@@ -112,6 +121,9 @@ model User {
   phone         String?  @unique @db.VarChar(50)
   password_hash String?  @db.VarChar(255)
   role          Role?
+  status        UserStatus @default(ACTIVE)
+  otp_hash      String?   @db.VarChar(255)
+  otp_expires_at DateTime?
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
 

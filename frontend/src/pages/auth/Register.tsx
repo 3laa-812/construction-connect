@@ -1,24 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { api } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Construction, Upload, CheckCircle } from "lucide-react";
+import { Construction, CheckCircle } from "lucide-react";
 
 export default function Register() {
-  const { register, isLoading } = useAuth();
+  const { registerInit, isLoading } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [kybCrFile, setKybCrFile] = useState<File | null>(null);
-  const [kybTaxFile, setKybTaxFile] = useState<File | null>(null);
-  const [kybVatFile, setKybVatFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -28,7 +31,6 @@ export default function Register() {
     companyName: "",
     crNumber: "",
     taxId: "",
-    otp: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,48 +39,32 @@ export default function Register() {
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep((prev) => prev + 1);
+    setStep(2);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await register(formData);
-    if (!result?.access_token) {
-      return;
+    try {
+      const { userId } = await registerInit({
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        fullName: formData.fullName,
+        role: formData.role,
+        companyName: formData.companyName,
+        crNumber: formData.crNumber,
+        taxId: formData.taxId,
+      });
+      toast({
+        title: t("auth.register.otp_sent_title") || "Verification code sent",
+        description:
+          t("auth.register.otp_sent_desc") ||
+          "Check your email or phone for a 6-digit code.",
+      });
+      navigate(`/auth/verify-otp?userId=${encodeURIComponent(userId)}`);
+    } catch {
+      /* registerInit toasts on error */
     }
-    const companyId = result.user?.company_id ?? result.user?.company?.id;
-    const token = result?.access_token;
-    const uploads: { file: File; docType: string }[] = [];
-    if (kybCrFile) uploads.push({ file: kybCrFile, docType: "CR" });
-    if (kybTaxFile) uploads.push({ file: kybTaxFile, docType: "TAX_ID" });
-    if (formData.role === "supplier" && kybVatFile) {
-      uploads.push({ file: kybVatFile, docType: "VAT_CERT" });
-    }
-
-    if (token && companyId && uploads.length > 0) {
-      const prevToken = localStorage.getItem("access_token");
-      localStorage.setItem("access_token", token);
-      try {
-        for (const { file, docType } of uploads) {
-          const fd = new FormData();
-          fd.append("file", file);
-          fd.append("doc_type", docType);
-          await api.post(`/companies/${companyId}/documents`, fd);
-        }
-      } catch (err: unknown) {
-        console.error(err);
-        toast({
-          variant: "destructive",
-          title: "Document upload failed",
-          description: "Account was created but KYB files could not be uploaded. You can retry from company settings later.",
-        });
-      } finally {
-        if (prevToken) localStorage.setItem("access_token", prevToken);
-        else localStorage.removeItem("access_token");
-      }
-    }
-
-    navigate("/login");
   };
 
   return (
@@ -95,7 +81,7 @@ export default function Register() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between mb-4">
-              {[1, 2, 3].map((s) => (
+              {[1, 2].map((s) => (
                 <div key={s} className="flex items-center">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
@@ -104,29 +90,21 @@ export default function Register() {
                   >
                     {step > s ? <CheckCircle className="w-4 h-4" /> : s}
                   </div>
-                  {s < 3 && (
-                    <div
-                      className={`w-12 h-0.5 mx-2 ${
-                        step > s ? "bg-primary" : "bg-muted"
-                      }`}
-                    />
+                  {s < 2 && (
+                    <div className={`w-12 h-0.5 mx-2 ${step > s ? "bg-primary" : "bg-muted"}`} />
                   )}
                 </div>
               ))}
             </div>
             <CardTitle>
-              {step === 1 ? t("auth.register.step1_title") : step === 2 ? t("auth.register.step2_title") : t("auth.register.step3_title")}
+              {step === 1 ? t("auth.register.step1_title") : t("auth.register.step2_title")}
             </CardTitle>
             <CardDescription>
-              {step === 1
-                ? t("auth.register.step1_desc")
-                : step === 2
-                ? t("auth.register.step2_desc")
-                : t("auth.register.step3_desc")}
+              {step === 1 ? t("auth.register.step1_desc") : t("auth.register.step2_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={step === 3 ? handleSubmit : handleNext} className="space-y-4">
+            <form onSubmit={step === 1 ? handleNext : handleFinish} className="space-y-4">
               {step === 1 && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="grid grid-cols-2 gap-4">
@@ -158,6 +136,8 @@ export default function Register() {
                         <TabsTrigger value="contractor">{t("auth.register.contractor")}</TabsTrigger>
                         <TabsTrigger value="supplier">{t("auth.register.supplier")}</TabsTrigger>
                       </TabsList>
+                      <TabsContent value="contractor" />
+                      <TabsContent value="supplier" />
                     </Tabs>
                   </div>
                 </div>
@@ -179,98 +159,23 @@ export default function Register() {
                       <Input id="taxId" value={formData.taxId} onChange={handleChange} required />
                     </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
-                      <input
-                        id="kyb-cr"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => setKybCrFile(e.target.files?.[0] ?? null)}
-                      />
-                      <label htmlFor="kyb-cr" className="cursor-pointer block">
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">{t("auth.register.upload_cr")}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{t("auth.register.upload_cr_desc")}</p>
-                        {kybCrFile && (
-                          <p className="text-xs text-primary mt-2 truncate px-2">{kybCrFile.name}</p>
-                        )}
-                      </label>
-                    </div>
-                    <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
-                      <input
-                        id="kyb-tax"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        className="hidden"
-                        onChange={(e) => setKybTaxFile(e.target.files?.[0] ?? null)}
-                      />
-                      <label htmlFor="kyb-tax" className="cursor-pointer block">
-                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">Tax ID</p>
-                        <p className="text-xs text-muted-foreground mt-1">PDF or image</p>
-                        {kybTaxFile && (
-                          <p className="text-xs text-primary mt-2 truncate px-2">{kybTaxFile.name}</p>
-                        )}
-                      </label>
-                    </div>
-                    {formData.role === "supplier" && (
-                      <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
-                        <input
-                          id="kyb-vat"
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          className="hidden"
-                          onChange={(e) => setKybVatFile(e.target.files?.[0] ?? null)}
-                        />
-                        <label htmlFor="kyb-vat" className="cursor-pointer block">
-                          <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-sm font-medium">VAT certificate</p>
-                          <p className="text-xs text-muted-foreground mt-1">Required for suppliers</p>
-                          {kybVatFile && (
-                            <p className="text-xs text-primary mt-2 truncate px-2">{kybVatFile.name}</p>
-                          )}
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {step === 3 && (
-                <div className="space-y-6 animate-fade-in text-center">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      {t("auth.register.otp_sent")} <strong>{formData.phone}</strong>
-                    </p>
-                    <Input
-                      id="otp"
-                      value={formData.otp}
-                      onChange={handleChange}
-                      className="text-center text-2xl tracking-widest h-14"
-                      maxLength={6}
-                      placeholder={t("auth.register.otp_placeholder")}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {t("auth.register.otp_tip")}
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Document uploads are on the next screen after you verify your email or phone.
+                  </p>
                 </div>
               )}
 
               <div className="flex gap-3 pt-4">
                 {step > 1 && (
-                  <Button type="button" variant="outline" onClick={() => setStep((p) => p - 1)} className="flex-1">
+                  <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1">
                     {t("auth.register.back")}
                   </Button>
                 )}
                 <Button type="submit" className="flex-1" disabled={isLoading}>
-                  {step === 3
+                  {step === 2
                     ? isLoading
-                      ? t("auth.register.verifying")
-                      : t("auth.register.verify")
+                      ? t("auth.register.sending") || "Sending code..."
+                      : t("auth.register.send_code") || "Send verification code"
                     : t("auth.register.next")}
                 </Button>
               </div>

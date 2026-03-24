@@ -1,10 +1,27 @@
-import { Controller, Request, Post, Body, Get, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Request,
+  Post,
+  Body,
+  Get,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from '../common/decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Public()
+  @Post('verify-otp')
+  verifyOtp(@Body() body: { userId?: string; otp?: string }) {
+    if (!body?.userId || !body?.otp) {
+      throw new BadRequestException('userId and otp are required');
+    }
+    return this.authService.verifyOtp(body.userId, body.otp);
+  }
 
   @Public()
   @Post('login')
@@ -43,7 +60,9 @@ export class AuthController {
       company: {
         name: body.companyName,
         type: companyType,
-      }
+        commercial_reg_no: body.crNumber,
+        tax_id: body.taxId,
+      },
     });
   }
 

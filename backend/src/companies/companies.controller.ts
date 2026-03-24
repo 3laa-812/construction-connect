@@ -12,6 +12,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { CompaniesService } from './companies.service';
 import { Prisma } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -37,7 +38,10 @@ export class CompaniesController {
   @Post(':id/documents')
   @Roles('CONTRACTOR', 'SUPPLIER', 'ADMIN')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }),
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 25 * 1024 * 1024 },
+    }),
   )
   uploadDocument(
     @Param('id') id: string,

@@ -7,6 +7,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
 import { CompaniesModule } from '../companies/companies.module';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OtpDeliveryService } from './otp-delivery.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       signOptions: { expiresIn: (process.env.JWT_EXPIRATION || '1d') as any },
     }),
   ],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, OtpDeliveryService],
   controllers: [AuthController],
   exports: [AuthService, JwtAuthGuard],
 })

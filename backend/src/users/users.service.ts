@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
+import { User, Prisma, UserStatus } from '@prisma/client';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -80,6 +80,26 @@ export class UsersService {
       data,
       include: { company: true },
     });
+  }
+
+  async setActiveClearOtp(id: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        status: UserStatus.ACTIVE,
+        otp_hash: null,
+        otp_expires_at: null,
+      },
+      include: { company: true },
+    });
+  }
+
+  async deleteUserHard(id: string): Promise<void> {
+    try {
+      await this.prisma.user.delete({ where: { id } });
+    } catch {
+      /* ignore */
+    }
   }
 
   async remove(id: string, user: JwtPayload): Promise<User> {

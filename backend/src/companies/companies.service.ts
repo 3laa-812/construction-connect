@@ -196,6 +196,14 @@ export class CompaniesService {
     }
   }
 
+  async deleteCompanyHard(id: string): Promise<void> {
+    try {
+      await this.prisma.company.delete({ where: { id } });
+    } catch {
+      /* ignore */
+    }
+  }
+
   async remove(id: string, user: JwtPayload): Promise<Company> {
     if (user.role !== 'ADMIN' && id !== user.companyId) {
       throw new ForbiddenException();
