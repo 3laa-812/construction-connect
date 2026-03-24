@@ -7,12 +7,17 @@ import {
   Param,
   Delete,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RFQsService } from './rfqs.service';
 import { Prisma } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { Roles } from '../common/decorators/roles.decorator';
+import type { MulterMemoryFile } from '../storage/upload-file.types';
 
 @Controller('rfqs')
 export class RFQsController {
@@ -86,6 +91,22 @@ export class RFQsController {
       body.rejection_reason,
       user,
     );
+  }
+
+  @Post(':id/attachments')
+  @Roles('CONTRACTOR', 'ADMIN')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
+  )
+  addAttachment(
+    @Param('id') rfqId: string,
+    @UploadedFile() file: MulterMemoryFile | undefined,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('file is required');
+    }
+    return this.rfqsService.addAttachment(rfqId, file, user);
   }
 
   @Get(':id')

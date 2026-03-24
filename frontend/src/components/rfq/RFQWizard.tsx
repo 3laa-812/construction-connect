@@ -181,7 +181,7 @@ export function RFQWizard() {
         return null;
       })();
 
-      await api.post("/rfqs", {
+      const response = await api.post("/rfqs", {
         project: { connect: { id: values.projectId } },
         created_user: { connect: { id: user.id } },
         deadline: values.deliveryDate ? new Date(values.deliveryDate) : null,
@@ -196,9 +196,24 @@ export function RFQWizard() {
         },
       });
 
+      const rfqId = response.data?.id as string | undefined;
+      let attachmentNote = "";
+      if (rfqId && uploadedFiles.length > 0) {
+        try {
+          for (const file of uploadedFiles) {
+            const fd = new FormData();
+            fd.append("file", file);
+            await api.post(`/rfqs/${rfqId}/attachments`, fd);
+          }
+        } catch (attachErr) {
+          console.error(attachErr);
+          attachmentNote = " Some files could not be uploaded.";
+        }
+      }
+
       toast({
         title: t("rfq_builder.toast.submitted"),
-        description: t("rfq_builder.toast.submitted_desc"),
+        description: `${t("rfq_builder.toast.submitted_desc")}${attachmentNote}`,
       });
       form.reset();
       setUploadedFiles([]);

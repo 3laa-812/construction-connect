@@ -1,11 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { StorageService } from '../storage/storage.service';
+import type { MulterMemoryFile } from '../storage/upload-file.types';
 
 @Injectable()
 export class DailyLogsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   async create(data: Prisma.DailyLogCreateInput, user: JwtPayload) {
     const { user: _ignored, ...rest } = data as Record<string, unknown>;
@@ -72,6 +81,33 @@ export class DailyLogsService {
       return null;
     }
     return log;
+  }
+
+  async uploadSitePhoto(
+    logPhotoId: string,
+    file: MulterMemoryFile,
+    user: JwtPayload,
+  ) {
+    const photo = await this.prisma.logPhoto.findUnique({
+      where: { id: logPhotoId },
+      include: { daily_log: true },
+    });
+    if (!photo) {
+      throw new NotFoundException('Log photo not found');
+    }
+    if (user.role !== 'ADMIN' && photo.daily_log.user_id !== user.sub) {
+      throw new ForbiddenException("Cannot upload for another user's log");
+    }
+    const url = await this.storage.uploadFile(
+      file.buffer,
+      file.mimetype || 'image/jpeg',
+      'site-photos',
+    );
+    await this.prisma.logPhoto.update({
+      where: { id: logPhotoId },
+      data: { s3_url: url },
+    });
+    return { url };
   }
 
   async update(

@@ -14,11 +14,14 @@ import {
   BidStatus,
   RFQStatus,
 } from '@prisma/client';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import { StorageService } from '../storage/storage.service';
+import type { MulterMemoryFile } from '../storage/upload-file.types';
 
 const rfqInclude = {
   project: { include: { company: true } },
   items: true,
+  attachments: true,
   bids: {
     include: {
       supplier: true,
@@ -29,7 +32,10 @@ const rfqInclude = {
 
 @Injectable()
 export class RFQsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   async create(data: Prisma.RFQCreateInput, user: JwtPayload): Promise<RFQ> {
     const projectId = (data.project as { connect?: { id: string } })?.connect
@@ -50,6 +56,42 @@ export class RFQsService {
       throw new ForbiddenException('Cannot create RFQ for this project');
     }
     return this.prisma.rFQ.create({ data });
+  }
+
+  async addAttachment(
+    rfqId: string,
+    file: MulterMemoryFile,
+    user: JwtPayload,
+  ) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('file is required');
+    }
+    const rfq = await this.prisma.rFQ.findUnique({
+      where: { id: rfqId },
+      include: { project: true },
+    });
+    if (!rfq) {
+      throw new NotFoundException('RFQ not found');
+    }
+    if (
+      user.role !== 'ADMIN' &&
+      (user.role !== 'CONTRACTOR' ||
+        rfq.project.company_id !== user.companyId)
+    ) {
+      throw new ForbiddenException('Cannot attach files to this RFQ');
+    }
+    const url = await this.storage.uploadFile(
+      file.buffer,
+      file.mimetype || 'application/octet-stream',
+      'rfq-attachments',
+    );
+    return this.prisma.rFQAttachment.create({
+      data: {
+        rfq_id: rfqId,
+        file_url: url,
+        file_name: file.originalname || 'attachment',
+      },
+    });
   }
 
   async findAll(user: JwtPayload): Promise<RFQ[]> {

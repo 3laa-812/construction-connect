@@ -19,6 +19,7 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Public()
   @Post('register')
   async register(@Body() body) {
     // Map frontend specific payload to backend domain model

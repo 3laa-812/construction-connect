@@ -7,11 +7,16 @@ import {
   Param,
   Query,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { DailyLogsService } from './daily-logs.service';
 import { Prisma } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import type { MulterMemoryFile } from '../storage/upload-file.types';
 
 @Controller('daily-logs')
 export class DailyLogsController {
@@ -40,6 +45,24 @@ export class DailyLogsController {
     }
 
     return this.dailyLogsService.findAll({ where }, user);
+  }
+
+  @Post('photos')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }),
+  )
+  uploadPhoto(
+    @UploadedFile() file: MulterMemoryFile | undefined,
+    @Body('log_photo_id') logPhotoId: string | undefined,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!logPhotoId?.trim()) {
+      throw new BadRequestException('log_photo_id is required');
+    }
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('file is required');
+    }
+    return this.dailyLogsService.uploadSitePhoto(logPhotoId.trim(), file, user);
   }
 
   @Get(':id')

@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { api } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +14,11 @@ import { Construction, Upload, CheckCircle } from "lucide-react";
 export default function Register() {
   const { register, isLoading } = useAuth();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [kybCrFile, setKybCrFile] = useState<File | null>(null);
+  const [kybTaxFile, setKybTaxFile] = useState<File | null>(null);
+  const [kybVatFile, setKybVatFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -36,7 +42,43 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await register(formData);
+    const result = await register(formData);
+    if (!result?.access_token) {
+      return;
+    }
+    const companyId = result.user?.company_id ?? result.user?.company?.id;
+    const token = result?.access_token;
+    const uploads: { file: File; docType: string }[] = [];
+    if (kybCrFile) uploads.push({ file: kybCrFile, docType: "CR" });
+    if (kybTaxFile) uploads.push({ file: kybTaxFile, docType: "TAX_ID" });
+    if (formData.role === "supplier" && kybVatFile) {
+      uploads.push({ file: kybVatFile, docType: "VAT_CERT" });
+    }
+
+    if (token && companyId && uploads.length > 0) {
+      const prevToken = localStorage.getItem("access_token");
+      localStorage.setItem("access_token", token);
+      try {
+        for (const { file, docType } of uploads) {
+          const fd = new FormData();
+          fd.append("file", file);
+          fd.append("doc_type", docType);
+          await api.post(`/companies/${companyId}/documents`, fd);
+        }
+      } catch (err: unknown) {
+        console.error(err);
+        toast({
+          variant: "destructive",
+          title: "Document upload failed",
+          description: "Account was created but KYB files could not be uploaded. You can retry from company settings later.",
+        });
+      } finally {
+        if (prevToken) localStorage.setItem("access_token", prevToken);
+        else localStorage.removeItem("access_token");
+      }
+    }
+
+    navigate("/login");
   };
 
   return (
@@ -138,10 +180,60 @@ export default function Register() {
                     </div>
                   </div>
                   
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm font-medium">{t("auth.register.upload_cr")}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t("auth.register.upload_cr_desc")}</p>
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
+                      <input
+                        id="kyb-cr"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => setKybCrFile(e.target.files?.[0] ?? null)}
+                      />
+                      <label htmlFor="kyb-cr" className="cursor-pointer block">
+                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">{t("auth.register.upload_cr")}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t("auth.register.upload_cr_desc")}</p>
+                        {kybCrFile && (
+                          <p className="text-xs text-primary mt-2 truncate px-2">{kybCrFile.name}</p>
+                        )}
+                      </label>
+                    </div>
+                    <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
+                      <input
+                        id="kyb-tax"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="hidden"
+                        onChange={(e) => setKybTaxFile(e.target.files?.[0] ?? null)}
+                      />
+                      <label htmlFor="kyb-tax" className="cursor-pointer block">
+                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Tax ID</p>
+                        <p className="text-xs text-muted-foreground mt-1">PDF or image</p>
+                        {kybTaxFile && (
+                          <p className="text-xs text-primary mt-2 truncate px-2">{kybTaxFile.name}</p>
+                        )}
+                      </label>
+                    </div>
+                    {formData.role === "supplier" && (
+                      <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/50 transition-colors">
+                        <input
+                          id="kyb-vat"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="hidden"
+                          onChange={(e) => setKybVatFile(e.target.files?.[0] ?? null)}
+                        />
+                        <label htmlFor="kyb-vat" className="cursor-pointer block">
+                          <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium">VAT certificate</p>
+                          <p className="text-xs text-muted-foreground mt-1">Required for suppliers</p>
+                          {kybVatFile && (
+                            <p className="text-xs text-primary mt-2 truncate px-2">{kybVatFile.name}</p>
+                          )}
+                        </label>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

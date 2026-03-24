@@ -9,7 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<void>;
-  register: (data: any) => Promise<void>;
+  register: (data: any) => Promise<{ access_token: string; user: any } | void>;
   logout: () => void;
 }
 
@@ -86,16 +86,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (data: any) => {
     setIsLoading(true);
     try {
-        // Map frontend registration usage to backend expectation if needed
-        // Assuming backend expects: { email, password, name, role, company_name }
-        await api.post('/auth/register', data);
+        const response = await api.post('/auth/register', data);
+        const payload = response.data as { access_token: string; user: any };
         
         toast({
             title: "Account Created",
             description: "You have successfully registered. Please login.",
         });
 
-        navigate("/login");
+        return payload;
     } catch (error: any) {
          console.error(error);
          toast({

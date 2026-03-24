@@ -39,14 +39,27 @@ model Company {
 
   // Relations: Supply Chain
   purchase_orders_as_supplier PurchaseOrder[] @relation("SupplierPOs")
+  products                    Product[]
 
   // Relations: Finance
   invoices_as_supplier Invoice[]        @relation("SupplierInvoices")
   invoices_as_buyer    Invoice[]        @relation("BuyerInvoices")
   wallets              Wallet[]
   settings             CompanySettings?
+  documents            CompanyDocument[]
 
   @@map("companies")
+}
+
+model CompanyDocument {
+  id          String   @id @default(uuid())
+  company_id  String
+  doc_type    String
+  file_url    String
+  uploaded_at DateTime @default(now())
+  company     Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+
+  @@map("company_documents")
 }
 
 model Wallet {
@@ -182,18 +195,34 @@ model BOQItem {
 }
 
 model Product {
-  id             String   @id @default(uuid())
-  server_id      String?  @unique // If mapping to external ID
-  name           String   @db.VarChar(255)
-  category       String   @db.VarChar(100)
-  unit           String   @db.VarChar(50)
-  specifications Json?
-  price          Decimal? @db.Decimal(10, 2)
-  supplier_id    String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  server_id           String?  @unique // If mapping to external ID
+  name                String   @db.VarChar(255)
+  category            String   @db.VarChar(100)
+  sub_category        String?  @db.VarChar(100)
+  unit                String   @db.VarChar(50)
+  specifications      Json?
+  base_price          Decimal? @db.Decimal(10, 2)
+  description         String?  @db.Text
+  image_url           String?  @db.Text
+  is_active           Boolean  @default(true)
+  supplier_company_id String?
+  supplier            Company? @relation(fields: [supplier_company_id], references: [id])
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
 
   @@map("products")
+}
+
+model Category {
+  id           String     @id @default(uuid())
+  name         String     @unique
+  parent_id    String?
+  parent       Category?  @relation("CategoryTree", fields: [parent_id], references: [id])
+  children     Category[] @relation("CategoryTree")
+  unit_options String[]
+
+  @@map("categories")
 }
 
 // 3. RFQ & Marketplace Engine
@@ -228,8 +257,19 @@ model RFQ {
   items            RFQItem[]
   bids             Bid[]
   purchase_orders  PurchaseOrder[]
+  attachments      RFQAttachment[]
 
   @@map("rfqs")
+}
+
+model RFQAttachment {
+  id        String @id @default(uuid())
+  rfq_id    String
+  file_url  String
+  file_name String
+  rfq       RFQ    @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
+
+  @@map("rfq_attachments")
 }
 
 model RFQItem {
