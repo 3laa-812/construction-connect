@@ -81,7 +81,8 @@ export class SyncService {
         'delivery_notes', 'grn_items',
         'invoices', 
         'daily_logs', 'log_photos',
-        'wallets', 'transactions'
+        'wallets', 'transactions',
+        'products',
       ];
 
       await this.prisma.$transaction(async (tx) => {
@@ -93,10 +94,18 @@ export class SyncService {
 
               const tableChanges = changes[tableName];
 
+              // Products are pull-only from mobile clients.
+              if (tableName === 'products') {
+                continue;
+              }
+
               // Created
               if (tableChanges.created && tableChanges.created.length > 0) {
                   for (const record of tableChanges.created) {
                       const data = this.sanitizeForPrisma(record);
+                      if (tableName === 'daily_logs') {
+                        data.status = 'SYNCED';
+                      }
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore
                       await tx[modelName].create({ data });
@@ -116,6 +125,29 @@ export class SyncService {
               if (tableChanges.updated && tableChanges.updated.length > 0) {
                   for (const record of tableChanges.updated) {
                        const data = this.sanitizeForPrisma(record);
+                      if (tableName === 'daily_logs') {
+                        data.status = 'SYNCED';
+                      }
+                      // Last-Write-Wins (LWW): only apply incoming update when it is not older
+                      // than the current server record, using updated_at timestamps.
+                      // If either side lacks updated_at, we keep backward compatibility and apply.
+                      if (record?.id && data.updated_at) {
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore
+                        const existing = await tx[modelName].findUnique({ where: { id: record.id } });
+                        const incomingUpdatedAt = new Date(data.updated_at).getTime();
+                        const existingUpdatedAt =
+                          existing?.updated_at instanceof Date
+                            ? existing.updated_at.getTime()
+                            : null;
+                        if (
+                          existingUpdatedAt !== null &&
+                          Number.isFinite(incomingUpdatedAt) &&
+                          incomingUpdatedAt < existingUpdatedAt
+                        ) {
+                          continue;
+                        }
+                      }
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore
                       await tx[modelName].update({ where: { id: record.id }, data });
@@ -172,7 +204,8 @@ export class SyncService {
           'wallets': 'wallet',
           'transactions': 'transaction',
           'daily_logs': 'dailyLog',
-          'log_photos': 'logPhoto'
+          'log_photos': 'logPhoto',
+          'products': 'product'
       };
       return map[tableName] || null;
   }

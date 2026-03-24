@@ -12,8 +12,12 @@ export class SyncController {
   }
 
   @Post('push')
-  push(@Body() changes: any, @Request() req: { user: { sub: string; id: string } }) {
+  push(
+    @Body() body: { changes?: any; lastPulledAt?: number } | any,
+    @Request() req: { user: { sub: string; id: string } },
+  ) {
     const userId = req.user.sub ?? req.user.id;
+    const changes = body?.changes ?? body;
     return this.syncService.pushChanges(changes, userId);
   }
 }

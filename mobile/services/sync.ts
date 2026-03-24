@@ -1,57 +1,53 @@
-import { synchronize } from '@nozbe/watermelondb/sync';
-import { database } from '../db';
-import api from './api';
-import * as Network from 'expo-network';
+import { synchronize } from '@nozbe/watermelondb/sync'
+import { database } from '../db'
+import { API_URL } from './api'
+import { getItem } from './storage'
 
-let isSyncing = false;
+const SYNC_API_URL = `${API_URL}/sync`
 
-export async function sync() {
-  if (isSyncing) {
-      console.log('Sync already in progress, skipping.');
-      return;
-  }
-
-  const networkState = await Network.getNetworkStateAsync();
-  if (!networkState.isConnected) {
-      console.log('No network connection, skipping sync.');
-      return;
-  }
-
-  isSyncing = true;
+export async function syncData() {
   try {
-      const startTime = Date.now();
-      await synchronize({
-        database,
-        pullChanges: async ({ lastPulledAt }) => {
-          try {
-            const timestamp = lastPulledAt || 0;
-            const response = await api.get(`/sync/pull?last_pulled_at=${timestamp}`);
-            
-            if (!response.data) {
-              throw new Error('Sync pull failed: No data');
-            }
+    const token = await getItem('user_token')
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
-            const { changes, timestamp: newTimestamp } = response.data;
-            return { changes, timestamp: newTimestamp };
-          } catch (error) {
-            console.error('Sync pull error:', error);
-            throw new Error('Sync pull failed');
-          }
-        },
-        pushChanges: async ({ changes, lastPulledAt }) => {
-            try {
-                await api.post('/sync/push', { changes, last_pulled_at: lastPulledAt });
-            } catch (error) {
-                console.error('Sync push error:', error);
-                throw new Error('Sync push failed');
+    await synchronize({
+      database,
+      pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
+        const response = await fetch(
+          `${SYNC_API_URL}/pull?last_pulled_at=${lastPulledAt ?? 0}`,
+          {
+            headers: {
+              ...authHeaders,
+            },
+          },
+        )
+        
+        if (!response.ok) {
+          throw new Error(await response.text())
+        }
+
+        const { changes, timestamp } = await response.json()
+        return { changes, timestamp }
+      },
+      pushChanges: async ({ changes, lastPulledAt }) => {
+        const response = await fetch(`${SYNC_API_URL}/push`, {
+            method: 'POST',
+            body: JSON.stringify({ changes, lastPulledAt }),
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
             }
-        },
-        migrationsEnabledAtVersion: 1,
-      });
-      console.log(`Sync completed in ${Date.now() - startTime}ms`);
+        })
+
+        if (!response.ok) {
+          throw new Error(await response.text())
+        }
+      },
+      migrationsEnabledAtVersion: 1,
+    })
+    console.log("Sync finished successfully")
   } catch (error) {
-      console.error('Sync failed:', error);
-  } finally {
-      isSyncing = false;
+    console.error("Sync failed", error)
+    // Optional: Alert.alert("Sync Failed", "Could not sync data. working offline.")
   }
 }

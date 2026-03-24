@@ -456,6 +456,7 @@ model SyncChange {
 enum DailyLogStatus {
   DRAFT
   SUBMITTED
+  SYNCED
 }
 
 model DailyLog {
