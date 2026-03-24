@@ -26,8 +26,10 @@ import WeatherWidget, {
   normalizeWeatherPayload,
 } from "../../components/WeatherWidget";
 import AttendanceSheet, {
-  type AttendanceRow,
+  type AttendanceEntry,
+  attendanceBlocksSubmit,
 } from "../../components/AttendanceSheet";
+import { recordAttendanceCompanyNames } from "../../services/attendanceCompanies";
 import MaterialReceiptForm, {
   type MaterialReceiptData,
   type ReceivedItem,
@@ -42,34 +44,37 @@ import {
 
 const MAX_ATTENDANCE_HOURS = 16;
 
-function normalizeAttendance(raw: unknown): AttendanceRow[] {
+function normalizeAttendance(raw: unknown): AttendanceEntry[] {
   if (Array.isArray(raw)) {
     return (raw as unknown[])
       .map((r, i) => {
         if (r && typeof r === "object" && !Array.isArray(r)) {
           const o = r as Record<string, unknown>;
-          if ("trade" in o || "company" in o) {
+          if ("trade" in o || "company" in o || "company_name" in o) {
             const h = Number(o.hours_worked);
+            const cn = String(
+              o.company_name ?? o.company ?? "",
+            );
             return {
               id: String(o.id ?? `row-${i}`),
-              company: String(o.company ?? ""),
-              trade: String(o.trade ?? ""),
+              company_name: cn,
+              trade: String(o.trade ?? "General Labor"),
               headcount: Math.max(0, Number(o.headcount) || 0),
               hours_worked: Number.isFinite(h)
-                ? Math.min(MAX_ATTENDANCE_HOURS, Math.max(0, h))
+                ? Math.min(MAX_ATTENDANCE_HOURS, Math.max(0.5, h))
                 : 8,
-            } satisfies AttendanceRow;
+            } satisfies AttendanceEntry;
           }
         }
         return null;
       })
-      .filter(Boolean) as AttendanceRow[];
+      .filter(Boolean) as AttendanceEntry[];
   }
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     return Object.entries(raw as Record<string, number>).map(
       ([trade, headcount], i) => ({
         id: `legacy-${i}`,
-        company: "",
+        company_name: "",
         trade,
         headcount: Number(headcount) || 0,
         hours_worked: 8,
@@ -109,7 +114,7 @@ export default function DailyLogEditScreen() {
   const [weather, setWeather] = useState<WeatherData>(() =>
     normalizeWeatherPayload(null),
   );
-  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
+  const [attendanceRows, setAttendanceRows] = useState<AttendanceEntry[]>([]);
   const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() =>
     parseProgressNotes(undefined),
   );
@@ -175,14 +180,13 @@ export default function DailyLogEditScreen() {
       return;
     }
 
-    const invalidHours = attendanceRows.some(
-      (r) =>
-        r.hours_worked > MAX_ATTENDANCE_HOURS || r.hours_worked < 0,
-    );
-    if (invalidHours) {
+    if (
+      status === "SUBMITTED" &&
+      attendanceBlocksSubmit(attendanceRows, MAX_ATTENDANCE_HOURS)
+    ) {
       Alert.alert(
         "Attendance",
-        `Hours per row must be between 0 and ${MAX_ATTENDANCE_HOURS}.`,
+        "Fix validation errors before submitting (company, headcount, hours).",
       );
       return;
     }
@@ -218,6 +222,11 @@ export default function DailyLogEditScreen() {
           }
         }
       });
+
+      await recordAttendanceCompanyNames(
+        database,
+        attendanceRows.map((r) => r.company_name),
+      );
 
       setExistingPhotoPaths(new Set(photos));
       Alert.alert("Saved", "Daily log updated.");
@@ -390,8 +399,14 @@ export default function DailyLogEditScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => persist("SUBMITTED")}
-              disabled={submitting}
-              className="flex-1 bg-primary p-4 rounded-xl items-center"
+              disabled={
+                submitting ||
+                attendanceBlocksSubmit(
+                  attendanceRows,
+                  MAX_ATTENDANCE_HOURS,
+                )
+              }
+              className={`flex-1 bg-primary p-4 rounded-xl items-center ${submitting || attendanceBlocksSubmit(attendanceRows, MAX_ATTENDANCE_HOURS) ? "opacity-45" : ""}`}
             >
               {submitting ? (
                 <ActivityIndicator color="white" />

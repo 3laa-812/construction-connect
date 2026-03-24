@@ -93,5 +93,19 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 5,
+      steps: [
+        createTable({
+          name: 'attendance_companies',
+          columns: [
+            { name: 'company_name', type: 'string' },
+            { name: 'last_used_at', type: 'number' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

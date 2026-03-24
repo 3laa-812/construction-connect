@@ -21,6 +21,7 @@ const SYNC_TABLES = [
   'purchase_orders',
   'po_items',
   'site_inventory',
+  'attendance_companies',
 ] as const
 
 export async function countPendingLocalChanges(db: Database): Promise<number> {

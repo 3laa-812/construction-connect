@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 4,
+  version: 5,
   tables: [
     // -------------------------------------------------------------------------
     // 1. Identity & Onboarding (Mirrors: Company, User)
@@ -145,6 +145,16 @@ export const schema = appSchema({
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
         ]
+    }),
+
+    tableSchema({
+      name: 'attendance_companies',
+      columns: [
+        { name: 'company_name', type: 'string' },
+        { name: 'last_used_at', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
     }),
     
     // -------------------------------------------------------------------------

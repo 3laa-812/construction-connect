@@ -21,8 +21,10 @@ import WeatherWidget, {
   normalizeWeatherPayload,
 } from "../../components/WeatherWidget";
 import AttendanceSheet, {
-  type AttendanceRow,
+  type AttendanceEntry,
+  attendanceBlocksSubmit,
 } from "../../components/AttendanceSheet";
+import { recordAttendanceCompanyNames } from "../../services/attendanceCompanies";
 import MaterialReceiptForm, {
   type MaterialReceiptData,
 } from "../../components/MaterialReceiptForm";
@@ -45,7 +47,7 @@ export default function NewDailyLog() {
   const [weather, setWeather] = useState<WeatherData>(() =>
     normalizeWeatherPayload(null),
   );
-  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
+  const [attendanceRows, setAttendanceRows] = useState<AttendanceEntry[]>([]);
   const [progressNotes, setProgressNotes] = useState<ProgressNote[]>(() =>
     parseProgressNotes(undefined),
   );
@@ -78,11 +80,14 @@ export default function NewDailyLog() {
       return;
     }
 
-    const invalidHours = attendanceRows.some(
-      (r) => r.hours_worked > 16 || r.hours_worked < 0,
-    );
-    if (invalidHours) {
-      Alert.alert("Attendance", "Hours per row must be between 0 and 16.");
+    if (
+      status === "SUBMITTED" &&
+      attendanceBlocksSubmit(attendanceRows, 16)
+    ) {
+      Alert.alert(
+        "Attendance",
+        "Fix validation errors before submitting (company, headcount, hours).",
+      );
       return;
     }
 
@@ -122,6 +127,11 @@ export default function NewDailyLog() {
           });
         }
       });
+
+      await recordAttendanceCompanyNames(
+        database,
+        attendanceRows.map((r) => r.company_name),
+      );
 
       Alert.alert("Saved", `Daily log ${status === "DRAFT" ? "saved as draft" : "submitted"} offline.`);
       router.back();
@@ -255,8 +265,10 @@ export default function NewDailyLog() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => persist("SUBMITTED")}
-            disabled={submitting}
-            className="flex-1 bg-primary p-4 rounded-xl items-center"
+            disabled={
+              submitting || attendanceBlocksSubmit(attendanceRows, 16)
+            }
+            className={`flex-1 bg-primary p-4 rounded-xl items-center ${submitting || attendanceBlocksSubmit(attendanceRows, 16) ? "opacity-45" : ""}`}
           >
             {submitting ? (
               <ActivityIndicator color="white" />
