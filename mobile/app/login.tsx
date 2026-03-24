@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,9 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from "react-native-reanimated";
+
+import { setItem } from "../services/storage";
+import api from "../services/api";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -44,12 +48,48 @@ export default function LoginScreen() {
   });
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
+    try {
+      console.log("Login Attempt:", { email, url: api.defaults.baseURL });
+      // Real API Call
+      const response = await api.post("/auth/login", { email, password });
+
+      console.log("Login Success:", response.status);
+      const { access_token, user } = response.data;
+
+      if (access_token) {
+        await setItem("user_token", access_token);
+        await setItem("auth_token", access_token);
+        await setItem("user_id", user.id);
+
+        router.replace("/(tabs)/dashboard");
+      } else {
+        throw new Error("No token received");
+      }
+    } catch (error: any) {
+      console.error(
+        "Login failed Full Error:",
+        error.message,
+        error.config?.url,
+        error.response?.status,
+        error.response?.data,
+      );
+      const message =
+        error.response?.data?.message || error.message || "Login failed";
+
+      // Native Alert
+      Alert.alert(
+        "Login Error",
+        `${message}\n\nHint: Check API URL in settings.`,
+      );
+    } finally {
       setIsLoading(false);
-      router.replace("/(tabs)/dashboard");
-    }, 1500);
+    }
   };
 
   return (

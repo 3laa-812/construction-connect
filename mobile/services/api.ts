@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getItem } from './storage';
+import { getAuthToken } from './storage';
 import { Platform } from 'react-native';
 
 // REPLACE WITH YOUR ACTUAL LOCAL IP FOR ANDROID EMULATOR (10.0.2.2 usually) OR IOS (localhost)
@@ -18,7 +18,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   async (config) => {
-    const token = await getItem('user_token');
+    const token = await getAuthToken();
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }

@@ -1,9 +1,13 @@
 import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { View } from "react-native";
+import { SyncStatusBar } from "../../components/SyncStatusBar";
 
 export default function TabLayout() {
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <SyncStatusBar />
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
@@ -41,6 +45,7 @@ export default function TabLayout() {
           ),
         }}
       />
-    </Tabs>
+      </Tabs>
+    </View>
   );
 }
