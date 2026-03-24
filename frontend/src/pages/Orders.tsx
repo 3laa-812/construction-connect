@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
-import { Search, Filter, ShoppingCart, Clock, Package, Truck, MapPin, CheckCircle, FileText, Download, Eye, MoreHorizontal, ClipboardCheck, Star } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Search,
+  Filter,
+  ShoppingCart,
+  Package,
+  Truck,
+  MapPin,
+  CheckCircle,
+  Eye,
+  MoreHorizontal,
+} from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,11 +35,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { GoodsReceivedNote } from "@/components/orders/GoodsReceivedNote";
-import { SupplierRating } from "@/components/orders/SupplierRating";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { api } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 
 
 const statusConfig = {
@@ -38,9 +47,13 @@ const statusConfig = {
   out_for_delivery: { color: "accent", labelKey: "orders.status.out_for_delivery", icon: Truck },
   delivered: { color: "success", labelKey: "orders.status.delivered", icon: MapPin },
   completed: { color: "success", labelKey: "orders.status.completed", icon: CheckCircle },
+  cancelled: { color: "danger", labelKey: "orders.status.cancelled", icon: MapPin },
   CONFIRMED: { color: "primary", labelKey: "orders.status.confirmed", icon: CheckCircle },
   PROCESSING: { color: "warning", labelKey: "orders.status.processing", icon: Package },
+  OUT_FOR_DELIVERY: { color: "accent", labelKey: "orders.status.out_for_delivery", icon: Truck },
+  DELIVERED: { color: "success", labelKey: "orders.status.delivered", icon: MapPin },
   COMPLETED: { color: "success", labelKey: "orders.status.completed", icon: CheckCircle },
+  CANCELLED: { color: "danger", labelKey: "orders.status.cancelled", icon: MapPin },
 } as const;
 
 const paymentConfig = {
@@ -56,7 +69,7 @@ type ApiPurchaseOrder = {
   created_at?: string;
   supplier?: { name?: string };
   project?: { name?: string };
-  items?: Array<{ item_description?: string }>;
+  items?: Array<{ id: string; item_description?: string; ordered_qty?: number }>;
 };
 
 type AdaptedOrder = {
@@ -69,6 +82,7 @@ type AdaptedOrder = {
   status: keyof typeof statusConfig;
   orderDate: string;
   paymentStatus: "pending" | "paid" | "overdue";
+  lineItems: Array<{ id: string; productName: string; quantity: number; unit: string }>;
 };
 
 const OrderRow = ({ order, onSelect }: { order: AdaptedOrder; onSelect: (o: AdaptedOrder) => void }) => {
@@ -137,12 +151,12 @@ const OrderRow = ({ order, onSelect }: { order: AdaptedOrder; onSelect: (o: Adap
 
 function Orders() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<AdaptedOrder | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showGRNDialog, setShowGRNDialog] = useState(false);
-  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   const { data, isLoading, isError } = useQuery<ApiPurchaseOrder[]>({
     queryKey: ["purchase-orders"],
@@ -152,12 +166,46 @@ function Orders() {
     },
   });
 
+  const createDeliveryNoteMutation = useMutation({
+    mutationFn: async (payload: {
+      orderId: string;
+      receiverName: string;
+      lineItems: Array<{ id: string; receivedQuantity: number }>;
+    }) => {
+      return api.post(`/purchase-orders/${payload.orderId}/delivery-notes`, {
+        status: "DELIVERED",
+        items: payload.lineItems.map((item) => ({
+          po_item_id: item.id,
+          delivered_qty: item.receivedQuantity,
+        })),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "GRN submitted",
+        description: "Delivery note and GRN were recorded successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      setShowGRNDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to submit GRN",
+        description: error?.response?.data?.message || "Please try again.",
+      });
+    },
+  });
+
   const orders: AdaptedOrder[] = useMemo(() => {
     if (!data) return [];
     return data.map((order) => {
       const normalizedStatus = (() => {
         const raw = (order.status || "confirmed").toString().toLowerCase();
         if (raw === "processing") return "processing";
+        if (raw === "out_for_delivery") return "out_for_delivery";
+        if (raw === "delivered") return "delivered";
+        if (raw === "cancelled") return "cancelled";
         if (raw === "completed") return "completed";
         return "confirmed";
       })() as AdaptedOrder["status"];
@@ -176,6 +224,12 @@ function Orders() {
         status: normalizedStatus,
         orderDate: order.created_at ? new Date(order.created_at).toLocaleDateString() : "",
         paymentStatus: "pending",
+        lineItems: (order.items || []).map((item) => ({
+          id: item.id,
+          productName: item.item_description || "Line item",
+          quantity: Number(item.ordered_qty || 0),
+          unit: "unit",
+        })),
       };
     });
   }, [data]);
@@ -338,12 +392,42 @@ function Orders() {
                     </div>
                   </div>
                 </div>
-                 {/* Timeline omitted for brevity/simplicity in this pass */}
+                {selectedOrder.status === "out_for_delivery" ||
+                selectedOrder.status === "OUT_FOR_DELIVERY" ? (
+                  <div className="pt-2">
+                    <Button
+                      className="w-full"
+                      onClick={() => setShowGRNDialog(true)}
+                    >
+                      Record Goods Receipt (GRN)
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {selectedOrder ? (
+        <GoodsReceivedNote
+          orderId={selectedOrder.fullId}
+          supplier={selectedOrder.supplier}
+          lineItems={selectedOrder.lineItems}
+          open={showGRNDialog}
+          onOpenChange={setShowGRNDialog}
+          onConfirm={(grn) => {
+            createDeliveryNoteMutation.mutate({
+              orderId: selectedOrder.fullId,
+              receiverName: grn.receiverName,
+              lineItems: grn.lineItems.map((line) => ({
+                id: line.id,
+                receivedQuantity: line.receivedQuantity,
+              })),
+            });
+          }}
+        />
+      ) : null}
     </AppLayout>
   );
 }

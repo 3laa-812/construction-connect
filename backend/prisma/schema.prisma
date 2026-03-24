@@ -130,8 +130,22 @@ model Project {
   rfqs            RFQ[]
   purchase_orders PurchaseOrder[]
   dailyLogs       DailyLog[]
+  inventories     Inventory[]
 
   @@map("projects")
+}
+
+model Inventory {
+  id           String   @id @default(uuid())
+  project_id   String
+  product_name String
+  unit         String
+  qty_on_hand  Decimal  @default(0) @db.Decimal(14, 3)
+  updated_at   DateTime @updatedAt
+  project      Project  @relation(fields: [project_id], references: [id])
+
+  @@unique([project_id, product_name, unit])
+  @@map("inventories")
 }
 
 model Site {
@@ -278,7 +292,10 @@ model BidItem {
 enum POStatus {
   CONFIRMED
   PROCESSING
+  OUT_FOR_DELIVERY
+  DELIVERED
   COMPLETED
+  CANCELLED
 }
 
 model PurchaseOrder {

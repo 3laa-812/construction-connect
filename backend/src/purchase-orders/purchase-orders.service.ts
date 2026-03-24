@@ -1,11 +1,17 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DeliveryNote, PurchaseOrder, Prisma } from '@prisma/client';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import {
+  DeliveryNote,
+  POStatus,
+  PurchaseOrder,
+  Prisma,
+} from '@prisma/client';
+import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 const poInclude = {
   project: true,
@@ -19,6 +25,16 @@ const poInclude = {
 @Injectable()
 export class PurchaseOrdersService {
   constructor(private prisma: PrismaService) {}
+
+  private readonly supplierTransitions: Record<string, POStatus> = {
+    CONFIRMED: 'PROCESSING',
+    PROCESSING: 'OUT_FOR_DELIVERY',
+  };
+
+  private readonly buyerTransitions: Record<string, POStatus> = {
+    OUT_FOR_DELIVERY: 'DELIVERED',
+    DELIVERED: 'COMPLETED',
+  };
 
   async create(
     data: Prisma.PurchaseOrderCreateInput,
@@ -69,16 +85,38 @@ export class PurchaseOrdersService {
     });
   }
 
-  async findOne(id: string, user: JwtPayload): Promise<PurchaseOrder | null> {
+  async findOne(id: string, user: JwtPayload): Promise<any | null> {
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id },
-      include: poInclude,
+      include: {
+        ...poInclude,
+        items: {
+          include: {
+            grn_items: true,
+          },
+        },
+      },
     });
     if (!po) {
       return null;
     }
     await this.assertPoAccess(user, po);
-    return po;
+    const itemsWithRemaining = po.items.map((item) => {
+      const delivered = item.grn_items.reduce(
+        (sum, g) => sum + Number(g.delivered_qty ?? 0),
+        0,
+      );
+      const ordered = Number(item.ordered_qty ?? 0);
+      return {
+        ...item,
+        remaining_qty: Math.max(ordered - delivered, 0),
+      };
+    });
+
+    return {
+      ...po,
+      items: itemsWithRemaining as any,
+    };
   }
 
   async update(
@@ -114,29 +152,134 @@ export class PurchaseOrdersService {
     });
   }
 
-  async createDeliveryNote(
-    data: Prisma.DeliveryNoteCreateInput,
+  async updateStatus(
+    id: string,
+    status: POStatus,
     user: JwtPayload,
-  ): Promise<DeliveryNote> {
-    const poId = (data.purchase_order as { connect?: { id: string } })?.connect
-      ?.id;
-    if (!poId) {
-      throw new ForbiddenException('purchase_order is required');
-    }
+  ): Promise<PurchaseOrder> {
     const po = await this.prisma.purchaseOrder.findUnique({
-      where: { id: poId },
+      where: { id },
       include: { project: true },
     });
     if (!po) {
       throw new NotFoundException('Purchase order not found');
     }
-    if (user.role === 'ADMIN') {
-      return this.prisma.deliveryNote.create({ data });
+    await this.assertPoAccess(user, po);
+
+    const current = po.status;
+    if (current === status) {
+      return po;
     }
-    if (!user.companyId || po.supplier_id !== user.companyId) {
+
+    if (user.role === 'ADMIN') {
+      return this.prisma.purchaseOrder.update({
+        where: { id },
+        data: { status },
+      });
+    }
+
+    if (!user.companyId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const isSupplier = po.supplier_id === user.companyId;
+    const isBuyer = po.project.company_id === user.companyId;
+
+    if (isSupplier) {
+      if (this.supplierTransitions[current] !== status) {
+        throw new BadRequestException(
+          `Invalid supplier transition: ${current} -> ${status}`,
+        );
+      }
+    } else if (isBuyer) {
+      if (this.buyerTransitions[current] !== status) {
+        throw new BadRequestException(
+          `Invalid buyer transition: ${current} -> ${status}`,
+        );
+      }
+    } else {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.prisma.purchaseOrder.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
+  async createDeliveryNote(
+    poId: string,
+    dto: {
+      delivery_date?: string;
+      status?: 'OUT_FOR_DELIVERY' | 'DELIVERED';
+      pod_image_url?: string;
+      pod_signature_url?: string;
+      received_by?: string;
+      items: Array<{ po_item_id: string; delivered_qty: number }>;
+    },
+    user: JwtPayload,
+  ): Promise<DeliveryNote> {
+    if (!dto.items?.length) {
+      throw new BadRequestException('At least one GRN line item is required');
+    }
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: poId },
+      include: { project: true, items: true },
+    });
+    if (!po) {
+      throw new NotFoundException('Purchase order not found');
+    }
+    if (user.role !== 'ADMIN' && (!user.companyId || po.supplier_id !== user.companyId)) {
       throw new ForbiddenException('Only the supplier can create delivery notes');
     }
-    return this.prisma.deliveryNote.create({ data });
+
+    for (const item of dto.items) {
+      const exists = po.items.find((poItem) => poItem.id === item.po_item_id);
+      if (!exists) {
+        throw new BadRequestException(
+          `PO item ${item.po_item_id} does not belong to this order`,
+        );
+      }
+      if (item.delivered_qty <= 0) {
+        throw new BadRequestException('delivered_qty must be > 0');
+      }
+    }
+
+    const deliveryNote = await this.prisma.deliveryNote.create({
+      data: {
+        purchase_order: { connect: { id: poId } },
+        delivery_date: dto.delivery_date
+          ? new Date(dto.delivery_date)
+          : undefined,
+        status: dto.status ?? 'DELIVERED',
+        pod_image_url: dto.pod_image_url,
+        pod_signature_url: dto.pod_signature_url,
+        receiver: dto.received_by
+          ? { connect: { id: dto.received_by } }
+          : undefined,
+        items: {
+          create: dto.items.map((item) => ({
+            po_item: { connect: { id: item.po_item_id } },
+            delivered_qty: item.delivered_qty,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    await this.updateInventory(
+      po.project_id,
+      dto.items.map((item) => {
+        const poItem = po.items.find((i) => i.id === item.po_item_id)!;
+        return {
+          product_name: poItem.item_description || 'Line item',
+          unit: 'unit',
+          qty: item.delivered_qty,
+        };
+      }),
+    );
+
+    return deliveryNote;
   }
 
   async findAllDeliveryNotes(
@@ -174,5 +317,37 @@ export class PurchaseOrdersService {
       return;
     }
     throw new ForbiddenException('Access denied');
+  }
+
+  private async updateInventory(
+    projectId: string,
+    items: Array<{ product_name: string; unit: string; qty: number }>,
+  ): Promise<void> {
+    for (const item of items) {
+      const existing = await this.prisma.inventory.findFirst({
+        where: {
+          project_id: projectId,
+          product_name: item.product_name,
+          unit: item.unit,
+        },
+      });
+      if (!existing) {
+        await this.prisma.inventory.create({
+          data: {
+            project: { connect: { id: projectId } },
+            product_name: item.product_name,
+            unit: item.unit,
+            qty_on_hand: item.qty,
+          },
+        });
+      } else {
+        await this.prisma.inventory.update({
+          where: { id: existing.id },
+          data: {
+            qty_on_hand: Number(existing.qty_on_hand) + item.qty,
+          },
+        });
+      }
+    }
   }
 }

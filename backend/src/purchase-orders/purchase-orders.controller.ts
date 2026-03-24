@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -9,7 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PurchaseOrdersService } from './purchase-orders.service';
-import { Prisma } from '@prisma/client';
+import { POStatus, Prisma } from '@prisma/client';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
@@ -33,16 +34,18 @@ export class PurchaseOrdersController {
   @Post(':id/delivery-notes')
   createDeliveryNote(
     @Param('id') poId: string,
-    @Body() data: Prisma.DeliveryNoteCreateInput,
+    @Body()
+    data: {
+      delivery_date?: string;
+      status?: 'OUT_FOR_DELIVERY' | 'DELIVERED';
+      pod_image_url?: string;
+      pod_signature_url?: string;
+      received_by?: string;
+      items: Array<{ po_item_id: string; delivered_qty: number }>;
+    },
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.poService.createDeliveryNote(
-      {
-        ...data,
-        purchase_order: { connect: { id: poId } },
-      },
-      user,
-    );
+    return this.poService.createDeliveryNote(poId, data, user);
   }
 
   @Get(':id/delivery-notes')
@@ -69,6 +72,18 @@ export class PurchaseOrdersController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.poService.update(id, data, user);
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Body() data: { status: POStatus; note?: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    if (!data?.status) {
+      throw new BadRequestException('status is required');
+    }
+    return this.poService.updateStatus(id, data.status, user);
   }
 
   @Delete(':id')
