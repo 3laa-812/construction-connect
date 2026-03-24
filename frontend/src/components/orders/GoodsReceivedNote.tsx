@@ -17,6 +17,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { api } from "@/lib/api";
 
 interface LineItemCheck {
   id: string;
@@ -135,8 +136,13 @@ export function GoodsReceivedNote({
         timestamp: new Date().toISOString(),
       };
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await api.post(`/purchase-orders/${orderId}/delivery-notes`, {
+        status: "DELIVERED",
+        items: itemChecks.map((line) => ({
+          po_item_id: line.id,
+          delivered_qty: line.receivedQuantity,
+        })),
+      });
 
       toast({
         title: t("orders.grn.toast.confirmed"),

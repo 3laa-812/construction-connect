@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { BidComparisonTable } from "./BidComparisonTable";
+import Bids from "./Bids";
 
 const mockGet = vi.fn();
 const mockPatch = vi.fn();
@@ -24,38 +24,39 @@ vi.mock("@/contexts/LanguageContext", () => ({
   }),
 }));
 
-const navigate = vi.fn();
-vi.mock("react-router-dom", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router-dom")>();
-  return { ...actual, useNavigate: () => navigate };
-});
+vi.mock("@/components/layout/AppLayout", () => ({
+  AppLayout: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+}));
 
 vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
 
-describe("BidComparisonTable", () => {
+describe("Bids", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGet.mockResolvedValue({
       data: [
         {
           id: "rfq-1",
-          items: [{ product_name: "Cement" }],
+          items: [{ product_name: "Steel" }],
           bids: [
             {
-              id: "bid-1",
-              supplier: { name: "Supplier A" },
-              items: [{ unit_price: 10 }],
-              total_price: 100,
-              valid_until: new Date(Date.now() + 86400000 * 7).toISOString(),
+              id: "bid-99",
+              status: "PENDING",
+              supplier: { name: "Acme Supply" },
+              items: [{ unit_price: 5 }],
+              total_price: 500,
+              valid_until: new Date(Date.now() + 86400000 * 3).toISOString(),
             },
           ],
         },
       ],
     });
-    mockPatch.mockResolvedValue({ data: { id: "po-1" } });
+    mockPatch.mockResolvedValue({ data: {} });
   });
 
-  function renderTable() {
+  function renderPage() {
     const qc = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -65,31 +66,40 @@ describe("BidComparisonTable", () => {
     return render(
       <QueryClientProvider client={qc}>
         <MemoryRouter>
-          <BidComparisonTable />
+          <Bids />
         </MemoryRouter>
       </QueryClientProvider>,
     );
   }
 
-  it("calls PATCH /rfqs/:id/award/:bidId when award is confirmed", async () => {
+  it("calls PATCH reject with rejection_reason when confirm reject is clicked", async () => {
     const user = userEvent.setup();
-    renderTable();
+    renderPage();
 
     await waitFor(() => {
       expect(screen.queryByText("Loading bids...")).not.toBeInTheDocument();
     });
 
+    await user.click(screen.getByRole("button", { name: "common.reject" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const combo = within(dialog).getByRole("combobox");
+    await user.click(combo);
     await user.click(
-      screen.getByRole("button", { name: "bids.comparison.actions.award" }),
+      await screen.findByRole("option", {
+        name: "bids.dialog.reasons.price_high",
+      }),
     );
 
     await user.click(
-      screen.getByRole("button", { name: "bids.comparison.dialog.confirm" }),
+      within(dialog).getByRole("button", { name: "bids.dialog.confirm_reject" }),
     );
 
     await waitFor(() => {
-      expect(mockPatch).toHaveBeenCalledWith("/rfqs/rfq-1/award/bid-1");
+      expect(mockPatch).toHaveBeenCalledWith(
+        "/rfqs/rfq-1/bids/bid-99/reject",
+        { rejection_reason: "Price too high" },
+      );
     });
-    expect(navigate).toHaveBeenCalled();
   });
 });

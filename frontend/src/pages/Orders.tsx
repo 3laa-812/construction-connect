@@ -10,11 +10,13 @@ import {
   Eye,
   MoreHorizontal,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -166,37 +168,6 @@ function Orders() {
     },
   });
 
-  const createDeliveryNoteMutation = useMutation({
-    mutationFn: async (payload: {
-      orderId: string;
-      receiverName: string;
-      lineItems: Array<{ id: string; receivedQuantity: number }>;
-    }) => {
-      return api.post(`/purchase-orders/${payload.orderId}/delivery-notes`, {
-        status: "DELIVERED",
-        items: payload.lineItems.map((item) => ({
-          po_item_id: item.id,
-          delivered_qty: item.receivedQuantity,
-        })),
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "GRN submitted",
-        description: "Delivery note and GRN were recorded successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      setShowGRNDialog(false);
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to submit GRN",
-        description: error?.response?.data?.message || "Please try again.",
-      });
-    },
-  });
-
   const orders: AdaptedOrder[] = useMemo(() => {
     if (!data) return [];
     return data.map((order) => {
@@ -322,10 +293,43 @@ function Orders() {
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading orders...</div>
+              <table className="w-full data-grid">
+                <thead>
+                  <tr>
+                    <th className="min-w-[200px]">{t("orders.order_info")}</th>
+                    <th className="min-w-[150px]">{t("orders.supplier")}</th>
+                    <th className="min-w-[180px]">{t("orders.project")}</th>
+                    <th className="min-w-[130px]">{t("orders.amount")}</th>
+                    <th className="min-w-[130px]">{t("orders.status")}</th>
+                    <th className="min-w-[110px]">{t("orders.payment")}</th>
+                    <th className="min-w-[100px] text-center">{t("common.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[120px]" />
+                            <Skeleton className="h-3 w-[80px]" />
+                          </div>
+                        </div>
+                      </td>
+                      <td><Skeleton className="h-4 w-[120px]" /></td>
+                      <td><Skeleton className="h-4 w-[140px]" /></td>
+                      <td><Skeleton className="h-4 w-[80px]" /></td>
+                      <td><Skeleton className="h-6 w-[80px] rounded-full" /></td>
+                      <td><Skeleton className="h-6 w-[80px] rounded-full" /></td>
+                      <td><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : isError ? (
               <div className="p-8 text-center text-danger">Failed to load orders</div>
-            ) : (
+            ) : filteredOrders.length > 0 ? (
               <table className="w-full data-grid">
                 <thead>
                   <tr>
@@ -349,15 +353,16 @@ function Orders() {
                           }}
                       />
                   ))}
-                  {filteredOrders.length === 0 && (
-                      <tr>
-                          <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                              No orders found.
-                          </td>
-                      </tr>
-                  )}
                 </tbody>
               </table>
+            ) : (
+              <div className="py-12">
+                <EmptyState
+                  icon={ShoppingCart}
+                  title={t("orders.empty.no_orders")}
+                  description={t("orders.empty.desc")}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -416,15 +421,8 @@ function Orders() {
           lineItems={selectedOrder.lineItems}
           open={showGRNDialog}
           onOpenChange={setShowGRNDialog}
-          onConfirm={(grn) => {
-            createDeliveryNoteMutation.mutate({
-              orderId: selectedOrder.fullId,
-              receiverName: grn.receiverName,
-              lineItems: grn.lineItems.map((line) => ({
-                id: line.id,
-                receivedQuantity: line.receivedQuantity,
-              })),
-            });
+          onConfirm={() => {
+            queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
           }}
         />
       ) : null}
