@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { CompaniesService } from '../companies/companies.service';
+import { buildJwtPayload } from './jwt-payload.util';
 
 @Injectable()
 export class AuthService {
@@ -23,15 +24,17 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { 
-      email: user.email, 
-      sub: user.id, 
-      role: user.role,
-      company_id: user.company_id 
-    };
+    const full =
+      user.company !== undefined
+        ? user
+        : await this.usersService.findOne(user.id);
+    if (!full) {
+      throw new UnauthorizedException('User not found');
+    }
+    const payload = buildJwtPayload(full);
     return {
       access_token: this.jwtService.sign(payload),
-      user,
+      user: full,
     };
   }
 

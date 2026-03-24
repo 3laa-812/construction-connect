@@ -27,6 +27,12 @@ export class WalletsService {
     return wallet;
   }
 
+  async findWalletById(id: string): Promise<Wallet | null> {
+    return this.prisma.wallet.findUnique({
+      where: { id },
+    });
+  }
+
   async findWalletByCompany(companyId: string): Promise<Wallet | null> {
     return this.prisma.wallet.findFirst({
       where: { company_id: companyId },

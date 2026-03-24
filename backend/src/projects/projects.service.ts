@@ -1,61 +1,149 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Project, Site, BOQItem, Prisma } from '@prisma/client';
+import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+
+const projectInclude = {
+  company: true,
+  sites: true,
+  boq_items: true,
+  rfqs: true,
+  purchase_orders: true,
+} as const;
 
 @Injectable()
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
-  // Projects
-  async create(data: Prisma.ProjectCreateInput): Promise<Project> {
-    return this.prisma.project.create({ data });
+  async create(data: Prisma.ProjectCreateInput, user: JwtPayload): Promise<Project> {
+    if (user.role === 'ADMIN') {
+      return this.prisma.project.create({ data });
+    }
+    if (user.role !== 'CONTRACTOR' || !user.companyId) {
+      throw new ForbiddenException('Only contractors can create projects');
+    }
+    const { company: _c, ...rest } = data as Record<string, unknown>;
+    return this.prisma.project.create({
+      data: {
+        ...(rest as object),
+        company: { connect: { id: user.companyId } },
+      } as Prisma.ProjectCreateInput,
+    });
   }
 
-  async findAll(): Promise<Project[]> {
+  async findAll(user: JwtPayload): Promise<Project[]> {
+    if (user.role === 'ADMIN') {
+      return this.prisma.project.findMany({ include: projectInclude });
+    }
+    if (!user.companyId) {
+      return [];
+    }
+    if (user.role === 'SUPPLIER') {
+      return this.prisma.project.findMany({
+        where: {
+          purchase_orders: { some: { supplier_id: user.companyId } },
+        },
+        include: projectInclude,
+      });
+    }
     return this.prisma.project.findMany({
-      include: {
-        company: true,
-        sites: true,
-        boq_items: true,
-        rfqs: true,
-        purchase_orders: true,
-      },
+      where: { company_id: user.companyId },
+      include: projectInclude,
     });
   }
 
-  async findOne(id: string): Promise<Project | null> {
-    return this.prisma.project.findUnique({
+  async findOne(id: string, user: JwtPayload): Promise<Project | null> {
+    const project = await this.prisma.project.findUnique({
       where: { id },
-      include: {
-        company: true,
-        sites: true,
-        boq_items: true,
-        rfqs: true,
-        purchase_orders: true,
-      },
+      include: projectInclude,
     });
+    if (!project) {
+      return null;
+    }
+    await this.assertProjectAccess(user, project);
+    return project;
   }
 
-  async update(id: string, data: Prisma.ProjectUpdateInput): Promise<Project> {
+  async update(
+    id: string,
+    data: Prisma.ProjectUpdateInput,
+    user: JwtPayload,
+  ): Promise<Project> {
+    await this.assertProjectAccess(user, id);
     return this.prisma.project.update({
       where: { id },
       data,
     });
   }
-  
-  async remove(id: string): Promise<Project> {
-      return this.prisma.project.delete({
-          where: { id }
-      });
+
+  async remove(id: string, user: JwtPayload): Promise<Project> {
+    await this.assertProjectAccess(user, id);
+    return this.prisma.project.delete({
+      where: { id },
+    });
   }
 
-  // Sites
-  async createSite(data: Prisma.SiteCreateInput): Promise<Site> {
+  private async assertProjectAccess(
+    user: JwtPayload,
+    projectOrId: Project | string,
+  ): Promise<void> {
+    const project =
+      typeof projectOrId === 'string'
+        ? await this.prisma.project.findUnique({ where: { id: projectOrId } })
+        : projectOrId;
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    if (user.role === 'ADMIN') {
+      return;
+    }
+    if (!user.companyId) {
+      throw new ForbiddenException('Access denied');
+    }
+    if (project.company_id === user.companyId) {
+      return;
+    }
+    if (user.role === 'SUPPLIER') {
+      const linked = await this.prisma.purchaseOrder.findFirst({
+        where: {
+          project_id: project.id,
+          supplier_id: user.companyId,
+        },
+      });
+      if (linked) {
+        return;
+      }
+    }
+    throw new ForbiddenException('Access denied');
+  }
+
+  async createSite(
+    data: Prisma.SiteCreateInput,
+    user: JwtPayload,
+  ): Promise<Site> {
+    const projectId = (data.project as { connect?: { id: string } })?.connect
+      ?.id;
+    if (!projectId) {
+      throw new ForbiddenException('Project is required');
+    }
+    await this.assertProjectAccess(user, projectId);
     return this.prisma.site.create({ data });
   }
-  
-  // BOQ Items
-  async createBOQItem(data: Prisma.BOQItemCreateInput): Promise<BOQItem> {
-      return this.prisma.bOQItem.create({ data });
+
+  async createBOQItem(
+    data: Prisma.BOQItemCreateInput,
+    user: JwtPayload,
+  ): Promise<BOQItem> {
+    const projectId = (data.project as { connect?: { id: string } })?.connect
+      ?.id;
+    if (!projectId) {
+      throw new ForbiddenException('Project is required');
+    }
+    await this.assertProjectAccess(user, projectId);
+    return this.prisma.bOQItem.create({ data });
   }
 }

@@ -1,11 +1,12 @@
-import { Controller, Request, Post, UseGuards, Body, Get, UnauthorizedException } from '@nestjs/common';
+import { Controller, Request, Post, Body, Get, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthGuard } from '@nestjs/passport';
+import { Public } from '../common/decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('login')
   async login(@Body() req) {
     // In a real app, use a LocalGuard to validate credentials before calling login
@@ -45,7 +46,6 @@ export class AuthController {
     });
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
