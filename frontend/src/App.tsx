@@ -21,6 +21,7 @@ import Approvals from "./pages/Approvals";
 import Settings from "./pages/Settings";
 import SupplierRFQFeed from "./pages/SupplierRFQFeed";
 import Financials from "./pages/Financials";
+import AuditLogsPage from "./pages/admin/AuditLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
                     element={<SupplierRFQFeed />}
                   />
                   <Route path="/financials" element={<Financials />} />
+                  <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
                 </Route>
 
                 {/* Catch-all */}

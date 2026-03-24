@@ -472,6 +472,24 @@ model CompanySettings {
   @@map("company_settings")
 }
 
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String
+  company_id  String
+  action      String
+  entity_type String
+  entity_id   String
+  old_value   Json?
+  new_value   Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+
+  @@index([created_at])
+  @@index([entity_type, created_at])
+  @@map("audit_logs")
+}
+
 // 6. Offline-First Sync
 // Tables to support WatermelonDB synchronization.
 enum SyncOperation {

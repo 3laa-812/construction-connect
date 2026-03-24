@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -18,6 +18,8 @@ import { SettingsModule } from './settings/settings.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { MaterialsModule } from './materials/materials.module';
 import { DailyLogsModule } from './daily-logs/daily-logs.module';
+import { AdminModule } from './admin/admin.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 @Module({
   imports: [
@@ -33,13 +35,15 @@ import { DailyLogsModule } from './daily-logs/daily-logs.module';
     SettingsModule,
     WalletsModule,
     MaterialsModule,
-    DailyLogsModule
+    DailyLogsModule,
+    AdminModule
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

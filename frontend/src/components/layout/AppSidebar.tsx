@@ -15,6 +15,7 @@ import {
   Shield,
   Wallet,
   Store,
+  FileClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const managementNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { titleKey: "nav.approvals", href: "/approvals", icon: Shield, badge: 3 },
+  { titleKey: "nav.settings", href: "/admin/audit-logs", icon: FileClock },
   { titleKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
