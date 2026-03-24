@@ -7,21 +7,49 @@ import {
   ActivityIndicator,
 } from "react-native";
 import * as Location from "expo-location";
+import * as Network from "expo-network";
+import Constants from "expo-constants";
 
-// Mock Weather API function (Replace with real API call later)
-const fetchWeather = async (lat: number, lon: number) => {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return {
-    temp: 24,
-    condition: "Sunny",
-    location: "Construction Site A",
-  };
-};
-
-interface WeatherData {
+export interface WeatherData {
   temp: string;
   condition: string;
+  humidity?: string;
+}
+
+function readOpenWeatherKey(): string {
+  const env =
+    typeof process !== "undefined"
+      ? process.env.EXPO_PUBLIC_OPENWEATHER_KEY
+      : undefined;
+  const extra = (
+    Constants.expoConfig?.extra as { openWeatherKey?: string } | undefined
+  )?.openWeatherKey;
+  return String(env ?? extra ?? "").trim();
+}
+
+async function fetchOpenWeather(
+  lat: number,
+  lon: number,
+): Promise<{ temp: number; condition: string; humidity?: number }> {
+  const key = readOpenWeatherKey();
+  if (!key) {
+    throw new Error("NO_API_KEY");
+  }
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${encodeURIComponent(key)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error("FETCH_FAILED");
+  }
+  const json = (await res.json()) as {
+    main?: { temp?: number; humidity?: number };
+    weather?: Array<{ description?: string }>;
+  };
+  const condition = json.weather?.[0]?.description ?? "";
+  return {
+    temp: Number(json.main?.temp ?? 0),
+    condition: String(condition),
+    humidity: json.main?.humidity,
+  };
 }
 
 interface WeatherWidgetProps {
@@ -39,30 +67,55 @@ export default function WeatherWidget({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (initialData) {
+      setWeather((w) => ({ ...w, ...initialData }));
+    }
+  }, [initialData?.temp, initialData?.condition, initialData?.humidity]);
+
   const handleAutoFetch = async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const key = readOpenWeatherKey();
+      if (!key) {
+        setErrorMsg("No API key — add EXPO_PUBLIC_OPENWEATHER_KEY or enter manually.");
+        return;
+      }
+
+      const net = await Network.getNetworkStateAsync();
+      if (!net.isConnected || net.isInternetReachable === false) {
+        setErrorMsg("Offline — enter weather manually.");
+        return;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setErrorMsg("Permission to access location was denied");
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      const data = await fetchWeather(
+      const location = await Location.getCurrentPositionAsync({});
+      const data = await fetchOpenWeather(
         location.coords.latitude,
         location.coords.longitude,
       );
 
-      const newData = {
+      const newData: WeatherData = {
         temp: data.temp.toString(),
         condition: data.condition,
+        ...(data.humidity != null
+          ? { humidity: String(data.humidity) }
+          : {}),
       };
       setWeather(newData);
       onWeatherChange(newData);
     } catch (error) {
-      setErrorMsg("Failed to fetch weather");
+      if (error instanceof Error && error.message === "NO_API_KEY") {
+        setErrorMsg("No API key — enter weather manually.");
+      } else {
+        setErrorMsg("Could not load weather — enter manually.");
+      }
     } finally {
       setLoading(false);
     }
@@ -103,7 +156,7 @@ export default function WeatherWidget({
             Temperature (°C)
           </Text>
           <TextInput
-            className="bg-secondary text-foreground p-3 rounded-lg border border-border"
+            className="bg-background text-foreground p-3 rounded-lg border border-border"
             placeholder="24"
             placeholderTextColor="hsl(var(--muted-foreground))"
             keyboardType="numeric"
@@ -114,13 +167,27 @@ export default function WeatherWidget({
         <View className="flex-1">
           <Text className="text-muted-foreground text-xs mb-1">Condition</Text>
           <TextInput
-            className="bg-secondary text-foreground p-3 rounded-lg border border-border"
+            className="bg-background text-foreground p-3 rounded-lg border border-border"
             placeholder="Sunny"
             placeholderTextColor="hsl(var(--muted-foreground))"
             value={weather.condition}
             onChangeText={(t) => handleChange("condition", t)}
           />
         </View>
+      </View>
+
+      <View className="mt-3">
+        <Text className="text-muted-foreground text-xs mb-1">
+          Humidity % (optional)
+        </Text>
+        <TextInput
+          className="bg-background text-foreground p-3 rounded-lg border border-border"
+          placeholder="from API or manual"
+          placeholderTextColor="hsl(var(--muted-foreground))"
+          keyboardType="numeric"
+          value={weather.humidity ?? ""}
+          onChangeText={(t) => handleChange("humidity", t)}
+        />
       </View>
     </View>
   );

@@ -543,7 +543,9 @@ model DailyLog {
   user         User           @relation(fields: [user_id], references: [id])
   log_date     DateTime       @db.Date
   weather_data Json? // { temp: 30, condition: "Sunny" }
-  attendance_data Json? // { "Carpenters": 5 }
+  // JSON array: { company: string; trade: string; headcount: number; hours_worked: number }[]
+  // hours_worked per row must be <= 16 (enforced on mobile client).
+  attendance_data Json?
   material_receipt_data Json? // List of received items
   status       DailyLogStatus @default(DRAFT)
 

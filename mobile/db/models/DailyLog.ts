@@ -21,11 +21,11 @@ export default class DailyLog extends Model {
 
   async addPhoto(localPath: string, gpsLat?: number, gpsLong?: number) {
     return this.database.write(async () => {
-      await this.collections.get<LogPhoto>('log_photos').create(photo => {
+      await this.collections.get<LogPhoto>('log_photos').create((photo) => {
         photo.dailyLog.set(this)
         photo.localPath = localPath
-        photo.gpsLat = gpsLat!
-        photo.gpsLong = gpsLong!
+        photo.gpsLat = gpsLat ?? null
+        photo.gpsLong = gpsLong ?? null
       })
     })
   }

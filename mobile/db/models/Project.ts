@@ -9,6 +9,8 @@ export default class Project extends Model {
 
   @field('name') name!: string
   @field('company_id') companyId!: string
+  @field('server_id') serverId!: string | null
+  @field('status') status!: string
   @date('start_date') startDate!: number | null
   @date('end_date') endDate!: number | null
   @readonly @date('created_at') createdAt!: number

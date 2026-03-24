@@ -7,13 +7,17 @@ import Project from './models/Project'
 import Site from './models/Site'
 import DailyLog from './models/DailyLog'
 import LogPhoto from './models/LogPhoto'
-import Material from './models/Material'
+import Product from './models/Product'
+import CartItem from './models/CartItem'
 import PurchaseOrder from './models/PurchaseOrder'
+import POItem from './models/POItem'
+import SiteInventory from './models/SiteInventory'
+
+import migrations from './migrations'
 
 const adapter = new SQLiteAdapter({
   schema,
-  // (You might want to comment out migration events for now if not using them yet)
-  // migrations, 
+  migrations,
   // dbName: 'construction_connect', 
   // jsi: true, /* Platform.OS === 'ios' */
   onSetUpError: error => {
@@ -29,7 +33,10 @@ export const database = new Database({
     Site,
     DailyLog,
     LogPhoto,
-    Material,
+    Product,
+    CartItem,
     PurchaseOrder,
+    POItem,
+    SiteInventory,
   ],
 })

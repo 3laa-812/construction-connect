@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,10 @@ export default function PhotoCapture({
   initialPhotos = [],
 }: PhotoCaptureProps) {
   const [photos, setPhotos] = useState<string[]>(initialPhotos);
+
+  useEffect(() => {
+    setPhotos([...initialPhotos]);
+  }, [JSON.stringify(initialPhotos)]);
 
   const pickImage = async () => {
     // No permissions request is necessary for launching the image library

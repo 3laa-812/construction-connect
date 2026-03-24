@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 1,
+  version: 3,
   tables: [
     // -------------------------------------------------------------------------
     // 1. Identity & Onboarding (Mirrors: Company, User)
@@ -25,6 +25,8 @@ export const schema = appSchema({
       columns: [
         { name: 'name', type: 'string' },
         { name: 'company_id', type: 'string' },
+        { name: 'server_id', type: 'string', isOptional: true }, // Backend Project.id for API calls
+        { name: 'status', type: 'string', isOptional: true }, // Added status
         { name: 'start_date', type: 'number', isOptional: true },
         { name: 'end_date', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
@@ -53,9 +55,9 @@ export const schema = appSchema({
             { name: 'project_id', type: 'string' },
             { name: 'user_id', type: 'string' },
             { name: 'log_date', type: 'number' }, // timestamp
-            { name: 'weather_data', type: 'string', isOptional: true }, // JSON: { temp: 30, condition: "Sunny" }
-            { name: 'attendance_data', type: 'string', isOptional: true }, // JSON: { "Carpenters": 5 }
-            { name: 'material_receipt_data', type: 'string', isOptional: true }, // JSON: List of received items
+            { name: 'weather_data', type: 'string', isOptional: true }, // JSON: { temp, condition, humidity? }
+            { name: 'attendance_data', type: 'string', isOptional: true }, // JSON: AttendanceRow[]
+            { name: 'material_receipt_data', type: 'string', isOptional: true }, // JSON: MaterialReceiptData or legacy ReceivedItem[]
             { name: 'status', type: 'string' }, // DRAFT, SUBMITTED
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
@@ -76,28 +78,68 @@ export const schema = appSchema({
     }),
 
     // -------------------------------------------------------------------------
-    // 4. Materials (Module B - Simplified for caching)
+    // 4. Inventory & Marketplace
     // -------------------------------------------------------------------------
-    // We might need a local cache of materials for offline selection
     tableSchema({
-        name: 'materials', 
+        name: 'products',
         columns: [
+            { name: 'server_id', type: 'string' }, // Maps to backend ID
             { name: 'name', type: 'string' },
             { name: 'category', type: 'string' },
             { name: 'unit', type: 'string' },
+            { name: 'specifications', type: 'string', isOptional: true }, // JSON
+            { name: 'price', type: 'number', isOptional: true },
+            { name: 'supplier_id', type: 'string', isOptional: true },
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
         ]
     }),
-    
-    // Purchase Orders (For receiving materials)
+    tableSchema({
+        name: 'cart_items',
+        columns: [
+            { name: 'product_id', type: 'string' },
+            { name: 'quantity', type: 'number' },
+            { name: 'project_id', type: 'string' }, // Cart is per project?
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+        ]
+    }),
+
+    // Purchase Orders (For receiving materials & tracking)
+    // Aligned closer to backend 'PurchaseOrder' + 'RFQ' concept
     tableSchema({
         name: 'purchase_orders',
         columns: [
+            { name: 'server_id', type: 'string', isOptional: true }, // Verified ID from backend
             { name: 'project_id', type: 'string' },
             { name: 'supplier_id', type: 'string' },
-            { name: 'status', type: 'string' },
+            { name: 'status', type: 'string' }, // PLACED, CONFIRMED, IN_TRANSIT, DELIVERED
             { name: 'total_amount', type: 'number', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+        ]
+    }),
+
+    tableSchema({
+        name: 'po_items',
+        columns: [
+            { name: 'po_id', type: 'string' },
+            { name: 'product_id', type: 'string', isOptional: true },
+            { name: 'name', type: 'string' }, // Snapshot name
+            { name: 'quantity', type: 'number' },
+            { name: 'unit_price', type: 'number', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+        ]
+    }),
+
+    tableSchema({
+        name: 'site_inventory',
+        columns: [
+            { name: 'project_id', type: 'string' },
+            { name: 'name', type: 'string' },
+            { name: 'unit', type: 'string' },
+            { name: 'quantity', type: 'number' },
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
         ]

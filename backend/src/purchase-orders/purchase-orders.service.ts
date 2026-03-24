@@ -273,8 +273,15 @@ export class PurchaseOrdersService {
     if (!po) {
       throw new NotFoundException('Purchase order not found');
     }
-    if (user.role !== 'ADMIN' && (!user.companyId || po.supplier_id !== user.companyId)) {
-      throw new ForbiddenException('Only the supplier can create delivery notes');
+    const isSupplier = user.companyId === po.supplier_id;
+    const isBuyer = user.companyId === po.project.company_id;
+    if (
+      user.role !== 'ADMIN' &&
+      (!user.companyId || (!isSupplier && !isBuyer))
+    ) {
+      throw new ForbiddenException(
+        'Only the supplier or buyer company can record goods received',
+      );
     }
 
     for (const item of dto.items) {

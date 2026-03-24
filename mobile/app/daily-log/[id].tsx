@@ -11,12 +11,82 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { database } from "../../db";
 import DailyLog from "../../db/models/DailyLog";
-import WeatherWidget from "../../components/WeatherWidget";
+import Project from "../../db/models/Project";
+import WeatherWidget, {
+  type WeatherData,
+} from "../../components/WeatherWidget";
 import PhotoCapture from "../../components/PhotoCapture";
-import AttendanceSheet from "../../components/AttendanceSheet";
+import AttendanceSheet, {
+  type AttendanceRow,
+} from "../../components/AttendanceSheet";
 import MaterialReceiptForm, {
-  ReceivedItem,
+  type MaterialReceiptData,
+  type ReceivedItem,
 } from "../../components/MaterialReceiptForm";
+
+const MAX_ATTENDANCE_HOURS = 16;
+
+function normalizeWeather(raw: unknown): WeatherData {
+  if (!raw || typeof raw !== "object") return { temp: "", condition: "" };
+  const o = raw as Record<string, unknown>;
+  return {
+    temp: o.temp != null ? String(o.temp) : "",
+    condition: o.condition != null ? String(o.condition) : "",
+    ...(o.humidity != null ? { humidity: String(o.humidity) } : {}),
+  };
+}
+
+function normalizeAttendance(raw: unknown): AttendanceRow[] {
+  if (Array.isArray(raw)) {
+    return (raw as unknown[])
+      .map((r, i) => {
+        if (r && typeof r === "object" && !Array.isArray(r)) {
+          const o = r as Record<string, unknown>;
+          if ("trade" in o || "company" in o) {
+            const h = Number(o.hours_worked);
+            return {
+              id: String(o.id ?? `row-${i}`),
+              company: String(o.company ?? ""),
+              trade: String(o.trade ?? ""),
+              headcount: Math.max(0, Number(o.headcount) || 0),
+              hours_worked: Number.isFinite(h)
+                ? Math.min(MAX_ATTENDANCE_HOURS, Math.max(0, h))
+                : 8,
+            } satisfies AttendanceRow;
+          }
+        }
+        return null;
+      })
+      .filter(Boolean) as AttendanceRow[];
+  }
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return Object.entries(raw as Record<string, number>).map(
+      ([trade, headcount], i) => ({
+        id: `legacy-${i}`,
+        company: "",
+        trade,
+        headcount: Number(headcount) || 0,
+        hours_worked: 8,
+      }),
+    );
+  }
+  return [];
+}
+
+function normalizeMaterialReceipt(raw: unknown): MaterialReceiptData {
+  if (
+    raw &&
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    (raw as MaterialReceiptData).version === 2
+  ) {
+    return raw as MaterialReceiptData;
+  }
+  if (Array.isArray(raw)) {
+    return { version: 2, legacyItems: raw as ReceivedItem[] };
+  }
+  return { version: 2 };
+}
 
 export default function DailyLogDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -25,75 +95,109 @@ export default function DailyLogDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Form State
-  const [weatherData, setWeatherData] = useState<any>({});
+  const [weatherData, setWeatherData] = useState<WeatherData>({
+    temp: "",
+    condition: "",
+  });
   const [photos, setPhotos] = useState<string[]>([]);
-  const [attendanceData, setAttendanceData] = useState<any>({});
-  const [materialItems, setMaterialItems] = useState<ReceivedItem[]>([]);
+  const [existingPhotoPaths, setExistingPhotoPaths] = useState<Set<string>>(
+    new Set(),
+  );
+  const [attendanceRows, setAttendanceRows] = useState<AttendanceRow[]>([]);
+  const [materialData, setMaterialData] = useState<MaterialReceiptData>({
+    version: 2,
+  });
 
-  // Fetch Log if editing
+  const [localProjectId, setLocalProjectId] = useState("");
+  const [projectServerId, setProjectServerId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!log) {
+        const projects = await database
+          .get<Project>("projects")
+          .query()
+          .fetch();
+        const p = projects[0];
+        if (cancelled) return;
+        setLocalProjectId(p?.id ?? "");
+        setProjectServerId(p?.serverId ?? null);
+        return;
+      }
+      const proj = await log.project.fetch();
+      if (cancelled) return;
+      setLocalProjectId(proj.id);
+      setProjectServerId(proj.serverId ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [log]);
+
   useEffect(() => {
     const fetchLog = async () => {
-      if (id && id !== "new") {
-        try {
-          const foundLog = await database.get<DailyLog>("daily_logs").find(id);
-          setLog(foundLog);
-          setWeatherData(foundLog.weatherData || {});
-          setAttendanceData(foundLog.attendanceData || {});
-          setMaterialItems(foundLog.materialReceiptData || []);
-          // Load photos (Need to fetch relations)
-          const logPhotos = await foundLog.photos.fetch();
-          setPhotos(logPhotos.map((p) => p.localPath!).filter(Boolean));
-        } catch (e) {
-          Alert.alert("Error", "Could not find log.");
-          router.back();
-        }
-      } else {
-        // Initialize defaults for new log
-        setWeatherData({ temp: "", condition: "" });
-        setPhotos([]);
-        setAttendanceData({});
-        setMaterialItems([]);
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const foundLog = await database.get<DailyLog>("daily_logs").find(id);
+        setLog(foundLog);
+        setWeatherData(normalizeWeather(foundLog.weatherData));
+        setAttendanceRows(normalizeAttendance(foundLog.attendanceData));
+        setMaterialData(normalizeMaterialReceipt(foundLog.materialReceiptData));
+        const logPhotos = await foundLog.photos.fetch();
+        const paths = logPhotos
+          .map((p) => p.localPath)
+          .filter((x): x is string => Boolean(x));
+        setExistingPhotoPaths(new Set(paths));
+        setPhotos(paths);
+      } catch {
+        Alert.alert("Error", "Could not find log.");
+        router.back();
       }
       setLoading(false);
     };
     fetchLog();
-  }, [id]);
+  }, [id, router]);
 
   const handleSave = async () => {
+    const invalidHours = attendanceRows.some(
+      (r) =>
+        r.hours_worked > MAX_ATTENDANCE_HOURS || r.hours_worked < 0,
+    );
+    if (invalidHours) {
+      Alert.alert(
+        "Attendance",
+        `Hours per row must be between 0 and ${MAX_ATTENDANCE_HOURS}.`,
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       await database.write(async () => {
         let currentLog = log;
 
         if (!currentLog) {
-          // Create new
-          currentLog = await database.collections
-            .get<DailyLog>("daily_logs")
-            .create((newLog) => {
-              newLog.logDate = Date.now();
-              newLog.status = "DRAFT";
-              newLog.weatherData = weatherData;
-              newLog.attendanceData = attendanceData;
-              newLog.materialReceiptData = materialItems;
-              newLog.project.id = "1"; // HARDCODED for MVP
-              newLog.user.id = "current-user-id";
-            });
-        } else {
-          // Update existing
-          await currentLog.update((updatedLog) => {
-            updatedLog.weatherData = weatherData;
-            updatedLog.attendanceData = attendanceData;
-            updatedLog.materialReceiptData = materialItems;
-            updatedLog.status = "SUBMITTED";
-          });
+          throw new Error("Log not loaded");
         }
 
-        // Handle Photos
-        for (const photoUri of photos) {
-          await currentLog.addPhoto(photoUri);
+        await currentLog.update((updatedLog) => {
+          updatedLog.weatherData = weatherData;
+          updatedLog.attendanceData = attendanceRows;
+          updatedLog.materialReceiptData = materialData;
+          updatedLog.status = "SUBMITTED";
+        });
+
+        for (const uri of photos) {
+          if (!existingPhotoPaths.has(uri)) {
+            await currentLog.addPhoto(uri);
+          }
         }
       });
+      setExistingPhotoPaths(new Set(photos));
       Alert.alert("Success", "Daily Log Saved!");
       router.back();
     } catch (error) {
@@ -118,9 +222,7 @@ export default function DailyLogDetailScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text className="text-secondary-foreground">Cancel</Text>
         </TouchableOpacity>
-        <Text className="text-lg font-bold text-foreground">
-          {id === "new" ? "New Log" : "Edit Log"}
-        </Text>
+        <Text className="text-lg font-bold text-foreground">Edit Log</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           <Text className="text-primary font-bold">
             {saving ? "Saving..." : "Save"}
@@ -138,22 +240,39 @@ export default function DailyLogDetailScreen() {
           </Text>
         </View>
 
-        {/* Weather Section */}
+        {materialData.work_notes ? (
+          <View className="mb-4">
+            <Text className="text-sm text-muted-foreground mb-1">Work notes</Text>
+            <Text className="text-foreground">{materialData.work_notes}</Text>
+          </View>
+        ) : null}
+
         <WeatherWidget
           initialData={weatherData}
           onWeatherChange={setWeatherData}
         />
 
-        {/* Attendance Section */}
-        <AttendanceSheet data={attendanceData} onChange={setAttendanceData} />
-
-        {/* Material Receipt Section */}
-        <MaterialReceiptForm
-          items={materialItems}
-          onChange={setMaterialItems}
+        <AttendanceSheet
+          rows={attendanceRows}
+          onChange={setAttendanceRows}
+          maxHoursPerPerson={MAX_ATTENDANCE_HOURS}
         />
 
-        {/* Photos Section */}
+        {localProjectId ? (
+          <MaterialReceiptForm
+            projectServerId={projectServerId}
+            localProjectId={localProjectId}
+            value={materialData}
+            onPatch={(p) =>
+              setMaterialData((m) => ({ ...m, ...p, version: 2 }))
+            }
+          />
+        ) : (
+          <Text className="text-muted-foreground text-sm mb-4">
+            Add a project in the local database to use GRN.
+          </Text>
+        )}
+
         <PhotoCapture initialPhotos={photos} onPhotosChange={setPhotos} />
       </ScrollView>
     </SafeAreaView>
