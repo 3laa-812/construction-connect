@@ -38,6 +38,14 @@ export class UsersController {
     return u;
   }
 
+  @Patch('push-token')
+  updatePushToken(
+    @Body() data: { push_token: string },
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.updatePushToken(user.sub, data.push_token);
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,

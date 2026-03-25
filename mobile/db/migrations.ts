@@ -107,5 +107,54 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'log_photos',
+          columns: [
+            { name: 'photo_type', type: 'string', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'po_items',
+          columns: [
+            { name: 'received_qty', type: 'number', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'cart_items',
+          columns: [
+            { name: 'product_name', type: 'string', isOptional: true },
+            { name: 'unit', type: 'string', isOptional: true },
+            { name: 'unit_price', type: 'number', isOptional: true },
+            { name: 'supplier_id', type: 'string', isOptional: true },
+          ],
+        }),
+        createTable({
+          name: 'grn_records',
+          columns: [
+            { name: 'po_local_id', type: 'string' },
+            { name: 'po_server_id', type: 'string', isOptional: true },
+            { name: 'daily_log_id', type: 'string', isOptional: true },
+            { name: 'items_json', type: 'string' },
+            { name: 'delivery_ticket_photo_id', type: 'string', isOptional: true },
+            { name: 'notes', type: 'string', isOptional: true },
+            { name: 'synced', type: 'number' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'pending_orders',
+          columns: [
+            { name: 'payload_json', type: 'string' },
+            { name: 'synced', type: 'number' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 })

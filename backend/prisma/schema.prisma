@@ -124,6 +124,7 @@ model User {
   status        UserStatus @default(ACTIVE)
   otp_hash      String?   @db.VarChar(255)
   otp_expires_at DateTime?
+  push_token    String?   @db.VarChar(255)
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
 
@@ -569,6 +570,8 @@ model DailyLog {
   // hours_worked per row must be <= 16 (enforced on mobile client).
   attendance_data Json?
   material_receipt_data Json? // List of received items
+  log_title         String? @db.VarChar(500)
+  progress_notes    Json? // array of { zone, work_done, percentage, issues }
   status       DailyLogStatus @default(DRAFT)
 
   created_at DateTime @default(now())

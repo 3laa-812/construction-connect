@@ -88,8 +88,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col bg-sidebar border-sidebar-border transition-all duration-300",
-        isRTL ? "border-l" : "border-r",
+        "hidden lg:flex flex-col bg-sidebar border-sidebar-border transition-all duration-300 border-r rtl:border-r-0 rtl:border-l",
         collapsed ? "w-16" : "w-64",
       )}
     >

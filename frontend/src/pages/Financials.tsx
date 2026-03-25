@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WalletLedger } from "@/components/financials/WalletLedger";
 import { InvoiceView } from "@/components/financials/InvoiceView";
@@ -384,47 +386,64 @@ function Financials() {
             {/* Invoices Table */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {t("financials_page.table.invoice")}
-                      </th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {t("financials_page.table.supplier")}
-                      </th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {t("financials_page.table.order")}
-                      </th>
-                      <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
-                        {t("common.date")}
-                      </th>
-                      <th className="text-end p-3 text-sm font-medium text-muted-foreground rtl:text-left">
-                        {t("common.amount")}
-                      </th>
-                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">
-                        {t("common.status")}
-                      </th>
-                      <th className="text-center p-3 text-sm font-medium text-muted-foreground">
-                        {t("common.actions")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
+                {isLoading ? (
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                          Loading invoices...
-                        </td>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">{t("financials_page.table.invoice")}</th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">{t("financials_page.table.supplier")}</th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">{t("financials_page.table.order")}</th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">{t("common.date")}</th>
+                        <th className="text-end p-3 text-sm font-medium text-muted-foreground rtl:text-left">{t("common.amount")}</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">{t("common.status")}</th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">{t("common.actions")}</th>
                       </tr>
-                    ) : isError ? (
+                    </thead>
+                    <tbody>
+                      {[...Array(5)].map((_, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-3"><Skeleton className="h-4 w-[80px]" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-[120px]" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-[80px]" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-[100px]" /></td>
+                          <td className="p-3 flex justify-end"><Skeleton className="h-4 w-[80px]" /></td>
+                          <td className="p-3"><Skeleton className="h-6 w-[80px] rounded-full mx-auto" /></td>
+                          <td className="p-3"><Skeleton className="h-8 w-24 rounded-md mx-auto" /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : isError ? (
+                  <div className="p-12 text-center text-danger">Failed to load invoices</div>
+                ) : invoices.length > 0 ? (
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
                       <tr>
-                        <td colSpan={7} className="p-8 text-center text-danger">
-                          Failed to load invoices
-                        </td>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                          {t("financials_page.table.invoice")}
+                        </th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                          {t("financials_page.table.supplier")}
+                        </th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                          {t("financials_page.table.order")}
+                        </th>
+                        <th className="text-start p-3 text-sm font-medium text-muted-foreground rtl:text-right">
+                          {t("common.date")}
+                        </th>
+                        <th className="text-end p-3 text-sm font-medium text-muted-foreground rtl:text-left">
+                          {t("common.amount")}
+                        </th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">
+                          {t("common.status")}
+                        </th>
+                        <th className="text-center p-3 text-sm font-medium text-muted-foreground">
+                          {t("common.actions")}
+                        </th>
                       </tr>
-                    ) : (
-                      invoices.map((invoice) => (
+                    </thead>
+                    <tbody>
+                      {invoices.map((invoice) => (
                         <InvoiceRow 
                           key={invoice.id} 
                           invoice={invoice} 
@@ -437,17 +456,18 @@ function Financials() {
                               setShowPaymentDialog(true);
                           }}
                         />
-                      ))
-                    )}
-                    {!isLoading && !isError && invoices.length === 0 && (
-                        <tr>
-                            <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                                No invoices found.
-                            </td>
-                        </tr>
-                    )}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="py-12">
+                    <EmptyState
+                      icon={FileText}
+                      title="No invoices found"
+                      description="You have no invoices to display at this time."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

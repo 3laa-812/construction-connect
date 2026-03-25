@@ -83,6 +83,21 @@ export class DailyLogsService {
     return log;
   }
 
+  async deleteSitePhoto(photoId: string, user: JwtPayload) {
+    const photo = await this.prisma.logPhoto.findUnique({
+      where: { id: photoId },
+      include: { daily_log: true },
+    });
+    if (!photo) {
+      throw new NotFoundException('Log photo not found');
+    }
+    if (user.role !== 'ADMIN' && photo.daily_log.user_id !== user.sub) {
+      throw new ForbiddenException("Cannot delete another user's photo");
+    }
+    await this.prisma.logPhoto.delete({ where: { id: photoId } });
+    return { deleted: true };
+  }
+
   async uploadSitePhoto(
     logPhotoId: string,
     file: MulterMemoryFile,

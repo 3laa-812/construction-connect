@@ -6,6 +6,7 @@ import { API_URL } from './api'
 import { getAuthToken } from './storage'
 import { uploadPendingPhotos } from './photoUpload'
 import { useSyncStore } from '../store/syncStore'
+import PendingOrder from '../db/models/PendingOrder'
 
 const SYNC_API_URL = `${API_URL}/sync`
 
@@ -22,7 +23,39 @@ const SYNC_TABLES = [
   'po_items',
   'site_inventory',
   'attendance_companies',
+  'grn_records',
+  'pending_orders',
 ] as const
+
+/** POST offline-queued purchase orders after a successful sync push/pull. */
+async function flushPendingOrders(db: Database, authHeaders: HeadersInit) {
+  const pending = await db
+    .get<PendingOrder>('pending_orders')
+    .query(Q.where('synced', 0))
+    .fetch()
+  for (const row of pending) {
+    try {
+      const body = JSON.parse(row.payloadJson)
+      const response = await fetch(`${API_URL}/purchase-orders`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
+      })
+      if (response.ok) {
+        await db.write(async () => {
+          await row.update((r) => {
+            r.synced = 1
+          })
+        })
+      }
+    } catch (e) {
+      console.warn('[sync] pending order flush failed', e)
+    }
+  }
+}
 
 export async function countPendingLocalChanges(db: Database): Promise<number> {
   let total = 0
@@ -86,6 +119,12 @@ export async function syncDatabase(db: Database) {
       },
       migrationsEnabledAtVersion: 1,
     })
+
+    try {
+      await flushPendingOrders(db, authHeaders)
+    } catch (e) {
+      console.error('[sync] flushPendingOrders', e)
+    }
 
     try {
       const response = await fetch(`${API_URL}/materials`, { headers: authHeaders })

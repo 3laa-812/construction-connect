@@ -9,5 +9,6 @@ import { InvoicesModule } from '../invoices/invoices.module';
   imports: [PrismaModule, NotificationsModule, InvoicesModule],
   controllers: [PurchaseOrdersController],
   providers: [PurchaseOrdersService],
+  exports: [PurchaseOrdersService],
 })
 export class PurchaseOrdersModule {}

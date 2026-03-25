@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -57,8 +58,16 @@ export function CatalogManagement() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [units, setUnits] = useState<UnitOfMeasure[]>([]);
 
-  const { data: companySettings } = useQuery<{
-    catalog?: { categories?: Category[]; units?: UnitOfMeasure[] };
+  const { data: fetchCategories, isLoading: isLoadingCategories } = useQuery<Category[]>({
+    queryKey: ["admin-categories"],
+    queryFn: async () => {
+      const response = await api.get("/admin/categories");
+      return response.data;
+    },
+  });
+
+  const { data: companySettings, isLoading: isLoadingSettings } = useQuery<{
+    catalog?: { units?: UnitOfMeasure[] };
   }>({
     queryKey: ["company-settings", user?.companyId],
     queryFn: async () => {
@@ -70,15 +79,15 @@ export function CatalogManagement() {
   });
 
   useEffect(() => {
+    if (fetchCategories) {
+      setCategories(fetchCategories);
+    }
+  }, [fetchCategories]);
+
+  useEffect(() => {
     if (companySettings?.catalog) {
-      setCategories(companySettings.catalog.categories || []);
       setUnits(companySettings.catalog.units || []);
     } else {
-      // Fallback demo data
-      setCategories([
-        { id: "cat-1", name: "Building Materials", nameAr: "مواد البناء", parentId: null, productCount: 245 },
-        { id: "cat-2", name: "Steel & Metal", nameAr: "الحديد والمعادن", parentId: null, productCount: 89 },
-      ]);
       setUnits([
         { id: "unit-1", name: "Kilogram", nameAr: "كيلوغرام", symbol: "kg", type: "weight" },
         { id: "unit-6", name: "Piece", nameAr: "قطعة", symbol: "pc", type: "count" },
@@ -113,6 +122,21 @@ export function CatalogManagement() {
       cat.nameAr.includes(searchTerm)
   );
 
+  const createCategoryMutation = useMutation({
+    mutationFn: (newCat: any) => api.post('/admin/categories', newCat),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: (cat: any) => api.patch(`/admin/categories/${cat.id}`, cat),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/categories/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
+  });
+
   const handleSaveCategory = () => {
     if (!newCategory.name || !newCategory.nameAr) {
       toast({
@@ -124,23 +148,10 @@ export function CatalogManagement() {
     }
 
     if (editingCategory) {
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === editingCategory.id
-            ? { ...c, name: newCategory.name, nameAr: newCategory.nameAr, parentId: newCategory.parentId || null }
-            : c
-        )
-      );
+      updateCategoryMutation.mutate({ id: editingCategory.id, name: newCategory.name, nameAr: newCategory.nameAr, parentId: newCategory.parentId || null });
       toast({ title: "Category Updated", description: `${newCategory.name} has been updated` });
     } else {
-      const newCat: Category = {
-        id: `cat-${Date.now()}`,
-        name: newCategory.name,
-        nameAr: newCategory.nameAr,
-        parentId: newCategory.parentId || null,
-        productCount: 0,
-      };
-      setCategories((prev) => [...prev, newCat]);
+      createCategoryMutation.mutate({ name: newCategory.name, nameAr: newCategory.nameAr, parentId: newCategory.parentId || null });
       toast({ title: "Category Created", description: `${newCategory.name} has been added` });
     }
 
@@ -183,7 +194,7 @@ export function CatalogManagement() {
   };
 
   const handleDeleteCategory = (cat: Category) => {
-    setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+    deleteCategoryMutation.mutate(cat.id);
     toast({ title: "Category Deleted", description: `${cat.name} has been removed` });
   };
 
@@ -199,7 +210,7 @@ export function CatalogManagement() {
       }
       try {
         const response = await api.patch(`/settings/company/${user.companyId}`, {
-          catalog: { categories, units },
+          catalog: { units },
         });
         return response;
       } catch (error: any) {
@@ -337,7 +348,18 @@ export function CatalogManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredCategories.map((cat) => {
+                {isLoadingCategories ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="p-3"><div className="flex items-center gap-2"><Skeleton className="h-4 w-4 rounded-sm" /><Skeleton className="h-4 w-[120px]" /></div></td>
+                      <td className="p-3"><Skeleton className="h-4 w-[120px]" /></td>
+                      <td className="p-3"><Skeleton className="h-4 w-[100px]" /></td>
+                      <td className="p-3"><Skeleton className="h-4 w-[40px] mx-auto" /></td>
+                      <td className="p-3"><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
+                    </tr>
+                  ))
+                ) : (
+                filteredCategories.map((cat) => {
                   const parent = categories.find((c) => c.id === cat.parentId);
                   return (
                     <tr key={cat.id} className="border-t border-border hover:bg-muted/30">
@@ -385,7 +407,7 @@ export function CatalogManagement() {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
@@ -473,7 +495,26 @@ export function CatalogManagement() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {units.map((unit) => (
+            {isLoadingSettings ? (
+              [...Array(4)].map((_, i) => (
+                <div key={i} className="bg-card rounded-xl border border-border p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded-md" />
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </div>
+              ))
+            ) : (
+            units.map((unit) => (
               <div
                 key={unit.id}
                 className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
@@ -527,7 +568,7 @@ export function CatalogManagement() {
                   </span>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </TabsContent>
       </Tabs>

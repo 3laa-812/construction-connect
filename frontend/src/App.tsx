@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { SyncProvider } from "@/contexts/SyncContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 import Login from "./pages/auth/Login";
@@ -25,6 +26,7 @@ import SupplierRFQFeed from "./pages/SupplierRFQFeed";
 import Financials from "./pages/Financials";
 import AuditLogsPage from "./pages/admin/AuditLogs";
 import NotFound from "./pages/NotFound";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -35,8 +37,9 @@ const App = () => (
   <DatabaseProvider database={database}>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <LanguageProvider>
+        <SyncProvider>
+          <AuthProvider>
+            <LanguageProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -48,30 +51,31 @@ const App = () => (
 
                 {/* Protected Routes */}
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/" element={<Index />} />
-                  <Route path="/rfqs" element={<RFQs />} />
-                  <Route path="/rfqs/new" element={<RFQBuilder />} />
-                  <Route path="/bids" element={<Bids />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/projects" element={<Projects />} />
-                  <Route path="/suppliers" element={<Suppliers />} />
-                  <Route path="/approvals" element={<Approvals />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/onboarding" element={<ErrorBoundary><Onboarding /></ErrorBoundary>} />
+                  <Route path="/" element={<ErrorBoundary><Index /></ErrorBoundary>} />
+                  <Route path="/rfqs" element={<ErrorBoundary><RFQs /></ErrorBoundary>} />
+                  <Route path="/rfqs/new" element={<ErrorBoundary><RFQBuilder /></ErrorBoundary>} />
+                  <Route path="/bids" element={<ErrorBoundary><Bids /></ErrorBoundary>} />
+                  <Route path="/orders" element={<ErrorBoundary><Orders /></ErrorBoundary>} />
+                  <Route path="/projects" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
+                  <Route path="/suppliers" element={<ErrorBoundary><Suppliers /></ErrorBoundary>} />
+                  <Route path="/approvals" element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
+                  <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
                   <Route
                     path="/supplier/rfq-feed"
-                    element={<SupplierRFQFeed />}
+                    element={<ErrorBoundary><SupplierRFQFeed /></ErrorBoundary>}
                   />
-                  <Route path="/financials" element={<Financials />} />
-                  <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+                  <Route path="/financials" element={<ErrorBoundary><Financials /></ErrorBoundary>} />
+                  <Route path="/admin/audit-logs" element={<ErrorBoundary><AuditLogsPage /></ErrorBoundary>} />
                 </Route>
 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </TooltipProvider>
-          </LanguageProvider>
-        </AuthProvider>
+            </LanguageProvider>
+          </AuthProvider>
+        </SyncProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </DatabaseProvider>

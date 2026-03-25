@@ -82,6 +82,14 @@ export class UsersService {
     });
   }
 
+  async updatePushToken(id: string, pushToken: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { push_token: pushToken },
+      include: { company: true },
+    });
+  }
+
   async setActiveClearOtp(id: string): Promise<User> {
     return this.prisma.user.update({
       where: { id },

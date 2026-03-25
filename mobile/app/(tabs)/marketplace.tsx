@@ -17,30 +17,35 @@ export default function MarketplaceScreen() {
       </View>
 
       {/* Segmented Control */}
-      <View className="flex-row px-4 py-2 gap-2">
-        {[
-          { id: "catalog", label: "Catalog" },
-          { id: "rfqs", label: "RFQs" },
-          { id: "orders", label: "Orders" },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.id}
-            onPress={() => setActiveTab(tab.id as TabOption)}
-            className={`flex-1 py-2 rounded-lg items-center ${
-              activeTab === tab.id ? "bg-primary" : "bg-secondary"
-            }`}
-          >
-            <Text
-              className={`font-bold ${
-                activeTab === tab.id
-                  ? "text-primary-foreground"
-                  : "text-secondary-foreground"
-              }`}
-            >
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View className="px-4 py-3">
+        <View className="flex-row bg-muted/30 p-1 rounded-xl">
+          {[
+            { id: "catalog", label: "Catalog" },
+            { id: "rfqs", label: "RFQs" },
+            { id: "orders", label: "Orders" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                onPress={() => setActiveTab(tab.id as TabOption)}
+                className={`flex-1 min-h-[48px] py-2.5 rounded-lg items-center justify-center transition-all ${
+                  isActive
+                    ? "bg-background shadow-sm border border-border/50"
+                    : "bg-transparent"
+                }`}
+              >
+                <Text
+                  className={`font-semibold text-base ${
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  }`}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Content Area */}

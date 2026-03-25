@@ -21,13 +21,19 @@ export default class DailyLog extends Model {
 
   @children('log_photos') photos!: Query<LogPhoto>
 
-  async addPhoto(localPath: string, gpsLat?: number, gpsLong?: number) {
+  async addPhoto(
+    localPath: string,
+    gpsLat?: number,
+    gpsLong?: number,
+    photoType: string = 'site_photo',
+  ) {
     return this.database.write(async () => {
       await this.collections.get<LogPhoto>('log_photos').create((photo) => {
         photo.dailyLog.set(this)
         photo.localPath = localPath
         photo.gpsLat = gpsLat ?? null
         photo.gpsLong = gpsLong ?? null
+        photo.photoType = photoType
       })
     })
   }

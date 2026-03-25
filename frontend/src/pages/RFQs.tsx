@@ -6,6 +6,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -75,7 +77,7 @@ export default function RFQs() {
         status: statusConfig[normalizedStatus] ? normalizedStatus : "open",
         deadline: rfq.deadline ? new Date(rfq.deadline).toISOString().split("T")[0] : "—",
         createdAt: rfq.created_at ? new Date(rfq.created_at).toISOString().split("T")[0] : "",
-        totalValue: rfq.bids?.[0]?.["total_price" as keyof typeof rfq.bids[0]] as number | undefined,
+        totalValue: rfq.bids?.[0] ? Number((rfq.bids[0] as any).total_price) : undefined,
       };
     });
   }, [data]);
@@ -158,11 +160,72 @@ export default function RFQs() {
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading RFQs...</div>
+              <>
+              <table className="w-full data-grid hidden lg:table">
+                <thead>
+                  <tr>
+                    <th className="min-w-[280px]">{t("rfq.table.details")}</th>
+                    <th className="min-w-[180px]">{t("rfq.table.project")}</th>
+                    <th className="min-w-[120px]">{t("rfq.table.category")}</th>
+                    <th className="min-w-[100px]">{t("rfq.table.bids")}</th>
+                    <th className="min-w-[120px]">{t("rfq.table.deadline")}</th>
+                    <th className="min-w-[100px]">{t("rfq.table.status")}</th>
+                    <th className="min-w-[100px] text-center">{t("rfq.table.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-[150px]" />
+                            <Skeleton className="h-3 w-[100px]" />
+                          </div>
+                        </div>
+                      </td>
+                      <td><Skeleton className="h-4 w-[120px]" /></td>
+                      <td><Skeleton className="h-6 w-[80px]" /></td>
+                      <td><Skeleton className="h-4 w-[60px]" /></td>
+                      <td><Skeleton className="h-4 w-[80px]" /></td>
+                      <td><Skeleton className="h-6 w-[80px]" /></td>
+                      <td><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="grid lg:hidden gap-4 p-4 border-t border-border mt-[-1px]">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-card rounded-xl border border-border p-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[150px]" />
+                        <Skeleton className="h-3 w-[100px]" />
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
             ) : isError ? (
               <div className="p-8 text-center text-danger">Failed to load RFQs</div>
+            ) : filteredRFQs.length === 0 ? (
+              <div className="py-12">
+                <EmptyState
+                  icon={FileText}
+                  title={t("rfq.no_results")}
+                  description={t("rfq.no_results_desc")}
+                />
+              </div>
             ) : (
-              <table className="w-full data-grid">
+              <>
+              <table className="w-full data-grid hidden lg:table">
                 <thead>
                   <tr>
                     <th className="min-w-[280px]">{t("rfq.table.details")}</th>
@@ -260,16 +323,81 @@ export default function RFQs() {
                   })}
                 </tbody>
               </table>
+              <div className="grid lg:hidden gap-4 p-4">
+                {filteredRFQs.map((rfq, index) => {
+                  const StatusIcon = statusConfig[rfq.status]?.icon;
+                  return (
+                    <div key={rfq.id} className="bg-card rounded-xl border border-border p-4 space-y-4 shadow-sm animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{rfq.id}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{rfq.title}</p>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="-mt-2 -me-2 h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem><Eye className="w-4 h-4 me-2" />{t("rfq.view_details")}</DropdownMenuItem>
+                            <DropdownMenuItem>{t("rfq.view_bids")}</DropdownMenuItem>
+                            {rfq.status === "open" && (
+                              <>
+                                <DropdownMenuItem>{t("rfq.edit")}</DropdownMenuItem>
+                                <DropdownMenuItem className="text-danger">{t("rfq.cancel")}</DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("rfq.table.project")}</p>
+                          <p className="font-medium truncate">{rfq.project}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("rfq.table.category")}</p>
+                          <p className="font-medium truncate">{rfq.category}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("rfq.table.bids")}</p>
+                          <p className="font-medium">{rfq.bidsReceived} / {rfq.items}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">{t("rfq.table.deadline")}</p>
+                          <p className="font-medium">{rfq.deadline}</p>
+                        </div>
+                      </div>
+                      <div className="pt-3 border-t border-border flex justify-between items-center">
+                        <StatusBadge variant={statusConfig[rfq.status]?.color as any} size="sm">
+                          {statusConfig[rfq.status]?.icon && <StatusIcon className="w-3 h-3" />}
+                          {t(statusConfig[rfq.status]?.labelKey)}
+                        </StatusBadge>
+                        <Button variant="outline" size="sm">
+                          {t("rfq.view_details")}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              </>
             )}
           </div>
 
           {!isLoading && !isError && filteredRFQs.length === 0 && (
-            <div className="p-12 text-center">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="font-medium text-foreground">{t("rfq.no_results")}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t("rfq.no_results_desc")}
-              </p>
+            <div className="py-12">
+              <EmptyState
+                icon={FileText}
+                title={t("rfq.no_results")}
+                description={t("rfq.no_results_desc")}
+              />
             </div>
           )}
         </div>

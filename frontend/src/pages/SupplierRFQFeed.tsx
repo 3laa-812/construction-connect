@@ -5,6 +5,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -191,9 +193,35 @@ export default function SupplierRFQFeed() {
         {/* RFQ Cards */}
         <div className="grid lg:grid-cols-2 gap-4">
           {isLoading ? (
-            <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
-              Loading RFQs...
-            </div>
+            [...Array(4)].map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-5">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="flex gap-2"><Skeleton className="h-5 w-16 rounded-full" /><Skeleton className="h-5 w-20 rounded-full" /></div>
+                    <Skeleton className="h-5 w-3/4" />
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+                <div className="mt-4 bg-muted/50 rounded-lg p-3 space-y-2">
+                  <Skeleton className="h-3 w-20 mb-3" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+                <div className="mt-4 pt-4 border-t border-border flex justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Skeleton className="h-9 flex-1 rounded-md" />
+                  <Skeleton className="h-9 flex-1 rounded-md" />
+                </div>
+              </div>
+            ))
           ) : isError ? (
             <div className="bg-card rounded-xl border border-border p-12 text-center text-danger">
               Failed to load RFQs
@@ -300,12 +328,12 @@ export default function SupplierRFQFeed() {
         </div>
 
         {!isLoading && !isError && filteredRFQs.length === 0 && (
-          <div className="bg-card rounded-xl border border-border p-12 text-center">
-            <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">{t("supplier_rfq_feed.empty.title")}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("supplier_rfq_feed.empty.desc")}
-            </p>
+          <div className="bg-card rounded-xl border border-border py-12">
+            <EmptyState
+              icon={Package}
+              title={t("supplier_rfq_feed.empty.title")}
+              description={t("supplier_rfq_feed.empty.desc")}
+            />
           </div>
         )}
       </div>

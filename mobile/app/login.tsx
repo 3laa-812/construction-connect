@@ -67,7 +67,7 @@ export default function LoginScreen() {
         await setItem("auth_token", access_token);
         await setItem("user_id", user.id);
 
-        router.replace("/(tabs)/dashboard");
+        router.replace("/(tabs)/today");
       } else {
         throw new Error("No token received");
       }

@@ -13,6 +13,8 @@ import PurchaseOrder from './models/PurchaseOrder'
 import POItem from './models/POItem'
 import SiteInventory from './models/SiteInventory'
 import AttendanceCompany from './models/AttendanceCompany'
+import GrnRecord from './models/GrnRecord'
+import PendingOrder from './models/PendingOrder'
 
 import migrations from './migrations' // Import migrations
 
@@ -40,5 +42,7 @@ export const database = new Database({
     POItem,
     SiteInventory,
     AttendanceCompany,
+    GrnRecord,
+    PendingOrder,
   ],
 })

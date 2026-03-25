@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Query,
+  Delete,
   NotFoundException,
   UseInterceptors,
   UploadedFile,
@@ -28,6 +29,14 @@ export class DailyLogsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.dailyLogsService.create(data, user);
+  }
+
+  @Delete('photos/:photoId')
+  deletePhoto(
+    @Param('photoId') photoId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.dailyLogsService.deleteSitePhoto(photoId, user);
   }
 
   @Get()

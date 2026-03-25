@@ -1,4 +1,4 @@
-import { Search, User, Globe, Check, RefreshCw } from "lucide-react";
+import { Search, User, Globe, Check, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,11 +14,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useSync } from "@/hooks/useSync";
+import { useSync } from "@/contexts/SyncContext";
 
 export function TopBar() {
   const { language, setLanguage, t, isRTL } = useLanguage();
-  const { sync, isSyncing } = useSync();
+  const { sync, isSyncing, isOffline } = useSync();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -35,19 +35,23 @@ export function TopBar() {
       {/* Search - Desktop */}
       <div className="hidden lg:flex flex-1 max-w-md">
         <div className="relative w-full">
-          <Search className={cn(
-            "absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
-            isRTL ? "right-3" : "left-3"
-          )} />
+          <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground left-3 rtl:left-auto rtl:right-3" />
           <Input
             placeholder={t("common.search_placeholder")}
-            className={cn("bg-muted/20 border-border/50 focus-visible:bg-background transition-colors placeholder:text-muted-foreground/70", isRTL ? "pr-10" : "pl-10")}
+            className="bg-muted/20 border-border/50 focus-visible:bg-background transition-colors placeholder:text-muted-foreground/70 pl-10 rtl:pl-3 rtl:pr-10"
           />
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
+         {/* Offline Indicator */}
+         {isOffline && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 text-danger text-xs font-medium rounded-full cursor-help" title="App is running offline">
+            <WifiOff className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Offline</span>
+          </div>
+         )}
          {/* Sync Button */}
          <Button 
           variant="ghost" 

@@ -10,6 +10,7 @@ export default class LogPhoto extends Model {
   @field('s3_url') s3Url!: string | null
   @field('gps_lat') gpsLat!: number | null
   @field('gps_long') gpsLong!: number | null
+  @field('photo_type') photoType?: string
   @readonly @date('created_at') createdAt!: number
   @readonly @date('updated_at') updatedAt!: number
 }

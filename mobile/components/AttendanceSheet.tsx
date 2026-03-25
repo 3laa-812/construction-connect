@@ -12,6 +12,7 @@ import { Swipeable } from "react-native-gesture-handler";
 import { Q } from "@nozbe/watermelondb";
 import { useDatabase } from "@nozbe/watermelondb/hooks";
 import AttendanceCompany from "../db/models/AttendanceCompany";
+import { hapticLight } from "../services/haptics";
 
 export type AttendanceEntry = {
   id: string;
@@ -116,6 +117,7 @@ export default function AttendanceSheet({
   };
 
   const addRow = () => {
+    hapticLight();
     onChange([...rows, emptyAttendanceEntry()]);
   };
 

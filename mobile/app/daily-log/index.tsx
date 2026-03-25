@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,8 +15,11 @@ import { useDatabase } from "@nozbe/watermelondb/hooks";
 import { withObservables } from "@nozbe/watermelondb/react";
 import DailyLog from "../../db/models/DailyLog";
 import LogPhoto from "../../db/models/LogPhoto";
-import Project from "../../db/models/Project";
 import { syncData } from "../../services/sync";
+import { useProjectStore } from "../../store/projectStore";
+import { ErrorState } from "../../components/ErrorState";
+import { SkeletonBlock } from "../../components/SkeletonRow";
+import { hapticLight } from "../../services/haptics";
 
 function weatherEmoji(condition?: string): string {
   const c = (condition || "").toLowerCase();
@@ -74,8 +78,11 @@ const LogRowInner = ({
 
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/daily-log/${log.id}`)}
-      className="bg-card mx-4 mb-3 p-4 rounded-xl border border-border"
+      onPress={() => {
+        hapticLight();
+        router.push(`/daily-log/${log.id}`);
+      }}
+      className="bg-card mx-4 mb-3 p-4 rounded-xl border border-border min-h-[72px]"
     >
       <View className="flex-row justify-between items-start mb-2">
         <Text className="text-lg font-bold text-foreground">
@@ -83,13 +90,13 @@ const LogRowInner = ({
         </Text>
         <StatusBadge status={log.status} />
       </View>
-      <Text className="text-sm text-muted-foreground">
+      <Text className="text-base text-muted-foreground">
         {emoji}{" "}
         {hasWeather
           ? `${w?.temp ?? "—"}° ${w?.condition ?? ""}`
           : "No weather"}
       </Text>
-      <Text className="text-sm text-muted-foreground mt-1">
+      <Text className="text-base text-muted-foreground mt-1">
         Workers (headcount sum): {headcount} · Photos: {photos.length}
       </Text>
     </TouchableOpacity>
@@ -101,124 +108,140 @@ const LogRow = withObservables(["log"], ({ log }: { log: DailyLog }) => ({
   photos: log.photos,
 }))(LogRowInner);
 
-function ProjectsFilter({
-  projects,
-  selectedId,
-  onSelect,
-}: {
-  projects: Project[];
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-}) {
-  return (
-    <View className="px-4 pb-2 flex-row flex-wrap gap-2">
-      <TouchableOpacity
-        onPress={() => onSelect(null)}
-        className={`px-3 py-1.5 rounded-full border ${selectedId === null ? "border-primary bg-primary/20" : "border-border"}`}
-      >
-        <Text className="text-xs text-foreground font-semibold">All</Text>
-      </TouchableOpacity>
-      {projects.map((p) => (
-        <TouchableOpacity
-          key={p.id}
-          onPress={() => onSelect(p.id)}
-          className={`px-3 py-1.5 rounded-full border ${selectedId === p.id ? "border-primary bg-primary/20" : "border-border"}`}
-        >
-          <Text className="text-xs text-foreground font-semibold" numberOfLines={1}>
-            {p.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
 export default function DailyLogIndexScreen() {
   const router = useRouter();
   const database = useDatabase();
+  const activeProjectId = useProjectStore((s) => s.activeProjectId);
+  const hydrated = useProjectStore((s) => s.hydrated);
+
   const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filterProjectId, setFilterProjectId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    const subProjects = database
-      .get<Project>("projects")
-      .query()
-      .observe()
-      .subscribe(setProjects);
-    return () => subProjects.unsubscribe();
-  }, [database]);
-
-  useEffect(() => {
-    const q = filterProjectId
-      ? database
-          .get<DailyLog>("daily_logs")
-          .query(
-            Q.where("project_id", filterProjectId),
-            Q.sortBy("log_date", Q.desc),
-          )
-      : database
-          .get<DailyLog>("daily_logs")
-          .query(Q.sortBy("log_date", Q.desc));
-    const sub = q.observe().subscribe(setLogs);
+    if (!hydrated) return;
+    if (!activeProjectId) {
+      setLogs([]);
+      setInitializing(false);
+      return;
+    }
+    const q = database
+      .get<DailyLog>("daily_logs")
+      .query(
+        Q.where("project_id", activeProjectId),
+        Q.sortBy("log_date", Q.desc),
+      );
+    const sub = q.observe().subscribe((l) => {
+      setLogs(l);
+      setInitializing(false);
+    });
     return () => sub.unsubscribe();
-  }, [database, filterProjectId]);
+  }, [database, activeProjectId, hydrated]);
 
   const performSync = useCallback(async () => {
     setRefreshing(true);
+    setLoadError(null);
     try {
       await syncData();
     } catch (e) {
-      console.error(e);
+      setLoadError(e instanceof Error ? e.message : "Sync failed");
     } finally {
       setRefreshing(false);
     }
   }, []);
 
+  if (!hydrated) {
+    return (
+      <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+        <SkeletonBlock />
+      </SafeAreaView>
+    );
+  }
+
+  if (!activeProjectId) {
+    return (
+      <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+        <ErrorState
+          title="Select a project"
+          message="Use the project dropdown at the top to choose a site. Daily logs are scoped to that project."
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && logs.length === 0) {
+    return (
+      <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+        <ErrorState
+          message={loadError}
+          onRetry={performSync}
+          onWorkOffline={() => setLoadError(null)}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="p-4 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-foreground">Daily Logs</Text>
+    <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+      <View className="p-4 flex-row justify-between items-center min-h-[52px]">
+        <Text className="text-2xl font-bold text-foreground">Today</Text>
         <TouchableOpacity
           onPress={performSync}
-          className="p-2 rounded-lg bg-muted"
+          className="min-h-[48px] min-w-[48px] rounded-xl bg-muted items-center justify-center px-3"
+          accessibilityLabel="Refresh and sync"
         >
-          <Feather name="refresh-cw" size={20} color="hsl(var(--foreground))" />
+          <Feather name="refresh-cw" size={22} color="hsl(var(--foreground))" />
         </TouchableOpacity>
       </View>
 
-      <ProjectsFilter
-        projects={projects}
-        selectedId={filterProjectId}
-        onSelect={setFilterProjectId}
-      />
-
-      <FlatList
-        data={logs}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <LogRow log={item} />}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={performSync}
-            tintColor="hsl(var(--primary))"
-          />
-        }
-        ListEmptyComponent={
-          <View className="items-center py-10 px-6">
-            <Text className="text-muted-foreground text-center">
-              No logs for this filter.
-            </Text>
-          </View>
-        }
-        contentContainerStyle={{ paddingBottom: 96 }}
-      />
+      {initializing ? (
+        <ScrollView className="flex-1 px-4">
+          <SkeletonBlock />
+          <SkeletonBlock />
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={logs}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <LogRow log={item} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={performSync}
+              tintColor="hsl(var(--primary))"
+            />
+          }
+          ListEmptyComponent={
+            <View className="items-center py-12 px-6">
+              <Text className="text-muted-foreground text-center text-base mb-2">
+                No logs yet this week for this project.
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  hapticLight();
+                  router.push("/daily-log/new");
+                }}
+                className="min-h-[48px] px-6 mt-4 rounded-xl bg-primary items-center justify-center"
+              >
+                <Text className="text-primary-foreground font-bold text-base">
+                  Create today&apos;s log
+                </Text>
+              </TouchableOpacity>
+            </View>
+          }
+          contentContainerStyle={{ paddingBottom: 96 }}
+        />
+      )}
 
       <TouchableOpacity
-        onPress={() => router.push("/daily-log/new")}
-        className="absolute bottom-8 right-6 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg"
+        onPress={() => {
+          hapticLight();
+          router.push("/daily-log/new");
+        }}
+        className="absolute bottom-8 right-6 w-14 h-14 min-w-[56px] min-h-[56px] rounded-full bg-primary items-center justify-center shadow-lg"
         activeOpacity={0.85}
+        accessibilityLabel="New daily log"
       >
         <Feather name="plus" size={28} color="hsl(var(--primary-foreground))" />
       </TouchableOpacity>

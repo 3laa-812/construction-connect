@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import * as Notifications from "expo-notifications";
 import {
   View,
   Text,
@@ -9,7 +10,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, type Href } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { database } from "../../db";
 import DailyLog from "../../db/models/DailyLog";
@@ -28,13 +29,18 @@ import { recordAttendanceCompanyNames } from "../../services/attendanceCompanies
 import MaterialReceiptForm, {
   type MaterialReceiptData,
 } from "../../components/MaterialReceiptForm";
-import PhotoCapture from "../../components/PhotoCapture";
+import {
+  DailyLogPhotosSection,
+  type DailyLogPhotoItem,
+} from "../../components/DailyLogPhotosSection";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import {
-  ProgressNotesSection,
+  ProgressNotes,
   parseProgressNotes,
   type ProgressNote,
-} from "../../components/ProgressNotesSection";
+} from "../../components/ProgressNotes";
+import { hapticError, hapticSuccess } from "../../services/haptics";
+import { useProjectStore } from "../../store/projectStore";
 
 export default function NewDailyLog() {
   const router = useRouter();
@@ -54,17 +60,18 @@ export default function NewDailyLog() {
   const [materialData, setMaterialData] = useState<MaterialReceiptData>({
     version: 2,
   });
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoItems, setPhotoItems] = useState<DailyLogPhotoItem[]>([]);
   const [projectServerId, setProjectServerId] = useState<string | null>(null);
-
   useEffect(() => {
     (async () => {
       const list = await database.get<Project>("projects").query().fetch();
       setProjects(list);
-      const first = list[0];
-      if (first) {
-        setProjectId(first.id);
-        setProjectServerId(first.serverId ?? null);
+      const preferredId = useProjectStore.getState().activeProjectId;
+      const preferred =
+        list.find((p) => p.id === preferredId) ?? list[0];
+      if (preferred) {
+        setProjectId(preferred.id);
+        setProjectServerId(preferred.serverId ?? null);
       }
     })();
   }, []);
@@ -84,6 +91,7 @@ export default function NewDailyLog() {
       status === "SUBMITTED" &&
       attendanceBlocksSubmit(attendanceRows, 16)
     ) {
+      hapticError();
       Alert.alert(
         "Attendance",
         "Fix validation errors before submitting (company, headcount, hours).",
@@ -118,12 +126,13 @@ export default function NewDailyLog() {
           },
         );
 
-        for (const uri of photos) {
+        for (const p of photoItems) {
           await database.get("log_photos").create((media: any) => {
             media.dailyLog.set(newLog);
-            media.localPath = uri;
-            media.gpsLat = null;
-            media.gpsLong = null;
+            media.localPath = p.uri;
+            media.gpsLat = p.lat ?? null;
+            media.gpsLong = p.lng ?? null;
+            media.photoType = "site_photo";
           });
         }
       });
@@ -133,10 +142,19 @@ export default function NewDailyLog() {
         attendanceRows.map((r) => r.company_name),
       );
 
+      if (status === "DRAFT") {
+        await Notifications.scheduleNotificationAsync({
+          content: { title: "Site Log Reminder", body: "Today's log is still a draft" },
+          trigger: { hour: 17, minute: 0, repeats: false },
+        });
+      }
+
+      hapticSuccess();
       Alert.alert("Saved", `Daily log ${status === "DRAFT" ? "saved as draft" : "submitted"} offline.`);
       router.back();
     } catch (e) {
       console.error(e);
+      hapticError();
       Alert.alert("Error", "Failed to save log.");
     } finally {
       setSubmitting(false);
@@ -218,26 +236,41 @@ export default function NewDailyLog() {
         </CollapsibleSection>
 
         <CollapsibleSection title="Progress notes">
-          <ProgressNotesSection
-            notes={progressNotes}
-            onChange={setProgressNotes}
-          />
+          <ProgressNotes notes={progressNotes} onChange={setProgressNotes} />
         </CollapsibleSection>
 
         <CollapsibleSection title="Photos">
-          <PhotoCapture initialPhotos={photos} onPhotosChange={setPhotos} />
+          <DailyLogPhotosSection
+            items={photoItems}
+            onChange={setPhotoItems}
+          />
         </CollapsibleSection>
 
         <CollapsibleSection title="Material receipt (GRN)">
           {projectId ? (
-            <MaterialReceiptForm
-              projectServerId={projectServerId}
-              localProjectId={projectId}
-              value={materialData}
-              onPatch={(p) =>
-                setMaterialData((m) => ({ ...m, ...p, version: 2 }))
-              }
-            />
+            <>
+              <MaterialReceiptForm
+                projectServerId={projectServerId}
+                localProjectId={projectId}
+                value={materialData}
+                onPatch={(p) =>
+                  setMaterialData((m) => ({ ...m, ...p, version: 2 }))
+                }
+              />
+              <TouchableOpacity
+                className="mt-4 bg-secondary py-3 rounded-xl items-center border border-border"
+                onPress={() =>
+                  router.push({
+                    pathname: "/daily-log/grn",
+                    params: { projectId },
+                  } as unknown as Href)
+                }
+              >
+                <Text className="text-secondary-foreground font-semibold">
+                  Full GRN wizard (select open PO)
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <Text className="text-muted-foreground text-sm">
               Select a project first.
@@ -253,7 +286,7 @@ export default function NewDailyLog() {
           <TouchableOpacity
             onPress={() => persist("DRAFT")}
             disabled={submitting}
-            className="flex-1 bg-secondary p-4 rounded-xl items-center"
+            className="flex-1 min-h-[48px] bg-secondary p-4 rounded-xl items-center justify-center"
           >
             {submitting ? (
               <ActivityIndicator color="hsl(var(--secondary-foreground))" />
@@ -268,7 +301,7 @@ export default function NewDailyLog() {
             disabled={
               submitting || attendanceBlocksSubmit(attendanceRows, 16)
             }
-            className={`flex-1 bg-primary p-4 rounded-xl items-center ${submitting || attendanceBlocksSubmit(attendanceRows, 16) ? "opacity-45" : ""}`}
+            className={`flex-1 min-h-[48px] bg-primary p-4 rounded-xl items-center justify-center ${submitting || attendanceBlocksSubmit(attendanceRows, 16) ? "opacity-45" : ""}`}
           >
             {submitting ? (
               <ActivityIndicator color="white" />

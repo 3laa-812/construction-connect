@@ -34,13 +34,18 @@ import MaterialReceiptForm, {
   type MaterialReceiptData,
   type ReceivedItem,
 } from "../../components/MaterialReceiptForm";
-import PhotoCapture from "../../components/PhotoCapture";
+import {
+  DailyLogPhotosSection,
+  type DailyLogPhotoItem,
+} from "../../components/DailyLogPhotosSection";
+import LogPhoto from "../../db/models/LogPhoto";
+import api from "../../services/api";
 import { CollapsibleSection } from "../../components/CollapsibleSection";
 import {
-  ProgressNotesSection,
+  ProgressNotes,
   parseProgressNotes,
   type ProgressNote,
-} from "../../components/ProgressNotesSection";
+} from "../../components/ProgressNotes";
 
 const MAX_ATTENDANCE_HOURS = 16;
 
@@ -121,10 +126,7 @@ export default function DailyLogEditScreen() {
   const [materialData, setMaterialData] = useState<MaterialReceiptData>({
     version: 2,
   });
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [existingPhotoPaths, setExistingPhotoPaths] = useState<Set<string>>(
-    new Set(),
-  );
+  const [photoItems, setPhotoItems] = useState<DailyLogPhotoItem[]>([]);
   const [projectServerId, setProjectServerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -159,11 +161,17 @@ export default function DailyLogEditScreen() {
         setProjectId(proj.id);
 
         const logPhotos = await foundLog.photos.fetch();
-        const paths = logPhotos
-          .map((p) => p.localPath)
-          .filter((x): x is string => Boolean(x));
-        setExistingPhotoPaths(new Set(paths));
-        setPhotos(paths);
+        setPhotoItems(
+          logPhotos
+            .map((p) => ({
+              id: p.id,
+              uri: p.localPath || p.s3Url || "",
+              lat: p.gpsLat,
+              lng: p.gpsLong,
+              capturedAt: p.createdAt,
+            }))
+            .filter((p) => p.uri),
+        );
       } catch {
         Alert.alert("Error", "Could not find log.");
         router.back();
@@ -216,9 +224,16 @@ export default function DailyLogEditScreen() {
           updated.materialReceiptData = materialData;
         });
 
-        for (const uri of photos) {
-          if (!existingPhotoPaths.has(uri)) {
-            await log.addPhoto(uri);
+        const freshLog = await database.get<DailyLog>("daily_logs").find(log.id);
+        for (const p of photoItems) {
+          if (!p.id) {
+            await database.get<LogPhoto>("log_photos").create((media) => {
+              media.dailyLog.set(freshLog);
+              media.localPath = p.uri;
+              media.gpsLat = p.lat ?? null;
+              media.gpsLong = p.lng ?? null;
+              media.photoType = "site_photo";
+            });
           }
         }
       });
@@ -227,8 +242,6 @@ export default function DailyLogEditScreen() {
         database,
         attendanceRows.map((r) => r.company_name),
       );
-
-      setExistingPhotoPaths(new Set(photos));
       Alert.alert("Saved", "Daily log updated.");
       router.back();
     } catch (error) {
@@ -352,14 +365,29 @@ export default function DailyLogEditScreen() {
           </CollapsibleSection>
 
           <CollapsibleSection title="Progress notes">
-            <ProgressNotesSection
-              notes={progressNotes}
-              onChange={setProgressNotes}
-            />
+            <ProgressNotes notes={progressNotes} onChange={setProgressNotes} />
           </CollapsibleSection>
 
           <CollapsibleSection title="Photos">
-            <PhotoCapture initialPhotos={photos} onPhotosChange={setPhotos} />
+            <DailyLogPhotosSection
+              items={photoItems}
+              onChange={setPhotoItems}
+              onRemovePersisted={async (row) => {
+                const photoId = row.id;
+                if (!photoId) return;
+                try {
+                  await api.delete(`/daily-logs/photos/${photoId}`);
+                } catch {
+                  /* offline */
+                }
+                await database.write(async () => {
+                  const ph = await database
+                    .get<LogPhoto>("log_photos")
+                    .find(photoId);
+                  await ph.destroyPermanently();
+                });
+              }}
+            />
           </CollapsibleSection>
 
           <CollapsibleSection title="Material receipt (GRN)">

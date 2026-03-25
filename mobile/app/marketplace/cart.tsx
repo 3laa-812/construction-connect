@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { withObservables } from "@nozbe/watermelondb/react";
+import NetInfo from "@react-native-community/netinfo";
 import { database } from "../../db";
 import CartItem from "../../db/models/CartItem";
-import PurchaseOrder from "../../db/models/PurchaseOrder";
-import POItem from "../../db/models/POItem";
+import Project from "../../db/models/Project";
+import PendingOrder from "../../db/models/PendingOrder";
+import api from "../../services/api";
+import { syncDatabase } from "../../services/sync";
+import { hapticSuccess } from "../../services/haptics";
 import { Feather } from "@expo/vector-icons";
 
 // Cart Item Component
@@ -67,39 +71,86 @@ const CartScreen = ({ cartItems }: { cartItems: CartItem[] }) => {
   const router = useRouter();
 
   const checkout = async () => {
-    // Create Purchase Order Logic
-    // 1. Group by Supplier? Or single PO?
-    // 2. Create PO locally
-    // 3. Clear Cart
-    // 4. Trigger Sync
     if (cartItems.length === 0) return;
 
     try {
-      await database.write(async () => {
-        // Create PO
-        const po = await database
-          .get<PurchaseOrder>("purchase_orders")
-          .create((order: PurchaseOrder) => {
-            order.projectId = cartItems[0].projectId;
-            order.supplierId = "sup_1";
-            order.status = "PLACED";
-            order.totalAmount = 0;
-          });
+      const project = await database
+        .get<Project>("projects")
+        .find(cartItems[0].projectId);
+      const projectServerId = project.serverId;
+      if (!projectServerId?.trim()) {
+        Alert.alert(
+          "Sync required",
+          "Project is missing a server id. Connect and sync, then try again.",
+        );
+        return;
+      }
 
-        for (const item of cartItems) {
-          await database.get<POItem>("po_items").create((poItem: POItem) => {
-            poItem.purchaseOrder.set(po);
-            poItem.productId = item.productId;
-            poItem.quantity = item.quantity;
-            poItem.unitPrice = 10;
-            poItem.name = "Item";
-          });
-          await item.destroyPermanently();
+      const lines: Array<{
+        item_description: string;
+        ordered_qty: number;
+        unit_price: number;
+      }> = [];
+      const supplierIds = new Set<string>();
+
+      for (const ci of cartItems) {
+        const product = await ci.product.fetch();
+        if (!product?.supplierId) {
+          Alert.alert("Cart", "A cart row is missing product data. Try again.");
+          return;
         }
+        supplierIds.add(product.supplierId);
+        lines.push({
+          item_description: product.name,
+          ordered_qty: ci.quantity,
+          unit_price: Number(product.price ?? 0),
+        });
+      }
+
+      if (supplierIds.size !== 1) {
+        Alert.alert(
+          "One supplier per order",
+          "Split your cart so each checkout is from a single supplier.",
+        );
+        return;
+      }
+
+      const supplierId = [...supplierIds][0];
+      const body = {
+        project: { connect: { id: projectServerId } },
+        supplier: { connect: { id: supplierId } },
+        items: {
+          create: lines,
+        },
+      };
+
+      const net = await NetInfo.fetch();
+      const online =
+        net.isConnected === true && net.isInternetReachable !== false;
+
+      if (online) {
+        await api.post("/purchase-orders", body);
+        await database.write(async () => {
+          for (const c of cartItems) await c.destroyPermanently();
+        });
+        await syncDatabase(database);
+        hapticSuccess();
+        Alert.alert("Success", "Order placed.");
+        router.back();
+        return;
+      }
+
+      await database.write(async () => {
+        await database.get<PendingOrder>("pending_orders").create((r) => {
+          r.payloadJson = JSON.stringify(body);
+          r.synced = 0;
+        });
+        for (const c of cartItems) await c.destroyPermanently();
       });
+      hapticSuccess();
       Alert.alert(
-        "Success",
-        "Order placed securely offline. Will sync when online.",
+        "Queued",
+        "Order will be submitted automatically when you are online.",
       );
       router.back();
     } catch (e) {

@@ -100,6 +100,7 @@ export function RFQWizard() {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
 
   const { data: projectsData, isLoading: projectsLoading, isError: projectsError } = useQuery<ApiProject[]>({
     queryKey: ["projects", "for-rfq"],
@@ -833,29 +834,67 @@ export function RFQWizard() {
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="border-t border-border px-6 py-4 flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
-          disabled={currentStep === 1}
-        >
-          <ChevronLeft className="w-4 h-4 me-2" />
-          {t("rfq_builder.actions.previous")}
-        </Button>
-
-        {currentStep < 4 ? (
-          <Button onClick={handleNext}>
-            {t("rfq_builder.actions.next")}
-            <ChevronRight className="w-4 h-4 ms-2" />
-          </Button>
-        ) : (
-          <Button onClick={handleSubmit} className="bg-success hover:bg-success/90 text-success-foreground">
-            <Check className="w-4 h-4 me-2" />
-            {t("rfq_builder.actions.submit")}
-          </Button>
+      {/* Footer Actions & Mobile Summary */}
+      <div className="border-t border-border bg-background">
+        {/* Mobile Summary Toggle */}
+        <div className="lg:hidden px-6 py-3 border-b border-border bg-muted/10 flex items-center justify-between cursor-pointer" onClick={() => setShowMobileSummary(!showMobileSummary)}>
+          <span className="font-semibold text-sm">{t("rfq_builder.review.summary_title")}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-primary">
+               {watchedValues.lineItems.length} {t("rfq_builder.card.items")}
+            </span>
+            <span className="text-muted-foreground transition-transform duration-200" style={{ transform: showMobileSummary ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              ▼
+            </span>
+          </div>
+        </div>
+        
+        {/* Mobile Summary Content */}
+        {showMobileSummary && (
+          <div className="lg:hidden px-6 py-4 bg-muted/5 space-y-3 text-sm border-b border-border">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("rfq_builder.review.category")}</span>
+              <span className="font-medium truncate max-w-28">{watchedValues.category || "-"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("rfq_builder.review.payment")}</span>
+              <span className="font-medium truncate max-w-28">
+                {paymentTermsOptions.find(p => p.value === watchedValues.paymentTerms)?.label || "-"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{t("rfq_builder.review.quote_validity")}</span>
+              <span className="font-medium">
+                {quoteValidityOptions.find(q => q.value === watchedValues.quoteValidity)?.label || "-"}
+              </span>
+            </div>
+          </div>
         )}
+
+        {/* Action Buttons */}
+        <div className="px-6 py-4 flex justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
+            disabled={currentStep === 1}
+          >
+            <ChevronLeft className="w-4 h-4 me-2" />
+            {t("rfq_builder.actions.previous")}
+          </Button>
+
+          {currentStep < 4 ? (
+            <Button onClick={handleNext}>
+              {t("rfq_builder.actions.next")}
+              <ChevronRight className="w-4 h-4 ms-2" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} className="bg-success hover:bg-success/90 text-success-foreground">
+              <Check className="w-4 h-4 me-2" />
+              {t("rfq_builder.actions.submit")}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

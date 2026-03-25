@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     // -------------------------------------------------------------------------
     // 1. Identity & Onboarding (Mirrors: Company, User)
@@ -73,6 +73,7 @@ export const schema = appSchema({
             { name: 's3_url', type: 'string', isOptional: true },
             { name: 'gps_lat', type: 'number', isOptional: true },
             { name: 'gps_long', type: 'number', isOptional: true },
+            { name: 'photo_type', type: 'string', isOptional: true }, // site_photo | delivery_ticket
             { name: 'created_at', type: 'number' },
              // Note: Often photos don't need update tracking if they are immutable, but 'updated_at' is good for sync just in case
             { name: 'updated_at', type: 'number' },
@@ -101,7 +102,11 @@ export const schema = appSchema({
         columns: [
             { name: 'product_id', type: 'string' },
             { name: 'quantity', type: 'number' },
-            { name: 'project_id', type: 'string' }, // Cart is per project?
+            { name: 'project_id', type: 'string' },
+            { name: 'product_name', type: 'string', isOptional: true },
+            { name: 'unit', type: 'string', isOptional: true },
+            { name: 'unit_price', type: 'number', isOptional: true },
+            { name: 'supplier_id', type: 'string', isOptional: true },
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
         ]
@@ -129,6 +134,7 @@ export const schema = appSchema({
             { name: 'product_id', type: 'string', isOptional: true },
             { name: 'name', type: 'string' }, // Snapshot name
             { name: 'quantity', type: 'number' },
+            { name: 'received_qty', type: 'number', isOptional: true },
             { name: 'unit_price', type: 'number', isOptional: true },
             { name: 'created_at', type: 'number' },
             { name: 'updated_at', type: 'number' },
@@ -152,6 +158,31 @@ export const schema = appSchema({
       columns: [
         { name: 'company_name', type: 'string' },
         { name: 'last_used_at', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+
+    tableSchema({
+      name: 'grn_records',
+      columns: [
+        { name: 'po_local_id', type: 'string' }, // Watermelon purchase_orders.id
+        { name: 'po_server_id', type: 'string', isOptional: true },
+        { name: 'daily_log_id', type: 'string', isOptional: true },
+        { name: 'items_json', type: 'string' },
+        { name: 'delivery_ticket_photo_id', type: 'string', isOptional: true },
+        { name: 'notes', type: 'string', isOptional: true },
+        { name: 'synced', type: 'number' }, // 0 | 1
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+
+    tableSchema({
+      name: 'pending_orders',
+      columns: [
+        { name: 'payload_json', type: 'string' },
+        { name: 'synced', type: 'number' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],
