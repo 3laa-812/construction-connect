@@ -42,6 +42,8 @@ interface GoodsReceivedNoteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm?: (data: GRNData) => void;
+  /** Called after the delivery note is persisted successfully. */
+  onRecordSuccess?: () => void;
 }
 
 interface GRNData {
@@ -63,6 +65,7 @@ export function GoodsReceivedNote({
   open,
   onOpenChange,
   onConfirm,
+  onRecordSuccess,
 }: GoodsReceivedNoteProps) {
   const { t } = useLanguage();
   const [step, setStep] = useState<"verify" | "photo" | "sign">("verify");
@@ -150,6 +153,7 @@ export function GoodsReceivedNote({
       });
 
       onConfirm?.(grnData);
+      onRecordSuccess?.();
       onOpenChange(false);
     } catch (error) {
       toast({

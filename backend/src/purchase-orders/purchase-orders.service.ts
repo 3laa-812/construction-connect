@@ -14,6 +14,8 @@ import {
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { InvoicesService } from '../invoices/invoices.service';
+import { WalletsService } from '../wallets/wallets.service';
+import { TransactionType } from '@prisma/client';
 
 const poInclude = {
   project: true,
@@ -56,6 +58,7 @@ export class PurchaseOrdersService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private invoices: InvoicesService,
+    private wallets: WalletsService,
   ) {}
 
   private readonly supplierTransitions: Record<string, POStatus> = {
@@ -104,7 +107,7 @@ export class PurchaseOrdersService {
       return this.prisma.purchaseOrder.findMany({ include: poListInclude });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     return this.prisma.purchaseOrder.findMany({
       where: {
@@ -244,6 +247,11 @@ export class PurchaseOrdersService {
       where: { id },
       data: { status },
     });
+
+    if (status === POStatus.COMPLETED) {
+      await this.handlePoCompletion(id);
+    }
+
     await this.notifyOrderStatusParties(
       po,
       id,
@@ -254,6 +262,80 @@ export class PurchaseOrdersService {
       await this.invoices.createOnPoDelivered(id);
     }
     return updated;
+  }
+
+  private async handlePoCompletion(poId: string) {
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: poId },
+      include: {
+        project: { include: { company: true } },
+        supplier: true,
+      },
+    });
+    if (!po || !po.total_amount) return;
+
+    const buyerId = po.project.company_id;
+    const supplierId = po.supplier_id;
+    const totalAmount = Number(po.total_amount);
+
+    // 1. Find Platform Admin Company for Commission & Settings
+    const adminUser = await this.prisma.user.findFirst({
+      where: { role: 'ADMIN' },
+      select: { company_id: true },
+    });
+    const platformCompanyId = adminUser?.company_id;
+
+    // 2. Get Commission % (Default 5% for now as per sprint D-3-6)
+    let commissionRate = 0.05; 
+    if (platformCompanyId) {
+      const settings = await this.prisma.companySettings.findUnique({
+        where: { company_id: platformCompanyId },
+      });
+      if (settings?.admin && typeof settings.admin === 'object') {
+        const adminSettings = settings.admin as any;
+        if (typeof adminSettings.commission_rate === 'number') {
+          commissionRate = adminSettings.commission_rate;
+        }
+      }
+    }
+
+    const commissionAmount = totalAmount * commissionRate;
+    const supplierNet = totalAmount - commissionAmount;
+
+    // 3. Fetch/Create Wallets
+    const buyerWallet = await this.wallets.findOrCreateWallet(buyerId);
+    const supplierWallet = await this.wallets.findOrCreateWallet(supplierId);
+
+    // 4. Record Transactions
+    // DEBIT Buyer
+    await this.wallets.createTransaction({
+      wallet: { connect: { id: buyerWallet.id } },
+      amount: totalAmount,
+      type: TransactionType.PAYMENT,
+      description: `Payment for PO ${po.id.slice(0, 8)}`,
+      purchase_order: { connect: { id: po.id } },
+    });
+
+    // CREDIT Supplier
+    await this.wallets.createTransaction({
+      wallet: { connect: { id: supplierWallet.id } },
+      amount: supplierNet,
+      type: TransactionType.DEPOSIT,
+      description: `Payout for PO ${po.id.slice(0, 8)} (Net of ${commissionRate * 100}% comm)`,
+      purchase_order: { connect: { id: po.id } },
+    });
+
+    // CREDIT Platform (if admin company exists)
+    if (platformCompanyId) {
+      const platformWallet = await this.wallets.findOrCreateWallet(platformCompanyId);
+      await this.wallets.createTransaction({
+        wallet: { connect: { id: platformWallet.id } },
+        amount: commissionAmount,
+        type: TransactionType.DEPOSIT,
+        description: `Commission from PO ${po.id.slice(0, 8)}`,
+        purchase_order: { connect: { id: po.id } },
+      });
+    }
   }
 
   private async notifyOrderStatusParties(
@@ -363,6 +445,20 @@ export class PurchaseOrdersService {
         };
       }),
     );
+
+    if (po.status !== 'DELIVERED' && po.status !== 'COMPLETED') {
+      await this.prisma.purchaseOrder.update({
+        where: { id: poId },
+        data: { status: 'DELIVERED' },
+      });
+      await this.notifyOrderStatusParties(
+        { ...po, project: po.project },
+        poId,
+        'DELIVERED',
+        isSupplier ? 'supplier' : 'buyer',
+      );
+      await this.invoices.createOnPoDelivered(poId);
+    }
 
     return deliveryNote;
   }

@@ -6,4 +6,5 @@ export interface JwtPayload {
   email: string;
   companyId: string;
   role: AppRole;
+  companyCountry?: string;
 }

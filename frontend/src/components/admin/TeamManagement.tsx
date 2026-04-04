@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Mail, Shield, User, MoreHorizontal, Edit, Trash2, CheckCircle, Clock, XCircle } from "lucide-react";
+import { UserPlus, Mail, Shield, MoreVertical, CheckCircle, Clock, XCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -21,13 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
@@ -35,8 +27,7 @@ import { api } from "@/lib/api";
 type ApiUser = {
   id: string;
   email: string;
-  phone?: string;
-  role?: "ADMIN" | "PROCUREMENT_MANAGER" | "SITE_ENGINEER";
+  role?: string;
   is_active: boolean;
   created_at: string;
 };
@@ -45,408 +36,165 @@ interface TeamMember {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "procurement_manager" | "site_engineer" | "finance";
+  role: string;
   status: "active" | "pending" | "inactive";
-  budgetLimit?: number;
-  invitedAt: string;
-  lastActive?: string;
+  lastActive: string;
+  colorSeed: number; // For sticky avatar colors
 }
 
-// FR-A04: Sub-Accounts Management
+const COLORS = ["bg-[#E5484D]", "bg-[#F76B15]", "bg-[#FFB224]", "bg-[#30A46C]", "bg-[#0090FF]", "bg-[#8D4DE8]"];
+
 export function TeamManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
-  // Fetch all users (we'll filter by company on backend or frontend)
+  const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("SITE_ENGINEER");
+
   const { data: usersData, isLoading } = useQuery<ApiUser[]>({
     queryKey: ["users"],
-    queryFn: async () => {
-      const response = await api.get("/users");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/users")).data,
   });
 
-  // Filter users by company
-  const companyUsers = usersData?.filter(u => {
-    // Since backend doesn't return company_id in user list, we'll show all users for now
-    // In production, backend should filter by company_id
-    return true;
-  }) || [];
+  const generateSeed = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return Math.abs(hash) % COLORS.length;
+  };
 
-  // Map API users to TeamMember format
-  const teamMembers: TeamMember[] = companyUsers.map((apiUser) => {
-    const roleMap: Record<string, TeamMember["role"]> = {
-      ADMIN: "admin",
-      PROCUREMENT_MANAGER: "procurement_manager",
-      SITE_ENGINEER: "site_engineer",
-    };
-    
+  const members: TeamMember[] = (usersData || []).map((u) => {
     return {
-      id: apiUser.id,
-      name: apiUser.email.split("@")[0],
-      email: apiUser.email,
-      role: roleMap[apiUser.role || ""] || "site_engineer",
-      status: apiUser.is_active ? "active" : "inactive",
-      invitedAt: apiUser.created_at ? new Date(apiUser.created_at).toISOString().split("T")[0] : "",
-      lastActive: apiUser.is_active ? new Date().toISOString().split("T")[0] : undefined,
+      id: u.id,
+      name: u.email.split("@")[0],
+      email: u.email,
+      role: (u.role || "SITE_ENGINEER").replace("_", " "),
+      status: u.is_active ? "active" : "pending",
+      lastActive: u.is_active ? new Date().toISOString().split("T")[0] : "Never",
+      colorSeed: generateSeed(u.email),
     };
   });
 
-  const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [newMember, setNewMember] = useState({
-    email: "",
-    role: "site_engineer" as TeamMember["role"],
-    budgetLimit: 50000,
-  });
-
-  const roleConfig = {
-    admin: {
-      label: "Company Admin",
-      description: "Full access to all features",
-      color: "primary",
-    },
-    procurement_manager: {
-      label: "Procurement Manager",
-      description: "Create RFQs, manage orders with budget limit",
-      color: "accent",
-    },
-    site_engineer: {
-      label: "Site Engineer",
-      description: "Confirm deliveries, limited procurement",
-      color: "success",
-    },
-    finance: {
-      label: "Finance",
-      description: "View invoices, payments, and reports",
-      color: "warning",
-    },
-  };
-
-  const statusConfig = {
-    active: { label: "Active", icon: CheckCircle, color: "success" },
-    pending: { label: "Pending", icon: Clock, color: "warning" },
-    inactive: { label: "Inactive", icon: XCircle, color: "neutral" },
-  };
-
-  // Create user mutation
-  const createUserMutation = useMutation({
-    mutationFn: async (data: { email: string; role: string; companyId?: string }) => {
-      const roleMap: Record<string, string> = {
-        admin: "ADMIN",
-        procurement_manager: "PROCUREMENT_MANAGER",
-        site_engineer: "SITE_ENGINEER",
-        finance: "SITE_ENGINEER", // Finance role not in backend, map to SITE_ENGINEER
-      };
-      
+  const inviteMutation = useMutation({
+    mutationFn: async () => {
       return api.post("/users", {
-        email: data.email,
-        role: roleMap[data.role] || "SITE_ENGINEER",
+        email: inviteEmail,
+        role: inviteRole,
         company: user?.companyId ? { connect: { id: user.companyId } } : undefined,
-        is_active: false, // Pending until they accept invitation
+        is_active: false,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast({
-        title: "Invitation Sent",
-        description: `An invitation has been sent to ${newMember.email}`,
-      });
+      toast({ title: "Invitation Sent", description: `Sent to ${inviteEmail}` });
       setShowInviteDialog(false);
-      setNewMember({ email: "", role: "site_engineer", budgetLimit: 50000 });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Invitation Failed",
-        description: error.response?.data?.message || "Could not send invitation",
-      });
+      setInviteEmail("");
     },
   });
 
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      return api.delete(`/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast({
-        title: "Member Removed",
-        description: "Team member has been removed",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Removal Failed",
-        description: error.response?.data?.message || "Could not remove team member",
-      });
-    },
-  });
-
-  // Update user mutation (for activating/deactivating)
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
-      return api.patch(`/users/${userId}`, { is_active: isActive });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-    },
-    onError: (error: any) => {
-      toast({
-        variant: "destructive",
-        title: "Update Failed",
-        description: error.response?.data?.message || "Could not update user",
-      });
-    },
-  });
-
-  const handleInvite = () => {
-    if (!newMember.email) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter an email address",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user?.companyId) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Your account is not linked to a company",
-      });
-      return;
-    }
-
-    createUserMutation.mutate({
-      email: newMember.email,
-      role: newMember.role,
-      companyId: user.companyId,
-    });
-  };
-
-  const handleRemoveMember = (member: TeamMember) => {
-    if (member.role === "admin" && teamMembers.filter((m) => m.role === "admin").length === 1) {
-      toast({
-        title: "Cannot Remove",
-        description: "At least one admin must remain in the team",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    deleteUserMutation.mutate(member.id);
-  };
-
-  const handleResendInvite = (member: TeamMember) => {
-    // Activate the user (assuming resending invite means activating them)
-    updateUserMutation.mutate({ userId: member.id, isActive: true });
-    toast({
-      title: "Invitation Resent",
-      description: `A new invitation has been sent to ${member.email}`,
-    });
-  };
+  if (isLoading) return <div className="p-8 text-center text-text-3">Loading team...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Team Management</h2>
-          <p className="text-sm text-muted-foreground">
-            Invite team members with specific roles and permissions (FR-A04)
-          </p>
-        </div>
-        <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="w-4 h-4 me-2" />
-              Invite Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Send an invitation to join your company account
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Email Address *</Label>
-                <Input
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Role *</Label>
-                <Select
-                  value={newMember.role}
-                  onValueChange={(v) => setNewMember({ ...newMember, role: v as TeamMember["role"] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(roleConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        <div>
-                          <p className="font-medium">{config.label}</p>
-                          <p className="text-xs text-muted-foreground">{config.description}</p>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {(newMember.role === "procurement_manager" || newMember.role === "site_engineer") && (
-                <div className="space-y-2">
-                  <Label>Budget Limit (SAR)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={newMember.budgetLimit}
-                    onChange={(e) => setNewMember({ ...newMember, budgetLimit: parseInt(e.target.value) || 0 })}
-                    className="tabular-nums"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Maximum order value this member can approve
-                  </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* Members Cards */}
+        {members.map((member) => {
+          const initials = member.name.substring(0, 2).toUpperCase();
+          const avatarColor = COLORS[member.colorSeed];
+          
+          return (
+            <div key={member.id} className="bg-surface rounded-xl border border-border p-5 relative group hover:border-text-3 transition-colors flex flex-col">
+              <div className="flex justify-between items-start mb-4">
+                <div className={`w-12 h-12 rounded-full ${avatarColor} text-white flex items-center justify-center text-lg font-bold shadow-sm`}>
+                  {initials}
                 </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowInviteDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleInvite} disabled={createUserMutation.isPending}>
-                <Mail className="w-4 h-4 me-2" />
-                {createUserMutation.isPending ? "Sending..." : "Send Invitation"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-text-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Edit Role</DropdownMenuItem>
+                    {member.status === "pending" && <DropdownMenuItem>Resend Invite</DropdownMenuItem>}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-danger">
+                      <Trash2 className="w-4 h-4 mr-2" /> Remove
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
-      {/* Role Legend */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Object.entries(roleConfig).map(([key, config]) => (
-          <div
-            key={key}
-            className="bg-card rounded-lg border border-border p-3 text-sm"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">{config.label}</span>
+              <div className="mb-4 flex-1">
+                <h3 className="text-[15px] font-semibold text-text-1 truncate" title={member.name}>
+                  {member.name}
+                </h3>
+                <p className="text-[13px] text-text-3 truncate" title={member.email}>
+                  {member.email}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border pt-4">
+                <span className="text-[11px] font-mono text-text-3 bg-surface-2 px-2 py-1 rounded truncate max-w-[100px]">
+                  {member.role}
+                </span>
+                <span className="text-[11px] flex items-center gap-1.5 text-text-2">
+                  {member.status === "active" ? (
+                    <><span className="w-1.5 h-1.5 rounded-full bg-success"></span> Active</>
+                  ) : (
+                    <><span className="w-1.5 h-1.5 rounded-full bg-warning"></span> Pending</>
+                  )}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">{config.description}</p>
+          );
+        })}
+
+        {/* Invite CTA Card */}
+        <button
+          onClick={() => setShowInviteDialog(true)}
+          className="bg-transparent rounded-xl border-2 border-dashed border-amber/50 hover:border-amber hover:bg-amber/5 p-5 flex flex-col items-center justify-center text-amber transition-all h-[210px] active:scale-[0.98]"
+        >
+          <div className="w-12 h-12 rounded-full bg-amber/10 flex items-center justify-center mb-4">
+            <UserPlus className="w-6 h-6" />
           </div>
-        ))}
+          <span className="font-medium text-[15px]">Invite Member</span>
+          <span className="text-[13px] text-amber/70 mt-1">Add to team</span>
+        </button>
       </div>
 
-      {/* Team Members List */}
-      {isLoading ? (
-        <div className="bg-card rounded-xl border border-border p-6 text-center">
-          <p className="text-muted-foreground">Loading team members...</p>
-        </div>
-      ) : (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Member</th>
-                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Role</th>
-                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Budget Limit</th>
-                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Status</th>
-                <th className="text-start p-3 text-sm font-medium text-muted-foreground">Last Active</th>
-                <th className="text-center p-3 text-sm font-medium text-muted-foreground">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamMembers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-6 text-center text-muted-foreground">
-                    No team members found. Invite someone to get started.
-                  </td>
-                </tr>
-              ) : (
-                teamMembers.map((member, index) => {
-              const StatusIcon = statusConfig[member.status].icon;
-              return (
-                <tr
-                  key={member.id}
-                  className="border-t border-border hover:bg-muted/30 transition-colors animate-fade-in"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <td className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{member.name}</p>
-                        <p className="text-sm text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <StatusBadge variant={roleConfig[member.role].color as any} size="sm">
-                      {roleConfig[member.role].label}
-                    </StatusBadge>
-                  </td>
-                  <td className="p-3 tabular-nums">
-                    {member.budgetLimit ? `SAR ${member.budgetLimit.toLocaleString()}` : "-"}
-                  </td>
-                  <td className="p-3">
-                    <StatusBadge variant={statusConfig[member.status].color as any} size="sm">
-                      <StatusIcon className="w-3 h-3" />
-                      {statusConfig[member.status].label}
-                    </StatusBadge>
-                  </td>
-                  <td className="p-3 text-sm text-muted-foreground tabular-nums">
-                    {member.lastActive || "Never"}
-                  </td>
-                  <td className="p-3 text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="w-4 h-4 me-2" />
-                          Edit Permissions
-                        </DropdownMenuItem>
-                        {member.status === "pending" && (
-                          <DropdownMenuItem onClick={() => handleResendInvite(member)}>
-                            <Mail className="w-4 h-4 me-2" />
-                            Resend Invitation
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-danger"
-                          onClick={() => handleRemoveMember(member)}
-                        >
-                          <Trash2 className="w-4 h-4 me-2" />
-                          Remove Member
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                  </tr>
-                );
-              })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>Send an invitation email to join the company.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="name@company.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <select 
+                className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm focus:outline-none focus:ring-1 focus:ring-amber"
+                value={inviteRole} 
+                onChange={e => setInviteRole(e.target.value)}
+              >
+                <option value="ADMIN">Admin</option>
+                <option value="PROCUREMENT_MANAGER">Procurement Manager</option>
+                <option value="SITE_ENGINEER">Site Engineer</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowInviteDialog(false)}>Cancel</Button>
+            <Button onClick={() => inviteMutation.mutate()} disabled={inviteMutation.isPending || !inviteEmail}>
+              <Mail className="w-4 h-4 mr-2" />
+              {inviteMutation.isPending ? "Sending..." : "Send Invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

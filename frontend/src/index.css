@@ -1,119 +1,12 @@
+@import url('./styles/tokens.css');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* Industrial Professional Design System */
+
 @layer base {
-  :root {
-    /* Core Structure - Industrial Palette Optimized */
-    /* Background: Soft Beige #EAE0CF */
-    --background: 38 30% 86%;
-    /* Foreground: Deep Navy #213448 */
-    --foreground: 211 37% 21%;
-    
-    /* Cards: Slightly off-white for harmony with beige, avoids stark contrast */
-    --card: 38 30% 96%;
-    --card-foreground: 211 37% 21%;
-    
-    --popover: 38 30% 96%;
-    --popover-foreground: 211 37% 21%;
-    
-    /* Primary: Deep Navy #213448 */
-    --primary: 211 37% 21%;
-    --primary-foreground: 38 30% 86%;
-    
-    /* Secondary: Steel Blue #547792 */
-    --secondary: 206 27% 45%;
-    --secondary-foreground: 0 0% 100%;
-    
-    /* Muted: Light Blue-Grey #94B4C1 */
-    --muted: 197 26% 85%; /* Lightened for backgrounds */
-    --muted-foreground: 206 27% 35%; /* Darker for readable text */
-    
-    /* Accent: Construction Orange (Kept for alerts) */
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    
-    /* Status Colors - Harmonized brightness */
-    --success: 142 60% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 211 37% 21%;
-    --danger: 0 70% 60%;
-    --danger-foreground: 0 0% 100%;
-    
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 0 0% 100%;
-    
-    /* Borders: Soft Steel #94B4C1 */
-    --border: 197 26% 80%; /* Softer border */
-    --input: 197 26% 80%;
-    --ring: 206 27% 45%;
-    
-    /* Radius: Slightly sharper for industrial feel */
-    --radius: 0.35rem;
-    
-    /* Sidebar: Deep Navy #213448 */
-    --sidebar-background: 211 37% 21%;
-    --sidebar-foreground: 38 30% 90%;
-    --sidebar-primary: 206 27% 45%; /* Secondary Steel Blue for highlighting */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 211 37% 15%; /* Darker Navy */
-    --sidebar-accent-foreground: 38 30% 96%;
-    --sidebar-border: 211 37% 25%;
-    --sidebar-ring: 206 27% 45%;
-    
-    /* Custom Industrial Tokens */
-    --industrial-steel: 206 27% 45%;
-    --industrial-concrete: 197 26% 67%;
-    --industrial-highlight: 211 37% 21%;
-    --data-positive: 142 76% 36%;
-    --data-negative: 0 84% 60%;
-    --data-neutral: 197 26% 67%;
-  }
-
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 20% 98%;
-    
-    --card: 222 47% 8%;
-    --card-foreground: 210 20% 98%;
-    
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 20% 98%;
-    
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 20% 98%;
-    
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 20% 98%;
-    
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
-    
-    --sidebar-background: 222 47% 4%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 12%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 217 33% 12%;
-    --sidebar-ring: 217 91% 60%;
-  }
-
-  /* RTL Support */
   [dir="rtl"] {
     direction: rtl;
   }
@@ -121,119 +14,11 @@
   [lang="ar"] {
     font-family: 'Noto Sans Arabic', 'Inter', system-ui, sans-serif;
   }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
 
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-
-  body {
-    @apply bg-background text-foreground tracking-tight leading-relaxed;
-  }
-
-  /* Tabular numbers for data tables */
-  .tabular-nums {
-    font-variant-numeric: tabular-nums;
-  }
-}
-
-@layer components {
-  /* Industrial card styling */
-  .industrial-card {
-    @apply bg-card border border-border rounded-lg shadow-sm;
-  }
-
-  /* Data grid styling */
-  .data-grid {
-    @apply w-full text-sm;
-  }
-
-  .data-grid th {
-    @apply bg-muted px-4 py-3 text-left font-semibold text-foreground border-b border-border;
-  }
-
-  [dir="rtl"] .data-grid th {
-    @apply text-right;
-  }
-
-  .data-grid td {
-    @apply px-4 py-3 border-b border-border tabular-nums;
-  }
-
-  /* Status badges */
-  .status-badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
-  }
-
-  .status-badge--success {
-    @apply bg-success/10 text-success;
-  }
-
-  .status-badge--warning {
-    @apply bg-warning/10 text-warning;
-  }
-
-  .status-badge--danger {
-    @apply bg-danger/10 text-danger;
-  }
-
-  .status-badge--neutral {
-    @apply bg-muted text-muted-foreground;
-  }
-
-  /* Industrial button variants */
-  .btn-industrial {
-    @apply font-semibold tracking-tight;
-  }
-
-  /* Highlight cells */
-  .highlight-best {
-    @apply bg-success/10 text-success font-semibold;
-  }
-
-  .highlight-worst {
-    @apply bg-danger/10 text-danger;
-  }
-
-  /* Mobile bottom nav */
-  .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50;
-  }
-
-  .bottom-nav-item {
-    @apply flex flex-col items-center justify-center py-2 px-3 text-muted-foreground transition-colors;
-  }
-
-  .bottom-nav-item.active {
-    @apply text-primary;
-  }
-
-  /* Wizard steps */
-  .wizard-step {
-    @apply flex items-center gap-3;
-  }
-
-  .wizard-step-indicator {
-    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2;
-  }
-
-  .wizard-step-indicator--active {
-    @apply bg-primary text-primary-foreground border-primary;
-  }
-
-  .wizard-step-indicator--completed {
-    @apply bg-success text-success-foreground border-success;
-  }
-
-  .wizard-step-indicator--pending {
-    @apply bg-muted text-muted-foreground border-border;
   }
 }
 
@@ -272,4 +57,9 @@
 
 .animate-pulse-highlight {
   animation: pulse-highlight 2s ease-in-out infinite;
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
 }

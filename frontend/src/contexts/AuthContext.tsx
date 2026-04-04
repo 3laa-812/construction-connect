@@ -25,6 +25,7 @@ function mapBackendUser(loggedInUser: any, emailFallback: string): User {
     crNumber: loggedInUser.company?.commercial_reg_no,
     companyId: loggedInUser.company?.id,
     companyType: loggedInUser.company?.type,
+    companyCountry: loggedInUser.company?.country ?? undefined,
   };
 }
 

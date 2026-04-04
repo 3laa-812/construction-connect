@@ -35,12 +35,10 @@ vi.mock("@/hooks/use-toast", () => ({ toast: vi.fn() }));
 describe("BidComparisonTable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGet.mockResolvedValue({
-      data: [
-        {
-          id: "rfq-1",
-          items: [{ product_name: "Cement" }],
-          bids: [
+    mockGet.mockImplementation((url: string) => {
+      if (typeof url === "string" && url.includes("/bids")) {
+        return Promise.resolve({
+          data: [
             {
               id: "bid-1",
               supplier: { name: "Supplier A" },
@@ -49,8 +47,9 @@ describe("BidComparisonTable", () => {
               valid_until: new Date(Date.now() + 86400000 * 7).toISOString(),
             },
           ],
-        },
-      ],
+        });
+      }
+      return Promise.resolve({ data: [] });
     });
     mockPatch.mockResolvedValue({ data: { id: "po-1" } });
   });
@@ -65,7 +64,7 @@ describe("BidComparisonTable", () => {
     return render(
       <QueryClientProvider client={qc}>
         <MemoryRouter>
-          <BidComparisonTable />
+          <BidComparisonTable rfqId="rfq-1" rfqStatus="OPEN" />
         </MemoryRouter>
       </QueryClientProvider>,
     );

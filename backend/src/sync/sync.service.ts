@@ -13,67 +13,61 @@ export class SyncService {
     private purchaseOrders: PurchaseOrdersService,
   ) {}
 
-  async pullChanges(lastPulledAt: number) {
-    this.logger.debug(`pullChanges lastPulledAt=${lastPulledAt}`);
-    const timestamp = new Date(lastPulledAt);
-    const changes = await this.prisma.syncChange.findMany({
-      where: {
-        changed_at: {
-          gt: timestamp,
-        },
-      },
-      orderBy: {
-        changed_at: 'asc',
-      },
-    });
+  async pullChanges(lastPulledAt: number, user: JwtPayload) {
+    this.logger.debug(
+      `pullChanges lastPulledAt=${lastPulledAt} companyId=${user.companyId}`,
+    );
+    const since = new Date(lastPulledAt);
 
-    const groupedChanges = changes.reduce((acc, change) => {
-      const { table_name, record_id, operation } = change;
-      if (!acc[table_name]) {
-        acc[table_name] = { created: [], updated: [], deleted: [] };
-      }
-      
-      if (operation === 'CREATE') {
-        acc[table_name].created.push(record_id); 
-        // Note: Ideally we should fetch the actual data here. 
-        // For 'created' and 'updated', we need to return the full object, not just ID.
-        // This current implementation is a specialized optimized fetcher.
-      } else if (operation === 'UPDATE') {
-        acc[table_name].updated.push(record_id);
-      } else if (operation === 'DELETE') {
-        acc[table_name].deleted.push(record_id);
-      }
-      return acc;
-    }, {});
+    // Minimal, explicit scoped pull. This avoids relying on sync_changes
+    // (which isn't guaranteed to be populated for server-seeded data).
+    const [projectsRaw, sitesRaw] = await Promise.all([
+      this.prisma.project.findMany({
+        where: { company_id: user.companyId },
+        orderBy: { created_at: 'desc' },
+      }),
+      this.prisma.site.findMany({
+        where: { project: { company_id: user.companyId } },
+        include: { project: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
 
-    // Hydrate created/updated records with actual data
-    // This is a naive implementation; for production, bulk fetch per table.
-    for (const tableName in groupedChanges) {
-        const modelName = this.mapTableNameToModel(tableName);
-        if (!modelName) continue;
+    // Mobile WatermelonDB schema expects numeric timestamps for *_at / *_date fields.
+    const projects = projectsRaw
+      .filter((p) => p.created_at > since)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        company_id: p.company_id,
+        status: null,
+        start_date: p.start_date ? p.start_date.getTime() : null,
+        end_date: p.end_date ? p.end_date.getTime() : null,
+        created_at: p.created_at.getTime(),
+        updated_at: p.created_at.getTime(),
+      }));
 
-        // Hydrate Created
-        const createdIds = groupedChanges[tableName].created;
-        if (createdIds.length > 0) {
-             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-             // @ts-ignore
-            const records = await this.prisma[modelName].findMany({ where: { id: { in: createdIds } } });
-            groupedChanges[tableName].created = records.map(r => this.sanitizeOutbound(r));
-        }
-
-        // Hydrate Updated
-        const updatedIds = groupedChanges[tableName].updated;
-        if (updatedIds.length > 0) {
-             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-             // @ts-ignore
-            const records = await this.prisma[modelName].findMany({ where: { id: { in: updatedIds } } });
-            groupedChanges[tableName].updated = records.map(r => this.sanitizeOutbound(r));
-        }
-    }
+    const sites = sitesRaw
+      .filter((s) => s.project.created_at > since)
+      .map((s) => ({
+        id: s.id,
+        project_id: s.project_id,
+        name: s.name,
+        latitude: s.latitude ? Number(s.latitude) : null,
+        longitude: s.longitude ? Number(s.longitude) : null,
+        geofence_polygon: s.geofence_polygon
+          ? JSON.stringify(s.geofence_polygon)
+          : null,
+        created_at: s.project.created_at.getTime(),
+        updated_at: s.project.created_at.getTime(),
+      }));
 
     return {
-        changes: groupedChanges,
-        timestamp: Date.now(), 
+      changes: {
+        projects: { created: projects, updated: [], deleted: [] },
+        sites: { created: sites, updated: [], deleted: [] },
+      },
+      timestamp: Date.now(),
     };
   }
 

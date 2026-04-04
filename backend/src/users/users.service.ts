@@ -53,7 +53,7 @@ export class UsersService {
       return this.prisma.user.findMany({ include: { company: true } });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     return this.prisma.user.findMany({
       where: { company_id: user.companyId },

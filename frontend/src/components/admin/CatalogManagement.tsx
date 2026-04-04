@@ -1,26 +1,18 @@
-import { useEffect, useState } from "react";
-import { Plus, Edit, Trash2, FolderTree, Package, Scale, Search, MoreHorizontal, Save } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { Plus, Package, FolderTree, Edit2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -28,11 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { api } from "@/lib/api";
 
 interface Category {
   id: string;
@@ -42,546 +29,282 @@ interface Category {
   productCount: number;
 }
 
-interface UnitOfMeasure {
+interface Product {
   id: string;
   name: string;
-  nameAr: string;
-  symbol: string;
-  type: "weight" | "volume" | "length" | "area" | "count";
+  unit: string;
+  base_price: string | number;
 }
 
-// FR-F02: Catalog Management Component
+interface NewProductForm {
+  name: string;
+  unit: string;
+  base_price: number | "";
+  category: string;
+  description: string;
+}
+
+const UNITS = ["Ton", "KG", "Piece", "M3", "Bag", "Roll", "SQM", "M", "Box", "L", "Gallon"];
+
 export function CatalogManagement() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
-
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [units, setUnits] = useState<UnitOfMeasure[]>([]);
-
-  const { data: fetchCategories, isLoading: isLoadingCategories } = useQuery<Category[]>({
-    queryKey: ["admin-categories"],
-    queryFn: async () => {
-      const response = await api.get("/admin/categories");
-      return response.data;
-    },
-  });
-
-  const { data: companySettings, isLoading: isLoadingSettings } = useQuery<{
-    catalog?: { units?: UnitOfMeasure[] };
-  }>({
-    queryKey: ["company-settings", user?.companyId],
-    queryFn: async () => {
-      if (!user?.companyId) return {} as any;
-      const response = await api.get(`/settings/company/${user.companyId}`);
-      return response.data;
-    },
-    enabled: !!user?.companyId,
-  });
-
-  useEffect(() => {
-    if (fetchCategories) {
-      setCategories(fetchCategories);
-    }
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    if (companySettings?.catalog) {
-      setUnits(companySettings.catalog.units || []);
-    } else {
-      setUnits([
-        { id: "unit-1", name: "Kilogram", nameAr: "كيلوغرام", symbol: "kg", type: "weight" },
-        { id: "unit-6", name: "Piece", nameAr: "قطعة", symbol: "pc", type: "count" },
-      ]);
-    }
-  }, [companySettings]);
-
+  const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [showUnitDialog, setShowUnitDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [editingUnit, setEditingUnit] = useState<UnitOfMeasure | null>(null);
-
-  const [newCategory, setNewCategory] = useState({
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [form, setForm] = useState<NewProductForm>({
     name: "",
-    nameAr: "",
-    parentId: "",
+    unit: "Ton",
+    base_price: "",
+    category: "",
+    description: "",
   });
 
-  const [newUnit, setNewUnit] = useState({
-    name: "",
-    nameAr: "",
-    symbol: "",
-    type: "count" as UnitOfMeasure["type"],
+  const { data: categories = [], isLoading } = useQuery<Category[]>({
+    queryKey: ["admin-categories"],
+    queryFn: async () => (await api.get("/admin/categories")).data,
   });
 
-  const parentCategories = categories.filter((c) => c.parentId === null);
-
-  const filteredCategories = categories.filter(
-    (cat) =>
-      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cat.nameAr.includes(searchTerm)
-  );
-
-  const createCategoryMutation = useMutation({
-    mutationFn: (newCat: any) => api.post('/admin/categories', newCat),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery<Product[]>({
+    queryKey: ["admin-products", selectedCatId],
+    queryFn: async () => (await api.get("/materials", { params: selectedCatId ? { category: selectedCatId } : {} })).data,
   });
 
-  const updateCategoryMutation = useMutation({
-    mutationFn: (cat: any) => api.patch(`/admin/categories/${cat.id}`, cat),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
-  });
-
-  const deleteCategoryMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/admin/categories/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
-  });
-
-  const handleSaveCategory = () => {
-    if (!newCategory.name || !newCategory.nameAr) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editingCategory) {
-      updateCategoryMutation.mutate({ id: editingCategory.id, name: newCategory.name, nameAr: newCategory.nameAr, parentId: newCategory.parentId || null });
-      toast({ title: "Category Updated", description: `${newCategory.name} has been updated` });
-    } else {
-      createCategoryMutation.mutate({ name: newCategory.name, nameAr: newCategory.nameAr, parentId: newCategory.parentId || null });
-      toast({ title: "Category Created", description: `${newCategory.name} has been added` });
-    }
-
-    setShowCategoryDialog(false);
-    setEditingCategory(null);
-    setNewCategory({ name: "", nameAr: "", parentId: "" });
-  };
-
-  const handleSaveUnit = () => {
-    if (!newUnit.name || !newUnit.nameAr || !newUnit.symbol) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (editingUnit) {
-      setUnits((prev) =>
-        prev.map((u) =>
-          u.id === editingUnit.id
-            ? { ...u, ...newUnit }
-            : u
-        )
-      );
-      toast({ title: "Unit Updated", description: `${newUnit.name} has been updated` });
-    } else {
-      const newU: UnitOfMeasure = {
-        id: `unit-${Date.now()}`,
-        ...newUnit,
-      };
-      setUnits((prev) => [...prev, newU]);
-      toast({ title: "Unit Created", description: `${newUnit.name} has been added` });
-    }
-
-    setShowUnitDialog(false);
-    setEditingUnit(null);
-    setNewUnit({ name: "", nameAr: "", symbol: "", type: "count" });
-  };
-
-  const handleDeleteCategory = (cat: Category) => {
-    deleteCategoryMutation.mutate(cat.id);
-    toast({ title: "Category Deleted", description: `${cat.name} has been removed` });
-  };
-
-  const handleDeleteUnit = (unit: UnitOfMeasure) => {
-    setUnits((prev) => prev.filter((u) => u.id !== unit.id));
-    toast({ title: "Unit Deleted", description: `${unit.name} has been removed` });
-  };
-
-  const saveCatalogMutation = useMutation({
-    mutationFn: async () => {
-      if (!user?.companyId) {
-        throw new Error("Company ID not found. Please log out and log back in.");
-      }
-      try {
-        const response = await api.patch(`/settings/company/${user.companyId}`, {
-          catalog: { units },
-        });
-        return response;
-      } catch (error: any) {
-        console.error("Catalog save error:", error);
-        throw error;
-      }
-    },
+  const createProductMutation = useMutation({
+    mutationFn: async (data: NewProductForm) =>
+      (await api.post("/materials", {
+        name: data.name,
+        unit: data.unit,
+        base_price: Number(data.base_price),
+        category: data.category,
+        description: data.description,
+        is_active: true,
+      })).data,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-settings", user?.companyId] });
-      toast({ title: "Catalog Saved", description: "Catalog configuration has been updated" });
+      toast({ title: "Product created", description: `${form.name} added to catalog.` });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      setShowAddProduct(false);
+      setForm({ name: "", unit: "Ton", base_price: "", category: "", description: "" });
     },
     onError: (error: any) => {
-      console.error("Catalog mutation error:", error);
       toast({
+        title: "Failed to create product",
+        description: error?.response?.data?.message || "Please try again.",
         variant: "destructive",
-        title: "Save Failed",
-        description: error.message || error.response?.data?.message || "Could not save catalog configuration",
       });
     },
   });
 
+  const rootCategories = categories.filter(c => !c.parentId);
+  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleAddProduct = () => {
+    if (!form.name.trim() || !form.unit || !form.base_price) {
+      toast({ title: "Missing fields", description: "Name, unit, and base price are required.", variant: "destructive" });
+      return;
+    }
+    createProductMutation.mutate(form);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Catalog Management</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage categories, subcategories, and units of measurement (FR-F02)
-          </p>
+    <div className="h-[calc(100vh-200px)] min-h-[600px] bg-surface rounded-xl border border-border overflow-hidden flex flex-col relative">
+      <div className="flex flex-1 min-h-0">
+        
+        {/* Left Panel: Category Tree (30%) */}
+        <div className="w-[30%] border-r border-border bg-surface-2 flex flex-col min-h-0 shrink-0">
+          <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface-2 z-10">
+            <h3 className="font-medium text-text-1 flex items-center gap-2 text-[14px]">
+              <FolderTree className="w-4 h-4 text-text-3" />
+              Categories
+            </h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-2">
+            {isLoading ? (
+              <div className="p-4 text-sm text-text-3">Loading categories...</div>
+            ) : rootCategories.length === 0 ? (
+              <div className="p-4 text-sm text-text-3">No categories.</div>
+            ) : (
+              <div className="space-y-1">
+                <button
+                    onClick={() => setSelectedCatId(null)}
+                    className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-md text-[13px] transition-colors ${
+                      selectedCatId === null ? "bg-amber/10 text-amber font-medium" : "text-text-2 hover:bg-white/5"
+                    }`}
+                  >
+                    <span>All Categories</span>
+                </button>
+                {rootCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCatId(cat.id)}
+                    className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-md text-[13px] transition-colors ${
+                      selectedCatId === cat.id ? "bg-amber/10 text-amber font-medium" : "text-text-2 hover:bg-white/5"
+                    }`}
+                  >
+                    <span>{cat.name}</span>
+                    <span className="text-[11px] font-mono opacity-50">{cat.productCount || 0}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <Tabs defaultValue="categories" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categories" className="flex items-center gap-2">
-            <FolderTree className="w-4 h-4" />
-            Categories
-          </TabsTrigger>
-          <TabsTrigger value="units" className="flex items-center gap-2">
-            <Scale className="w-4 h-4" />
-            Units
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search categories..."
+        {/* Right Panel: Products Data Table (70%) */}
+        <div className="w-[70%] flex flex-col min-h-0 bg-surface">
+          <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-surface z-10">
+            <div className="relative w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-3" />
+              <Input 
+                placeholder="Search products..." 
+                className="pl-9 h-9" 
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingCategory(null)}>
-                  <Plus className="w-4 h-4 me-2" />
-                  Add Category
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingCategory ? "Edit Category" : "Add New Category"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Create a new product category for the marketplace
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Name (English) *</Label>
-                      <Input
-                        placeholder="e.g., Building Materials"
-                        value={newCategory.name}
-                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Name (Arabic) *</Label>
-                      <Input
-                        placeholder="مواد البناء"
-                        dir="rtl"
-                        value={newCategory.nameAr}
-                        onChange={(e) => setNewCategory({ ...newCategory, nameAr: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Parent Category</Label>
-                    <Select
-                      value={newCategory.parentId}
-                      onValueChange={(v) => setNewCategory({ ...newCategory, parentId: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="None (Top-level category)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">None (Top-level)</SelectItem>
-                        {parentCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowCategoryDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSaveCategory}>
-                    <Save className="w-4 h-4 me-2" />
-                    {editingCategory ? "Update" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2 text-sm text-text-3">
+              <span>Selected Category:</span>
+              <span className="font-medium text-text-1">{categories.find(c => c.id === selectedCatId)?.name || "All"}</span>
+            </div>
           </div>
 
-          <div className="bg-card rounded-xl border border-border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/50">
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-surface sticky top-0 border-b border-border z-10 shadow-sm">
                 <tr>
-                  <th className="text-start p-3 text-sm font-medium text-muted-foreground">Category</th>
-                  <th className="text-start p-3 text-sm font-medium text-muted-foreground">Arabic</th>
-                  <th className="text-start p-3 text-sm font-medium text-muted-foreground">Parent</th>
-                  <th className="text-center p-3 text-sm font-medium text-muted-foreground">Products</th>
-                  <th className="text-center p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                  <th className="p-3 text-[12px] font-medium text-text-3 uppercase tracking-wider pl-6">ID</th>
+                  <th className="p-3 text-[12px] font-medium text-text-3 uppercase tracking-wider">Product Name</th>
+                  <th className="p-3 text-[12px] font-medium text-text-3 uppercase tracking-wider">Unit</th>
+                  <th className="p-3 text-[12px] font-medium text-text-3 uppercase tracking-wider text-right">Base Price</th>
                 </tr>
               </thead>
-              <tbody>
-                {isLoadingCategories ? (
-                  [...Array(5)].map((_, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="p-3"><div className="flex items-center gap-2"><Skeleton className="h-4 w-4 rounded-sm" /><Skeleton className="h-4 w-[120px]" /></div></td>
-                      <td className="p-3"><Skeleton className="h-4 w-[120px]" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-[100px]" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-[40px] mx-auto" /></td>
-                      <td className="p-3"><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
+              <tbody className="divide-y divide-border/50">
+                {isLoadingProducts ? (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-text-3 text-sm">Loading products...</td>
+                  </tr>
+                ) : filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-text-3 text-sm">No products found.</td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <tr key={product.id} className="hover:bg-surface-2 transition-colors group cursor-text">
+                      <td className="p-3 pl-6 text-[13px] font-mono text-text-3">{product.id.slice(0, 8)}</td>
+                      <td className="p-3 text-[14px] text-text-1 font-medium flex items-center justify-between group-hover:text-amber transition-colors">
+                        {product.name}
+                        <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </td>
+                      <td className="p-3 text-[13px] text-text-2">{product.unit || "—"}</td>
+                      <td className="p-3 text-[13px] font-mono text-text-1 text-right">{Number(product.base_price).toFixed(2)}</td>
                     </tr>
                   ))
-                ) : (
-                filteredCategories.map((cat) => {
-                  const parent = categories.find((c) => c.id === cat.parentId);
-                  return (
-                    <tr key={cat.id} className="border-t border-border hover:bg-muted/30">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{cat.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-muted-foreground" dir="rtl">{cat.nameAr}</td>
-                      <td className="p-3 text-muted-foreground">{parent?.name || "-"}</td>
-                      <td className="p-3 text-center tabular-nums">{cat.productCount}</td>
-                      <td className="p-3 text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditingCategory(cat);
-                                setNewCategory({
-                                  name: cat.name,
-                                  nameAr: cat.nameAr,
-                                  parentId: cat.parentId || "",
-                                });
-                                setShowCategoryDialog(true);
-                              }}
-                            >
-                              <Edit className="w-4 h-4 me-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-danger"
-                              onClick={() => handleDeleteCategory(cat)}
-                            >
-                              <Trash2 className="w-4 h-4 me-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                }))}
+                )}
               </tbody>
             </table>
           </div>
-        </TabsContent>
+        </div>
+      </div>
 
-        {/* Units Tab */}
-        <TabsContent value="units" className="space-y-4">
-          <div className="flex justify-end">
-            <Dialog open={showUnitDialog} onOpenChange={setShowUnitDialog}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setEditingUnit(null)}>
-                  <Plus className="w-4 h-4 me-2" />
-                  Add Unit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingUnit ? "Edit Unit" : "Add New Unit"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    Create a new unit of measurement
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Name (English) *</Label>
-                      <Input
-                        placeholder="e.g., Kilogram"
-                        value={newUnit.name}
-                        onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Name (Arabic) *</Label>
-                      <Input
-                        placeholder="كيلوغرام"
-                        dir="rtl"
-                        value={newUnit.nameAr}
-                        onChange={(e) => setNewUnit({ ...newUnit, nameAr: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Symbol *</Label>
-                      <Input
-                        placeholder="e.g., kg"
-                        value={newUnit.symbol}
-                        onChange={(e) => setNewUnit({ ...newUnit, symbol: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Type *</Label>
-                      <Select
-                        value={newUnit.type}
-                        onValueChange={(v) => setNewUnit({ ...newUnit, type: v as UnitOfMeasure["type"] })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="weight">Weight</SelectItem>
-                          <SelectItem value="volume">Volume</SelectItem>
-                          <SelectItem value="length">Length</SelectItem>
-                          <SelectItem value="area">Area</SelectItem>
-                          <SelectItem value="count">Count</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowUnitDialog(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSaveUnit}>
-                    <Save className="w-4 h-4 me-2" />
-                    {editingUnit ? "Update" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {isLoadingSettings ? (
-              [...Array(4)].map((_, i) => (
-                <div key={i} className="bg-card rounded-xl border border-border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                </div>
-              ))
-            ) : (
-            units.map((unit) => (
-              <div
-                key={unit.id}
-                className="bg-card rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <span className="text-primary font-bold text-sm">{unit.symbol}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-foreground">{unit.name}</h4>
-                      <p className="text-sm text-muted-foreground" dir="rtl">{unit.nameAr}</p>
-                    </div>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditingUnit(unit);
-                          setNewUnit({
-                            name: unit.name,
-                            nameAr: unit.nameAr,
-                            symbol: unit.symbol,
-                            type: unit.type,
-                          });
-                          setShowUnitDialog(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4 me-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-danger"
-                        onClick={() => handleDeleteUnit(unit)}
-                      >
-                        <Trash2 className="w-4 h-4 me-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <div className="mt-3 pt-3 border-t border-border">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    {unit.type}
-                  </span>
-                </div>
-              </div>
-            )))}
-          </div>
-        </TabsContent>
-      </Tabs>
-      <div className="flex justify-end">
-        <Button
-          className="mt-2"
-          onClick={() => saveCatalogMutation.mutate()}
-          disabled={saveCatalogMutation.isPending}
+      {/* Floating Action Buttons */}
+      <div className="absolute bottom-6 right-6 flex flex-col gap-3">
+        <Button className="rounded-full shadow-lg h-12 px-6 bg-surface-2 text-text-1 border border-border hover:bg-surface hover:text-amber transition-colors" variant="outline">
+          <FolderTree className="w-4 h-4 mr-2" />
+          Add Category
+        </Button>
+        <Button 
+          onClick={() => setShowAddProduct(true)}
+          className="rounded-full shadow-lg h-14 px-6 bg-amber hover:bg-amber-hover text-black font-semibold text-[15px] transition-all active:scale-95"
         >
-          <Save className="w-4 h-4 me-2" />
-          {saveCatalogMutation.isPending ? "Saving..." : "Save Catalog"}
+          <Plus className="w-5 h-5 mr-2" />
+          Add Product
         </Button>
       </div>
+
+      {/* Add Product Dialog */}
+      <Dialog open={showAddProduct} onOpenChange={setShowAddProduct}>
+        <DialogContent className="max-w-md bg-surface border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-text-1">
+              <Package className="w-5 h-5 text-amber" />
+              Add New Product
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-[12px] text-text-2 uppercase tracking-wider">Product Name *</Label>
+              <Input
+                placeholder="e.g. Steel Rebar 16mm"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[12px] text-text-2 uppercase tracking-wider">Unit *</Label>
+                <Select value={form.unit} onValueChange={v => setForm(f => ({ ...f, unit: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNITS.map(u => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[12px] text-text-2 uppercase tracking-wider">Base Price (SAR) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={form.base_price}
+                  onChange={e => setForm(f => ({ ...f, base_price: e.target.value ? Number(e.target.value) : "" }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[12px] text-text-2 uppercase tracking-wider">Category</Label>
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rootCategories.map(c => (
+                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[12px] text-text-2 uppercase tracking-wider">Description</Label>
+              <Input
+                placeholder="Short product description..."
+                value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddProduct(false)}>Cancel</Button>
+            <Button
+              onClick={handleAddProduct}
+              disabled={createProductMutation.isPending}
+              className="bg-amber hover:bg-amber-hover text-black font-semibold"
+            >
+              {createProductMutation.isPending ? "Adding..." : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

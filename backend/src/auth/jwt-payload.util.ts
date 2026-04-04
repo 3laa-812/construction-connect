@@ -18,5 +18,6 @@ export function buildJwtPayload(user: UserWithCompany): JwtPayload {
     email: user.email,
     companyId: user.company_id ?? '',
     role,
+    companyCountry: user.company?.country ?? undefined,
   };
 }

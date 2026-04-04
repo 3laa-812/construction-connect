@@ -79,13 +79,23 @@ export class RFQsService {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (user.role === 'ADMIN') {
-      return this.prisma.rFQ.create({ data });
+
+    const createData: Prisma.RFQCreateInput = {
+      ...data,
+      created_user: { connect: { id: user.sub } },
+    };
+
+    try {
+      if (user.role === 'ADMIN') {
+        return await this.prisma.rFQ.create({ data: createData });
+      }
+      if (user.role !== 'CONTRACTOR' || project.company_id !== user.companyId) {
+        throw new ForbiddenException('Cannot create RFQ for this project');
+      }
+      return await this.prisma.rFQ.create({ data: createData });
+    } catch (e: any) {
+      throw new BadRequestException(e.message || String(e));
     }
-    if (user.role !== 'CONTRACTOR' || project.company_id !== user.companyId) {
-      throw new ForbiddenException('Cannot create RFQ for this project');
-    }
-    return this.prisma.rFQ.create({ data });
   }
 
   async addAttachment(
@@ -129,7 +139,7 @@ export class RFQsService {
       return this.prisma.rFQ.findMany({ include: rfqListInclude });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     if (user.role === 'CONTRACTOR') {
       return this.prisma.rFQ.findMany({

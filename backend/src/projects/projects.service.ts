@@ -40,7 +40,7 @@ export class ProjectsService {
       return this.prisma.project.findMany({ include: projectInclude });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     if (user.role === 'SUPPLIER') {
       return this.prisma.project.findMany({

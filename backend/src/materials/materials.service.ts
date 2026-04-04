@@ -5,11 +5,18 @@ import { PrismaService } from '../prisma/prisma.service';
 export class MaterialsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters: { category?: string; supplierId?: string }) {
+  async findAll(filters: {
+    category?: string;
+    supplierId?: string;
+    search?: string;
+  }) {
     return this.prisma.product.findMany({
       where: {
         ...(filters.category && { category: filters.category }),
         ...(filters.supplierId && { supplier_company_id: filters.supplierId }),
+        ...(filters.search && {
+          name: { contains: filters.search, mode: 'insensitive' },
+        }),
         is_active: true,
       },
       include: { supplier: { select: { name: true, is_verified: true } } },

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, ClipboardList, MapPin, Phone, User, Building2, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, MapPin, Phone, User, Building2, MoreVertical, Edit, Trash2, ClipboardList, FolderKanban } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,14 +66,12 @@ export default function Projects() {
     location: "",
     receiverName: "",
     receiverPhone: "",
+    budget: "",
   });
 
   const { data, isLoading, isError } = useQuery<ApiProject[]>({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const response = await api.get("/projects");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/projects")).data,
   });
 
   const projects: Project[] = useMemo(() => {
@@ -105,198 +103,234 @@ export default function Projects() {
       project.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const activeCount = projects.filter(p => p.status === 'active').length;
+
   const handleCreateProject = () => {
     if (newProject.name && newProject.location && newProject.receiverName && newProject.receiverPhone) {
       toast({
-        title: t("projects.toast.created_title"),
-        description: t("projects.toast.created_desc", { name: newProject.name }),
+        title: "Project Initialized",
+        description: `Project setup for ${newProject.name} has been completed.`,
       });
       setShowCreateDialog(false);
-      setNewProject({ name: "", location: "", receiverName: "", receiverPhone: "" });
+      setNewProject({ name: "", location: "", receiverName: "", receiverPhone: "", budget: "" });
     }
   };
 
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 space-y-6">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between border-b border-border pb-6">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("projects.title")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("projects.subtitle")}
-            </p>
+            <h1 className="text-[24px] font-display text-text-1">Project Portfolio</h1>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-[13px] text-text-2">
+                Manage operational locations and budgets across your organization.
+              </p>
+              <StatusBadge variant="success" size="sm" className="font-mono">{activeCount} ACTIVE</StatusBadge>
+            </div>
           </div>
+          
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 me-2" />
-                {t("projects.create_new")}
+              <Button className="shrink-0 h-10 px-5 text-[14px] bg-amber text-black hover:bg-amber-hover font-bold shadow-lg shadow-amber/20 active:scale-95 transition-all">
+                <Plus className="w-4 h-4 mr-2" />
+                New Project
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>{t("projects.create_dialog.title")}</DialogTitle>
-                <DialogDescription>
-                  {t("projects.create_dialog.desc")}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">{t("projects.create_dialog.name")}</Label>
-                  <Input
-                    id="name"
-                    placeholder={t("projects.create_dialog.name_placeholder")}
-                    value={newProject.name}
-                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  />
+            <DialogContent className="sm:max-w-2xl bg-surface border-border p-0 overflow-hidden">
+              <div className="bg-surface-2 border-b border-border p-6 flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-[18px] font-display text-text-1">Initialize Project</DialogTitle>
+                  <DialogDescription className="text-text-2 text-[13px] mt-1">
+                     Configure standard procurement and delivery details for this new operational site.
+                  </DialogDescription>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">{t("projects.create_dialog.location")}</Label>
-                  <Textarea
-                    id="location"
-                    placeholder={t("projects.create_dialog.location_placeholder")}
-                    value={newProject.location}
-                    onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("projects.create_dialog.location_tip")}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="receiver">{t("projects.create_dialog.receiver")}</Label>
-                    <Input
-                      id="receiver"
-                      placeholder={t("projects.create_dialog.receiver_placeholder")}
-                      value={newProject.receiverName}
-                      onChange={(e) => setNewProject({ ...newProject, receiverName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">{t("projects.create_dialog.phone")}</Label>
-                    <Input
-                      id="phone"
-                      placeholder={t("projects.create_dialog.phone_placeholder")}
-                      value={newProject.receiverPhone}
-                      onChange={(e) => setNewProject({ ...newProject, receiverPhone: e.target.value })}
-                    />
-                  </div>
+                <div className="w-12 h-12 rounded-lg bg-amber/10 border border-amber/20 flex items-center justify-center shrink-0 hidden sm:flex">
+                  <FolderKanban className="w-6 h-6 text-amber" />
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                  {t("projects.create_dialog.cancel")}
+              
+              <div className="p-6 space-y-6 bg-ground">
+                 <div className="grid sm:grid-cols-2 gap-6">
+                   <div className="space-y-2 col-span-2">
+                     <Label htmlFor="name" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Project Designation</Label>
+                     <Input
+                       id="name"
+                       placeholder="e.g. Riyadh Villa Compound Phase 2"
+                       value={newProject.name}
+                       onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                       className="h-10 bg-surface-2 border-border-2 font-mono text-[13px]"
+                     />
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <Label htmlFor="budget" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Allocated Budget (SAR)</Label>
+                     <Input
+                       id="budget"
+                       type="number"
+                       placeholder="0.00"
+                       value={newProject.budget}
+                       onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                       className="h-10 bg-surface-2 border-border-2 font-mono text-[13px]"
+                     />
+                   </div>
+                   
+                   <div className="space-y-2 col-span-2 sm:col-span-1"></div>
+
+                   <div className="space-y-2 col-span-2">
+                     <Label htmlFor="location" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Delivery Site Logistics</Label>
+                     <Textarea
+                       id="location"
+                       placeholder="Provide full shipping address or coordinate details for deliveries..."
+                       value={newProject.location}
+                       onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                       className="min-h-[80px] bg-surface-2 border-border-2 font-mono text-[13px] resize-none"
+                     />
+                   </div>
+
+                   <div className="space-y-2">
+                     <Label htmlFor="receiver" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Site Superintendent</Label>
+                     <Input
+                       id="receiver"
+                       placeholder="Authorised recipient name"
+                       value={newProject.receiverName}
+                       onChange={(e) => setNewProject({ ...newProject, receiverName: e.target.value })}
+                       className="h-10 bg-surface-2 border-border-2 font-mono text-[13px]"
+                     />
+                   </div>
+
+                   <div className="space-y-2">
+                     <Label htmlFor="phone" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Site Contact Number</Label>
+                     <Input
+                       id="phone"
+                       placeholder="+966 5X XXX XXXX"
+                       value={newProject.receiverPhone}
+                       onChange={(e) => setNewProject({ ...newProject, receiverPhone: e.target.value })}
+                       className="h-10 bg-surface-2 border-border-2 font-mono text-[13px]"
+                     />
+                   </div>
+                 </div>
+              </div>
+              
+              <DialogFooter className="border-t border-border bg-surface p-4 flex gap-2">
+                <Button variant="outline" className="h-10 border-border text-text-2 hover:bg-surface-2 hover:text-text-1" onClick={() => setShowCreateDialog(false)}>
+                  Cancel
                 </Button>
                 <Button
+                  className="h-10 bg-amber hover:bg-amber-hover text-black font-semibold shadow-[0_1px_0_rgba(255,255,255,0.1)_inset]"
                   onClick={handleCreateProject}
                   disabled={!newProject.name || !newProject.location || !newProject.receiverName || !newProject.receiverPhone}
                 >
-                  {t("projects.create_dialog.submit")}
+                  Confirm & Provision
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Search */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Action Bar */}
+        <div className="bg-surface-2 rounded border border-border p-3">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-3" />
             <Input
-              placeholder={t("projects.search_placeholder")}
+              placeholder="Query by project name or site location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-9 h-10 border-border bg-surface text-[14px]"
             />
           </div>
         </div>
 
         {/* Projects Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {isLoading ? (
-            <div className="bg-card rounded-xl border border-border p-12 text-center text-muted-foreground">
-              Loading projects...
-            </div>
+             <div className="col-span-3 py-16 text-center text-text-3 font-mono text-sm tracking-widest">
+                VERIFYING SITE DATA...
+             </div>
           ) : isError ? (
-            <div className="bg-card rounded-xl border border-border p-12 text-center text-danger">
-              Failed to load projects
+            <div className="col-span-3 py-16 text-center text-danger bg-danger/5 border border-danger/20 rounded font-mono text-sm">
+              TELEMETRY ERROR: FAILED TO LOAD PORTFOLIO
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="col-span-3 border border-dashed border-border-2 rounded-lg p-12 text-center">
+              <Building2 className="w-8 h-8 text-text-3 mx-auto mb-4 opacity-50" />
+              <p className="font-medium text-text-1">No Projects Found</p>
+              <p className="text-[13px] text-text-3 mt-1">Initialize a new project to track specific site material orders.</p>
             </div>
           ) : (
             filteredProjects.map((project, index) => (
               <div
                 key={project.id}
-                className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-shadow animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="bg-surface rounded-xl border border-border p-5 group hover:border-amber/40 hover:shadow-amber transition-all duration-200 flex flex-col h-full active:scale-[0.98]"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                      <ClipboardList className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{project.name}</h3>
-                      <StatusBadge
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 pr-4">
+                     <h3 className="font-display font-medium text-[16px] text-text-1 line-clamp-1" title={project.name}>
+                        {project.name}
+                     </h3>
+                     <StatusBadge
                         variant={statusConfig[project.status].color as any}
                         size="sm"
-                        className="mt-1"
+                        className="mt-2 font-mono text-[10px] tracking-wider"
                       >
-                        {t(statusConfig[project.status].labelKey)}
+                        {t(statusConfig[project.status].labelKey).toUpperCase()}
                       </StatusBadge>
-                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-text-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>
-                        <Edit className="w-4 h-4 me-2" />
-                        {t("projects.actions.edit")}
+                        <Edit className="w-4 h-4 mr-2" />
+                        Modify Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem>{t("projects.actions.view_rfqs")}</DropdownMenuItem>
-                      <DropdownMenuItem>{t("projects.actions.view_orders")}</DropdownMenuItem>
+                      <DropdownMenuItem>
+                         <ClipboardList className="w-4 h-4 mr-2" />
+                         Procurement Ledger
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-danger">
-                        <Trash2 className="w-4 h-4 me-2" />
-                        {t("projects.actions.delete")}
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Archive Project
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
 
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">{project.location}</span>
+                <div className="flex-1 py-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-4 h-4 text-text-3 mt-0.5 shrink-0" />
+                    <span className="text-[13px] text-text-2 leading-tight flex-1 line-clamp-2">{project.location}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground">{project.receiverName}</span>
+                  <div className="flex items-center gap-3">
+                    <User className="w-4 h-4 text-text-3 shrink-0" />
+                    <span className="text-[13px] text-text-2 flex-1 line-clamp-1">{project.receiverName}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <span className="text-muted-foreground tabular-nums">{project.receiverPhone}</span>
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-text-3 shrink-0" />
+                    <span className="text-[13px] font-mono text-text-2">{project.receiverPhone}</span>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <p className="text-lg font-bold tabular-nums">{project.rfqCount}</p>
-                      <p className="text-xs text-muted-foreground">{t("projects.metrics.rfqs")}</p>
+                <div className="border-t border-border pt-4 mt-2">
+                  <div className="grid grid-cols-3 gap-2 py-1 text-center">
+                    <div className="border-r border-border">
+                      <p className="text-[16px] font-mono text-text-1 leading-tight">{project.rfqCount}</p>
+                      <p className="text-[10px] tracking-widest uppercase text-text-3 mt-1">RFQs</p>
+                    </div>
+                    <div className="border-r border-border">
+                      <p className="text-[16px] font-mono text-text-1 leading-tight">{project.orderCount}</p>
+                      <p className="text-[10px] tracking-widest uppercase text-text-3 mt-1">Orders</p>
                     </div>
                     <div>
-                      <p className="text-lg font-bold tabular-nums">{project.orderCount}</p>
-                      <p className="text-xs text-muted-foreground">{t("projects.metrics.orders")}</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold tabular-nums text-primary">
+                      <p className="text-[15px] font-mono text-amber leading-tight">
                         {(project.totalSpent / 1000000).toFixed(1)}M
                       </p>
-                      <p className="text-xs text-muted-foreground">{t("projects.metrics.sar_spent")}</p>
+                      <p className="text-[10px] tracking-widest uppercase text-text-3 mt-1">SAR Budget</p>
                     </div>
                   </div>
                 </div>
@@ -304,16 +338,6 @@ export default function Projects() {
             ))
           )}
         </div>
-
-        {!isLoading && !isError && filteredProjects.length === 0 && (
-          <div className="bg-card rounded-xl border border-border p-12 text-center">
-            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">{t("projects.empty.no_projects")}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("projects.empty.desc")}
-            </p>
-          </div>
-        )}
       </div>
     </AppLayout>
   );

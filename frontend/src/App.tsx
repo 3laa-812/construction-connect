@@ -18,6 +18,7 @@ import RFQBuilder from "./pages/RFQBuilder";
 import RFQs from "./pages/RFQs";
 import Bids from "./pages/Bids";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Projects from "./pages/Projects";
 import Suppliers from "./pages/Suppliers";
 import Approvals from "./pages/Approvals";
@@ -57,6 +58,7 @@ const App = () => (
                   <Route path="/rfqs/new" element={<ErrorBoundary><RFQBuilder /></ErrorBoundary>} />
                   <Route path="/bids" element={<ErrorBoundary><Bids /></ErrorBoundary>} />
                   <Route path="/orders" element={<ErrorBoundary><Orders /></ErrorBoundary>} />
+                  <Route path="/orders/:id" element={<ErrorBoundary><OrderDetail /></ErrorBoundary>} />
                   <Route path="/projects" element={<ErrorBoundary><Projects /></ErrorBoundary>} />
                   <Route path="/suppliers" element={<ErrorBoundary><Suppliers /></ErrorBoundary>} />
                   <Route path="/approvals" element={<ErrorBoundary><Approvals /></ErrorBoundary>} />

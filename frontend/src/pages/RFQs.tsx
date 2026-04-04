@@ -1,407 +1,162 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Filter, FileText, Clock, CheckCircle, XCircle, Eye, MoreHorizontal } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageShell } from "@/components/layout/PageShell";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { BidComparisonTable } from "@/components/bids/BidComparisonTable";
 
-type ApiRFQ = {
+type RfqRow = {
   id: string;
-  project?: { id: string; name: string };
-  status?: string;
-  deadline?: string;
+  status: string;
+  project?: { name?: string };
+  items?: { product_name?: string }[];
+  bids?: unknown[];
   created_at?: string;
-  payment_terms?: string;
-  items?: Array<{
-    id: string;
-    product_name?: string;
-    quantity?: number;
-    unit?: string;
-  }>;
-  bids?: Array<{ id: string }>;
+  delivery_date_required?: string | null;
+  payment_terms?: string | null;
 };
 
-const statusConfig = {
-  open: { color: "primary", labelKey: "rfq.filter.open", icon: Clock },
-  closed: { color: "neutral", labelKey: "rfq.filter.closed", icon: CheckCircle },
-  awarded: { color: "success", labelKey: "rfq.filter.awarded", icon: CheckCircle },
-  cancelled: { color: "danger", labelKey: "rfq.filter.cancelled", icon: XCircle },
-} as const;
-
 export default function RFQs() {
-  const { t, isRTL } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("All");
+  const tabs = ["All", "Open", "Awarded", "Closed"];
+  const [selectedRfq, setSelectedRfq] = useState<RfqRow | null>(null);
 
-  const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
+  const { data: rfqs = [], isLoading } = useQuery({
     queryKey: ["rfqs"],
     queryFn: async () => {
-      const response = await api.get("/rfqs");
-      return response.data;
+      const res = await api.get<RfqRow[]>("/rfqs");
+      return res.data;
     },
   });
 
-  const rfqs = useMemo(() => {
-    if (!data) return [];
-    return data.map((rfq) => {
-      const firstItem = rfq.items?.[0];
-      const normalizedStatus = (rfq.status || "open").toLowerCase() as keyof typeof statusConfig;
-      return {
-        id: rfq.id,
-        title: firstItem?.product_name || "RFQ",
-        project: rfq.project?.name || "Unassigned project",
-        category: firstItem?.unit || "General",
-        items: rfq.items?.length || 0,
-        bidsReceived: rfq.bids?.length || 0,
-        status: statusConfig[normalizedStatus] ? normalizedStatus : "open",
-        deadline: rfq.deadline ? new Date(rfq.deadline).toISOString().split("T")[0] : "—",
-        createdAt: rfq.created_at ? new Date(rfq.created_at).toISOString().split("T")[0] : "",
-        totalValue: rfq.bids?.[0] ? Number((rfq.bids[0] as any).total_price) : undefined,
-      };
-    });
-  }, [data]);
-
-  const filteredRFQs = rfqs.filter((rfq) => {
-    const matchesSearch =
-      rfq.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rfq.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rfq.project.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || rfq.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || rfq.category === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
+  const filteredRfqs = rfqs.filter((r) => {
+    if (activeTab === "All") return true;
+    return r.status === activeTab.toUpperCase();
   });
-
-  const categories = [...new Set(rfqs.map((r) => r.category))];
 
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("rfq.title")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("rfq.subtitle")}
-            </p>
-          </div>
+      <PageShell
+        title="RFQs"
+        actions={
           <Link to="/rfqs/new">
-            <Button className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 me-2" />
-              {t("rfq.create_rfq")}
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> New RFQ
             </Button>
           </Link>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("rfq.search_placeholder")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        }
+      >
+        <div className="flex bg-surface border border-border rounded-md overflow-hidden min-h-[600px] relative">
+          <div
+            className={`flex flex-col flex-1 ${selectedRfq ? "hidden md:flex md:max-w-[400px] border-r border-border" : ""}`}
+          >
+            <div className="flex items-center gap-4 px-4 border-b border-border overflow-x-auto no-scrollbar pt-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`py-3 text-[13px] font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? "border-amber text-amber"
+                      : "border-transparent text-text-3 hover:text-text-1"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
-            <div className="flex gap-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <Filter className="w-4 h-4 me-2" />
-                  <SelectValue placeholder={t("rfq.filter.status")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("rfq.filter.all_status")}</SelectItem>
-                  <SelectItem value="open">{t("rfq.filter.open")}</SelectItem>
-                  <SelectItem value="closed">{t("rfq.filter.closed")}</SelectItem>
-                  <SelectItem value="awarded">{t("rfq.filter.awarded")}</SelectItem>
-                  <SelectItem value="cancelled">{t("rfq.filter.cancelled")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t("rfq.filter.category")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("rfq.filter.all_categories")}</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
 
-        {/* RFQ List */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <>
-              <table className="w-full data-grid hidden lg:table">
-                <thead>
-                  <tr>
-                    <th className="min-w-[280px]">{t("rfq.table.details")}</th>
-                    <th className="min-w-[180px]">{t("rfq.table.project")}</th>
-                    <th className="min-w-[120px]">{t("rfq.table.category")}</th>
-                    <th className="min-w-[100px]">{t("rfq.table.bids")}</th>
-                    <th className="min-w-[120px]">{t("rfq.table.deadline")}</th>
-                    <th className="min-w-[100px]">{t("rfq.table.status")}</th>
-                    <th className="min-w-[100px] text-center">{t("rfq.table.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...Array(5)].map((_, i) => (
-                    <tr key={i}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[150px]" />
-                            <Skeleton className="h-3 w-[100px]" />
-                          </div>
-                        </div>
-                      </td>
-                      <td><Skeleton className="h-4 w-[120px]" /></td>
-                      <td><Skeleton className="h-6 w-[80px]" /></td>
-                      <td><Skeleton className="h-4 w-[60px]" /></td>
-                      <td><Skeleton className="h-4 w-[80px]" /></td>
-                      <td><Skeleton className="h-6 w-[80px]" /></td>
-                      <td><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="grid lg:hidden gap-4 p-4 border-t border-border mt-[-1px]">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-card rounded-xl border border-border p-4">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-[150px]" />
-                        <Skeleton className="h-3 w-[100px]" />
-                      </div>
+            <div className="flex-1 overflow-y-auto bg-surface-2 p-4 flex flex-col gap-3">
+              {isLoading && (
+                <p className="text-[13px] text-text-3">Loading RFQs…</p>
+              )}
+              {!isLoading &&
+                filteredRfqs.map((rfq) => (
+                  <button
+                    type="button"
+                    key={rfq.id}
+                    onClick={() => setSelectedRfq(rfq)}
+                    className={`text-left bg-surface p-4 rounded-md border cursor-pointer transition-all ${
+                      selectedRfq?.id === rfq.id
+                        ? "border-amber shadow-[0_0_0_1px_var(--amber)]"
+                        : "border-border hover:border-border-2"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-[13px] font-mono text-text-1">
+                        {rfq.id.slice(0, 8)}…
+                      </span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-2 text-text-2 border border-border">
+                        {rfq.status}
+                      </span>
                     </div>
-                    <div className="mt-4 space-y-3">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+                    <h4 className="text-[15px] font-medium text-text-1 mb-1">
+                      {rfq.items?.[0]?.product_name ?? "RFQ"}
+                    </h4>
+                    <div className="text-[12px] text-text-3 flex flex-col gap-1">
+                      <span>
+                        {rfq.project?.name ?? "Project"} ·{" "}
+                        {rfq.bids?.length ?? 0} bids
+                      </span>
+                      <span>
+                        {rfq.delivery_date_required
+                          ? `Required: ${new Date(rfq.delivery_date_required).toLocaleDateString()}`
+                          : ""}{" "}
+                        {rfq.payment_terms ? `· ${rfq.payment_terms}` : ""}
+                      </span>
                     </div>
-                  </div>
+                  </button>
                 ))}
-              </div>
-              </>
-            ) : isError ? (
-              <div className="p-8 text-center text-danger">Failed to load RFQs</div>
-            ) : filteredRFQs.length === 0 ? (
-              <div className="py-12">
-                <EmptyState
-                  icon={FileText}
-                  title={t("rfq.no_results")}
-                  description={t("rfq.no_results_desc")}
-                />
-              </div>
-            ) : (
-              <>
-              <table className="w-full data-grid hidden lg:table">
-                <thead>
-                  <tr>
-                    <th className="min-w-[280px]">{t("rfq.table.details")}</th>
-                    <th className="min-w-[180px]">{t("rfq.table.project")}</th>
-                    <th className="min-w-[120px]">{t("rfq.table.category")}</th>
-                    <th className="min-w-[100px]">{t("rfq.table.bids")}</th>
-                    <th className="min-w-[120px]">{t("rfq.table.deadline")}</th>
-                    <th className="min-w-[100px]">{t("rfq.table.status")}</th>
-                    <th className="min-w-[100px] text-center">{t("rfq.table.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRFQs.map((rfq, index) => {
-                    const StatusIcon = statusConfig[rfq.status].icon;
-                    return (
-                      <tr
-                        key={rfq.id}
-                        className="hover:bg-muted/50 transition-colors animate-fade-in"
-                        style={{ animationDelay: `${index * 30}ms` }}
-                      >
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                              <FileText className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-foreground">{rfq.id}</p>
-                              <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                                {rfq.title}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <p className="text-sm truncate max-w-[160px]">{rfq.project}</p>
-                        </td>
-                        <td>
-                          <StatusBadge variant="neutral" size="sm">
-                            {rfq.category}
-                          </StatusBadge>
-                        </td>
-                        <td className="tabular-nums">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{rfq.bidsReceived}</span>
-                            <span className="text-muted-foreground text-sm">/ {rfq.items} items</span>
-                          </div>
-                        </td>
-                        <td className="tabular-nums">
-                          <p className="text-sm">{rfq.deadline}</p>
-                          {rfq.status === "open" && rfq.deadline !== "—" && (
-                            <p className="text-xs text-muted-foreground">
-                              {Math.max(
-                                0,
-                                Math.ceil((new Date(rfq.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                              )}{" "}
-                              {t("rfq.days_left")}
-                            </p>
-                          )}
-                        </td>
-                        <td>
-                          <StatusBadge
-                            variant={statusConfig[rfq.status].color as any}
-                            size="sm"
-                          >
-                            {statusConfig[rfq.status].icon && <StatusIcon className="w-3 h-3" />}
-                            {t(statusConfig[rfq.status].labelKey)}
-                          </StatusBadge>
-                        </td>
-                        <td className="text-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="w-4 h-4 me-2" />
-                                {t("rfq.view_details")}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>{t("rfq.view_bids")}</DropdownMenuItem>
-                              {rfq.status === "open" && (
-                                <>
-                                  <DropdownMenuItem>{t("rfq.edit")}</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-danger">
-                                    {t("rfq.cancel")}
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div className="grid lg:hidden gap-4 p-4">
-                {filteredRFQs.map((rfq, index) => {
-                  const StatusIcon = statusConfig[rfq.status]?.icon;
-                  return (
-                    <div key={rfq.id} className="bg-card rounded-xl border border-border p-4 space-y-4 shadow-sm animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-                            <FileText className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{rfq.id}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{rfq.title}</p>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="-mt-2 -me-2 h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem><Eye className="w-4 h-4 me-2" />{t("rfq.view_details")}</DropdownMenuItem>
-                            <DropdownMenuItem>{t("rfq.view_bids")}</DropdownMenuItem>
-                            {rfq.status === "open" && (
-                              <>
-                                <DropdownMenuItem>{t("rfq.edit")}</DropdownMenuItem>
-                                <DropdownMenuItem className="text-danger">{t("rfq.cancel")}</DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs">{t("rfq.table.project")}</p>
-                          <p className="font-medium truncate">{rfq.project}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">{t("rfq.table.category")}</p>
-                          <p className="font-medium truncate">{rfq.category}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">{t("rfq.table.bids")}</p>
-                          <p className="font-medium">{rfq.bidsReceived} / {rfq.items}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">{t("rfq.table.deadline")}</p>
-                          <p className="font-medium">{rfq.deadline}</p>
-                        </div>
-                      </div>
-                      <div className="pt-3 border-t border-border flex justify-between items-center">
-                        <StatusBadge variant={statusConfig[rfq.status]?.color as any} size="sm">
-                          {statusConfig[rfq.status]?.icon && <StatusIcon className="w-3 h-3" />}
-                          {t(statusConfig[rfq.status]?.labelKey)}
-                        </StatusBadge>
-                        <Button variant="outline" size="sm">
-                          {t("rfq.view_details")}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              </>
-            )}
+              {!isLoading && filteredRfqs.length === 0 && (
+                <p className="text-[13px] text-text-3">No RFQs in this tab.</p>
+              )}
+            </div>
           </div>
 
-          {!isLoading && !isError && filteredRFQs.length === 0 && (
-            <div className="py-12">
-              <EmptyState
-                icon={FileText}
-                title={t("rfq.no_results")}
-                description={t("rfq.no_results_desc")}
-              />
+          {selectedRfq ? (
+            <div className="flex-1 flex flex-col bg-surface overflow-y-auto">
+              <div className="p-4 border-b border-border flex justify-between items-center sticky top-0 bg-surface z-10">
+                <div>
+                  <h2 className="text-[18px] font-display text-text-1">
+                    {selectedRfq.items?.[0]?.product_name ?? "RFQ"}
+                  </h2>
+                  <span className="text-[13px] font-mono text-text-3">
+                    {selectedRfq.id}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedRfq(null)}
+                >
+                  <X className="w-5 h-5 text-text-3" />
+                </Button>
+              </div>
+              <div className="p-6">
+                <p className="text-text-2 text-[14px] mb-6">
+                  Status: {selectedRfq.status}. Project:{" "}
+                  {selectedRfq.project?.name ?? "—"}
+                </p>
+                <div className="mt-4">
+                  <h3 className="text-[14px] font-medium mb-4">Compare bids</h3>
+                  <BidComparisonTable
+                    rfqId={selectedRfq.id}
+                    rfqStatus={selectedRfq.status}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="hidden md:flex flex-1 items-center justify-center bg-surface text-text-3 text-[14px]">
+              Select an RFQ to view details
             </div>
           )}
         </div>
-      </div>
+      </PageShell>
     </AppLayout>
   );
 }

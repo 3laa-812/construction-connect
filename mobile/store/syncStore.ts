@@ -1,21 +1,19 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
-export type SyncStatus = "idle" | "syncing" | "error" | "offline";
-
-interface SyncStore {
-  status: SyncStatus;
+interface SyncState {
+  isSyncing: boolean;
+  lastSyncAt: number | null;
   pendingCount: number;
-  lastSyncedAt: Date | null;
-  setStatus: (s: SyncStatus) => void;
-  setPending: (n: number) => void;
-  setLastSynced: (d: Date) => void;
+  setSyncing: (isSyncing: boolean) => void;
+  setLastSyncAt: (timestamp: number) => void;
+  setPendingCount: (count: number) => void;
 }
 
-export const useSyncStore = create<SyncStore>((set) => ({
-  status: "idle",
+export const useSyncStore = create<SyncState>((set) => ({
+  isSyncing: false,
+  lastSyncAt: null,
   pendingCount: 0,
-  lastSyncedAt: null,
-  setStatus: (status) => set({ status }),
-  setPending: (pendingCount) => set({ pendingCount }),
-  setLastSynced: (lastSyncedAt) => set({ lastSyncedAt }),
+  setSyncing: (isSyncing) => set({ isSyncing }),
+  setLastSyncAt: (lastSyncAt) => set({ lastSyncAt }),
+  setPendingCount: (pendingCount) => set({ pendingCount }),
 }));

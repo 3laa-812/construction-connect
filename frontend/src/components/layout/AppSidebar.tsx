@@ -4,125 +4,117 @@ import {
   LayoutDashboard,
   FileText,
   ShoppingCart,
-  Package,
   Users,
-  Building2,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  TrendingUp,
-  Shield,
   Wallet,
-  Store,
-  FileClock,
+  Building2,
+  LogOut,
+  Hexagon,
+  ClipboardList,
+  Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
-  titleKey: string;
+  title: string;
   href: string;
   icon: React.ElementType;
-  badge?: number;
 }
 
 const mainNavItems: NavItem[] = [
-  { titleKey: "nav.dashboard", href: "/", icon: LayoutDashboard },
-  { titleKey: "nav.rfqs", href: "/rfqs", icon: FileText, badge: 5 },
-  { titleKey: "nav.bids", href: "/bids", icon: TrendingUp, badge: 12 },
-  { titleKey: "nav.orders", href: "/orders", icon: ShoppingCart },
-  { titleKey: "nav.financials", href: "/financials", icon: Wallet },
-];
-
-const managementNavItems: NavItem[] = [
-  { titleKey: "nav.suppliers", href: "/suppliers", icon: Building2 },
-  { titleKey: "nav.supplier_portal", href: "/supplier/rfq-feed", icon: Store },
-  { titleKey: "nav.projects", href: "/projects", icon: ClipboardList },
-  { titleKey: "nav.suppliers", href: "/users", icon: Users },
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "RFQs", href: "/rfqs", icon: FileText },
+  { title: "Orders", href: "/orders", icon: ShoppingCart },
+  { title: "Suppliers", href: "/suppliers", icon: Building2 },
+  { title: "Financials", href: "/financials", icon: Wallet },
+  { title: "Projects", href: "/projects", icon: ClipboardList },
 ];
 
 const adminNavItems: NavItem[] = [
-  { titleKey: "nav.approvals", href: "/approvals", icon: Shield, badge: 3 },
-  { titleKey: "nav.settings", href: "/admin/audit-logs", icon: FileClock },
-  { titleKey: "nav.settings", href: "/settings", icon: Settings },
+  { title: "Settings & Admin", href: "/settings", icon: Settings },
+  { title: "Audit Logs", href: "/admin/audit-logs", icon: Shield },
 ];
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { t, isRTL } = useLanguage();
+  const { user, logout } = useAuth();
+  const { isRTL } = useLanguage();
 
   const isActive = (href: string) => {
     if (href === "/") return location.pathname === "/";
     return location.pathname.startsWith(href);
   };
 
-  const NavItemComponent = ({ item }: { item: NavItem }) => (
-    <NavLink
-      to={item.href}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-        "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-        isActive(item.href) &&
-          "bg-sidebar-accent text-sidebar-foreground font-medium",
-        collapsed && "justify-center px-2",
-      )}
-    >
-      <item.icon className="h-5 w-5 shrink-0" />
-      {!collapsed && (
-        <>
-          <span className="flex-1 truncate">{t(item.titleKey)}</span>
-          {item.badge && (
-            <span className="bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded-full">
-              {item.badge}
-            </span>
-          )}
-        </>
-      )}
-    </NavLink>
-  );
+  const NavItemComponent = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    return (
+      <NavLink
+        to={item.href}
+        className={cn(
+          "flex items-center gap-2 h-9 px-2 rounded font-body text-[14px] transition-all duration-[120ms] ease-out-expo",
+          active
+            ? "bg-[rgba(212,146,10,0.08)] border-l-2 border-amber text-amber pl-[calc(0.5rem-2px)]"
+            : "text-text-2 hover:bg-surface-2 hover:text-text-1",
+          collapsed && "justify-center px-0 border-none",
+          collapsed && active && "bg-[rgba(212,146,10,0.08)] border-none text-amber"
+        )}
+        title={collapsed ? item.title : undefined}
+      >
+        <item.icon className="h-4 w-4 shrink-0" color="currentColor" />
+        {!collapsed && <span className="flex-1 truncate">{item.title}</span>}
+      </NavLink>
+    );
+  };
 
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col bg-sidebar border-sidebar-border transition-all duration-300 border-r rtl:border-r-0 rtl:border-l",
-        collapsed ? "w-16" : "w-64",
+        "hidden lg:flex flex-col bg-surface border-border transition-all duration-300",
+        isRTL ? "border-l" : "border-r",
+        collapsed ? "w-[56px]" : "w-[220px]"
       )}
     >
-      {/* Logo */}
       <div
         className={cn(
-          "h-16 flex items-center border-b border-sidebar-border px-4",
-          collapsed && "justify-center px-2",
+          "h-16 flex items-center px-4 cursor-pointer gap-2",
+          collapsed && "justify-center px-2"
         )}
+        onClick={() => setCollapsed(!collapsed)}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-primary-foreground" />
+        <Hexagon className="h-6 w-6 text-amber shrink-0 fill-amber/20" />
+        {!collapsed && (
+          <div className="flex flex-col">
+            <span className="font-display text-text-1 text-[16px] leading-tight">
+              Construction
+            </span>
+            <span className="font-display text-text-2 text-[16px] leading-tight">
+              Connect
+            </span>
           </div>
-          {!collapsed && (
-            <div>
-              <h1 className="text-sidebar-foreground font-bold text-lg tracking-tight">
-                {t("common.app_name")}
-              </h1>
-              <p className="text-sidebar-foreground/50 text-xs">
-                {t("common.procurement")}
-              </p>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Navigation */}
+      <div className="px-3 py-2">
+        {!collapsed ? (
+          <div className="h-9 w-full bg-surface-2 border border-border-2 rounded flex items-center px-2 text-[13px] text-text-1 cursor-pointer hover:border-amber/40 transition-colors">
+            <span className="w-2 h-2 rounded-full bg-success mr-2 shrink-0" />
+            <span className="truncate">Riyadh Villa Compound</span>
+          </div>
+        ) : (
+          <div className="h-9 w-full flex justify-center items-center">
+             <span className="w-2 h-2 rounded-full bg-success" />
+          </div>
+        )}
+      </div>
+
       <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
-        {/* Main */}
         <div className="space-y-1">
           {!collapsed && (
-            <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {t("common.sidebar.main")}
+            <p className="text-[10px] tracking-[1px] uppercase text-text-3 mt-4 mb-2 px-2 font-medium">
+              Navigation
             </p>
           )}
           {mainNavItems.map((item) => (
@@ -130,27 +122,10 @@ export function AppSidebar() {
           ))}
         </div>
 
-        <Separator className="bg-sidebar-border" />
-
-        {/* Management */}
         <div className="space-y-1">
           {!collapsed && (
-            <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {t("common.sidebar.management")}
-            </p>
-          )}
-          {managementNavItems.map((item, index) => (
-            <NavItemComponent key={`${item.href}-${index}`} item={item} />
-          ))}
-        </div>
-
-        <Separator className="bg-sidebar-border" />
-
-        {/* Admin */}
-        <div className="space-y-1">
-          {!collapsed && (
-            <p className="text-sidebar-foreground/40 text-xs font-medium uppercase tracking-wider px-3 mb-2">
-              {t("common.sidebar.admin")}
+            <p className="text-[10px] tracking-[1px] uppercase text-text-3 mt-4 mb-2 px-2 font-medium">
+              Admin
             </p>
           )}
           {adminNavItems.map((item) => (
@@ -159,34 +134,28 @@ export function AppSidebar() {
         </div>
       </nav>
 
-      {/* Collapse Toggle */}
-      <div className="p-3 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "w-full text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
-            collapsed && "px-2",
-          )}
-        >
-          {collapsed ? (
-            isRTL ? (
-              <ChevronLeft className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )
-          ) : (
-            <>
-              {isRTL ? (
-                <ChevronRight className="h-4 w-4 me-2" />
-              ) : (
-                <ChevronLeft className="h-4 w-4 me-2" />
-              )}
-              <span>{t("common.sidebar.collapse")}</span>
-            </>
-          )}
-        </Button>
+      <div className="p-3 border-t border-border mt-auto">
+        {!collapsed ? (
+          <div className="flex items-center justify-between gap-2 p-2 rounded hover:bg-surface-2 transition-colors cursor-pointer" onClick={logout}>
+            <div className="flex items-center gap-2 overflow-hidden">
+               <div className="w-8 h-8 rounded-full bg-surface-2 border border-border-2 flex items-center justify-center shrink-0">
+                  <span className="text-xs text-text-1 font-medium">{user?.name?.charAt(0) || "U"}</span>
+               </div>
+               <div className="flex flex-col truncate">
+                 <span className="text-[13px] text-text-1 font-medium truncate">{user?.name || "User"}</span>
+                 <span className="text-[11px] text-text-3 truncate">{user?.role || "Role"}</span>
+               </div>
+            </div>
+            <LogOut className="h-4 w-4 text-text-3 hover:text-text-1" />
+          </div>
+        ) : (
+          <div className="flex justify-center flex-col gap-2 items-center">
+            <div className="w-8 h-8 rounded-full bg-surface-2 border border-border-2 flex items-center justify-center shrink-0">
+                <span className="text-xs text-text-1 font-medium">{user?.name?.charAt(0) || "U"}</span>
+            </div>
+            <LogOut className="h-4 w-4 text-text-3 hover:text-text-1 cursor-pointer" onClick={logout} />
+          </div>
+        )}
       </div>
     </aside>
   );

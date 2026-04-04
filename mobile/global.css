@@ -1,91 +1,36 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
 
-@layer base {
-  :root {
-    /* Core Structure - Industrial Palette Optimized */
-    /* Background: Soft Beige #EAE0CF */
-    --background: 38 30% 86%;
-    /* Foreground: Deep Navy #213448 */
-    --foreground: 211 37% 21%;
-    
-    /* Cards: Slightly off-white for harmony with beige */
-    --card: 38 30% 96%;
-    --card-foreground: 211 37% 21%;
-    
-    --popover: 38 30% 96%;
-    --popover-foreground: 211 37% 21%;
-    
-    /* Primary: Deep Navy #213448 */
-    --primary: 211 37% 21%;
-    --primary-foreground: 38 30% 86%;
-    
-    /* Secondary: Steel Blue #547792 */
-    --secondary: 206 27% 45%;
-    --secondary-foreground: 0 0% 100%;
-    
-    /* Muted: Light Blue-Grey #94B4C1 */
-    --muted: 197 26% 85%;
-    --muted-foreground: 206 27% 35%;
-    
-    /* Accent: Construction Orange */
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 0 0% 100%;
-    
-    --border: 197 26% 80%;
-    --input: 197 26% 80%;
-    --ring: 206 27% 45%;
-    
-    --radius: 0.35rem;
+@import "nativewind/theme";
 
-    /* Status Colors */
-    --success: 142 60% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 211 37% 21%;
-    --danger: 0 70% 60%;
-    --danger-foreground: 0 0% 100%;
+/* App theme (migrated from tailwind.config.js — use @theme for Tailwind v4 + react-native-css) */
+@theme {
+  --color-ground: #0d0f0e;
+  --color-surface: #141716;
+  --color-surface-2: #1c1f1d;
+  --color-border: #2a2e2b;
+  --color-border-2: #363b37;
+  --color-amber: #d4920a;
+  --color-amber-dim: #8a5f06;
+  --color-amber-hover: #e0a020;
+  --color-text-1: #f0ede8;
+  --color-text-2: #9a9890;
+  --color-text-3: #5c5a55;
+  --color-error-bg: #8b2e2e;
+  --color-error-text: #f0a0a0;
+  --color-success-bg: #3a7d44;
+  --color-success-text: #7ec893;
+  --color-info-bg: #2a4a6b;
+  --color-info-text: #7eb8e0;
 
-    /* Custom Industrial Tokens */
-    --industrial-steel: 206 27% 45%;
-    --industrial-concrete: 197 26% 67%;
-    --industrial-highlight: 211 37% 21%;
-    --data-positive: 142 76% 36%;
-    --data-negative: 0 84% 60%;
-    --data-neutral: 197 26% 67%;
-  }
+  --font-display: DMSerifDisplay, ui-serif, Georgia, serif;
+  --font-body: Geist, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: GeistMono, ui-monospace, monospace;
+  --font-arabic: NotoSansArabic, ui-sans-serif, system-ui, sans-serif;
 
-  .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 20% 98%;
-    
-    --card: 222 47% 8%;
-    --card-foreground: 210 20% 98%;
-    
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 20% 98%;
-    
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 20% 98%;
-    
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    
-    --accent: 24 95% 53%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 20% 98%;
-    
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
-  }
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }

@@ -1,183 +1,106 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { DollarSign, Truck, Clock, FileText, Send, Calculator } from "lucide-react";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { Building2, Calendar, MapPin, AlertCircle, FileText, FileUp, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext";
-
-// FR-C05: Quote submission schema
-const quoteSchema = z.object({
-  lineItems: z.array(z.object({
-    productId: z.string(),
-    productName: z.string(),
-    quantity: z.number(),
-    unit: z.string(),
-    unitPrice: z.number().min(0.01, "Unit price must be greater than 0"),
-    brand: z.string().optional(),
-    bidOnItem: z.boolean().default(true),
-  })),
-  deliveryCost: z.number().min(0, "Delivery cost cannot be negative"),
-  deliveryDays: z.number().min(1, "Delivery days must be at least 1"),
-  quoteValidity: z.enum(["24h", "48h", "72h", "7d", "14d", "30d"]),
-  notes: z.string().optional(),
-  termsAccepted: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms to submit a quote",
-  }),
-});
-
-type QuoteFormData = z.infer<typeof quoteSchema>;
-
-interface RFQLineItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  unit: string;
-  specifications?: string;
-}
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SupplierQuoteFormProps {
   rfqId: string;
   rfqTitle: string;
-  lineItems: RFQLineItem[];
   buyerCompany: string;
   deliveryLocation: string;
   requiredDeliveryDate: string;
   allowPartialBids: boolean;
-  onSubmit?: (data: QuoteFormData) => void;
-  onCancel?: () => void;
+  lineItems: {
+    id: string;
+    productName: string;
+    quantity: number;
+    unit: string;
+    specifications?: string;
+  }[];
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
 }
 
-const validityOptions = [
-  { value: "24h", label: "24 Hours" },
-  { value: "48h", label: "48 Hours" },
-  { value: "72h", label: "72 Hours" },
-  { value: "7d", label: "7 Days" },
-  { value: "14d", label: "14 Days" },
-  { value: "30d", label: "30 Days" },
-];
+interface QuoteFormValues {
+  items: {
+    id: string;
+    unitPrice: number | "";
+    leadTimeDays: number | "";
+    notes: string;
+    isQuoting: boolean;
+  }[];
+  paymentTerms: string;
+  validUntil: string;
+  generalNotes: string;
+}
 
 export function SupplierQuoteForm({
   rfqId,
   rfqTitle,
-  lineItems,
   buyerCompany,
   deliveryLocation,
   requiredDeliveryDate,
   allowPartialBids,
+  lineItems,
   onSubmit,
   onCancel,
 }: SupplierQuoteFormProps) {
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
 
-  const form = useForm<QuoteFormData>({
-    resolver: zodResolver(quoteSchema),
+  const { control, handleSubmit, watch, register, formState: { errors } } = useForm<QuoteFormValues>({
     defaultValues: {
-      lineItems: lineItems.map((item) => ({
-        productId: item.id,
-        productName: item.productName,
-        quantity: item.quantity,
-        unit: item.unit,
-        unitPrice: 0,
-        brand: "",
-        bidOnItem: true,
+      items: lineItems.map((item) => ({
+        id: item.id,
+        unitPrice: "",
+        leadTimeDays: "",
+        notes: "",
+        isQuoting: true,
       })),
-      deliveryCost: 0,
-      deliveryDays: 7,
-      quoteValidity: "48h",
-      notes: "",
-      termsAccepted: false,
+      paymentTerms: "Net 30",
+      validUntil: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      generalNotes: "",
     },
   });
 
-  const watchedLineItems = form.watch("lineItems");
-  const watchedDeliveryCost = form.watch("deliveryCost");
+  const { fields } = useFieldArray({
+    control,
+    name: "items",
+  });
 
-  // Calculate totals
-  const itemsTotal = watchedLineItems.reduce((sum, item) => {
-    if (item.bidOnItem) {
-      return sum + (item.unitPrice * item.quantity);
-    }
-    return sum;
-  }, 0);
+  const watchItems = watch("items");
 
-  const grandTotal = itemsTotal + (watchedDeliveryCost || 0);
-  const biddingItemsCount = watchedLineItems.filter((item) => item.bidOnItem).length;
+  const calculateTotal = () => {
+    return watchItems.reduce((acc, item, index) => {
+      if (!item.isQuoting) return acc;
+      const price = Number(item.unitPrice) || 0;
+      const q = lineItems[index].quantity;
+      return acc + price * q;
+    }, 0);
+  };
 
-  const handleSubmit = async (data: QuoteFormData) => {
-    if (!user?.companyId) {
-      toast({
-        variant: "destructive",
-        title: "Missing company info",
-        description: "Your account is not linked to a company. Please contact support.",
-      });
-      return;
-    }
-
+  const handleFormSubmit = async (data: QuoteFormValues) => {
     setIsSubmitting(true);
     try {
-      const now = new Date();
-      const validityMap: Record<QuoteFormData["quoteValidity"], number> = {
-        "24h": 1,
-        "48h": 2,
-        "72h": 3,
-        "7d": 7,
-        "14d": 14,
-        "30d": 30,
-      };
-      const daysToAdd = validityMap[data.quoteValidity] || 2;
-      const validUntil = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
-
-      await api.post(`/rfqs/${rfqId}/bids`, {
-        rfq: { connect: { id: rfqId } },
-        supplier: { connect: { id: user.companyId } },
-        total_price: grandTotal,
-        valid_until: validUntil,
-        items: {
-          create: data.lineItems
-            .filter((li) => li.bidOnItem)
-            .map((li) => ({
-              rfq_item: { connect: { id: li.productId } },
-              unit_price: li.unitPrice,
-              note: li.brand || undefined,
-            })),
-        },
-      });
-
+      if (onSubmit) {
+        await Promise.resolve(onSubmit(data));
+      }
       toast({
         title: "Quote Submitted Successfully",
-        description: `Your quote for ${rfqId} has been sent to ${buyerCompany}`,
+        description: `Formal quote for ${rfqTitle} has been transmitted to ${buyerCompany}.`,
       });
-      
-      onSubmit?.(data);
+      onSubmit(data);
     } catch (error) {
-      toast({
-        title: "Submission Failed",
-        description: "Please try again later",
-        variant: "destructive",
+       toast({
+        title: "Transmission Failed",
+        description: "An error occurred while submitting your quote.",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -185,287 +108,220 @@ export function SupplierQuoteForm({
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        {/* RFQ Summary Header */}
-        <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
-              <FileText className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground">{rfqId}</h3>
-              <p className="text-sm text-muted-foreground">{rfqTitle}</p>
-              <div className="flex flex-wrap gap-4 mt-2 text-sm">
-                <span className="text-muted-foreground">
-                  Buyer: <span className="text-foreground font-medium">{buyerCompany}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  Delivery: <span className="text-foreground font-medium">{deliveryLocation}</span>
-                </span>
-                <span className="text-muted-foreground">
-                  Required by: <span className="text-foreground font-medium tabular-nums">{requiredDeliveryDate}</span>
-                </span>
-              </div>
-            </div>
+    <div className="flex flex-col bg-ground">
+      {/* Target RFQ Context Bar */}
+      <div className="p-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-surface-2 border-b border-border">
+        <div className="flex items-center gap-3">
+          <Building2 className="w-4 h-4 text-text-3" />
+          <div className="flex flex-col">
+             <span className="text-[10px] text-text-3 tracking-widest uppercase font-medium">Buyer Organization</span>
+             <span className="text-[13px] text-text-1 font-semibold truncate leading-tight mt-0.5">{buyerCompany}</span>
           </div>
         </div>
-
-        {/* Line Items Pricing - FR-C05 & FR-C06 */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-foreground">Line Items Pricing</h4>
-            {allowPartialBids && (
-              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                Partial bids allowed
-              </span>
-            )}
+        <div className="flex items-center gap-3">
+          <MapPin className="w-4 h-4 text-text-3" />
+          <div className="flex flex-col">
+             <span className="text-[10px] text-text-3 tracking-widest uppercase font-medium">Delivery Location</span>
+             <span className="text-[13px] text-text-1 font-semibold truncate leading-tight mt-0.5">{deliveryLocation}</span>
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 text-text-3" />
+          <div className="flex flex-col">
+             <span className="text-[10px] text-text-3 tracking-widest uppercase font-medium">Req. Delivery</span>
+             <span className="text-[13px] text-text-1 font-mono leading-tight mt-0.5">{requiredDeliveryDate}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-text-3" />
+          <div className="flex flex-col">
+             <span className="text-[10px] text-text-3 tracking-widest uppercase font-medium">Partial Supply</span>
+             <StatusBadge variant={allowPartialBids ? "success" : "warning"} size="sm" className="font-mono text-[10px] mt-1 w-fit">
+                {allowPartialBids ? "ALLOWED" : "NOT ALLOWED"}
+             </StatusBadge>
+          </div>
+        </div>
+      </div>
 
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col">
+        <div className="p-6 space-y-8">
+            
+          {/* Pricing Matrix */}
           <div className="space-y-4">
-            {lineItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="bg-muted/50 rounded-lg p-4 space-y-3"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {allowPartialBids && (
-                        <FormField
-                          control={form.control}
-                          name={`lineItems.${index}.bidOnItem`}
-                          render={({ field }) => (
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
+             <div className="flex items-center justify-between border-b border-border pb-2">
+                <h3 className="font-display text-[16px] text-text-1">Line Item Matrix</h3>
+                <span className="font-mono text-[11px] text-text-3 uppercase tracking-widest">Pricing & Lead Times</span>
+             </div>
+            
+            <div className="bg-surface border border-border rounded-lg overflow-x-auto">
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-surface-2 border-b border-border font-mono text-[11px] text-text-3 uppercase tracking-widest">
+                  <tr>
+                    {allowPartialBids && <th className="p-3 w-10 text-center">Quote</th>}
+                    <th className="p-3">Material Designation</th>
+                    <th className="p-3">Required QTY</th>
+                    <th className="p-3 min-w-[140px]">Unit Price (SAR)</th>
+                    <th className="p-3 min-w-[120px]">Lead Time (Days)</th>
+                    <th className="p-3 text-right">Ext. Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {fields.map((field, index) => {
+                    const item = lineItems[index];
+                    const isQuoting = watchItems[index].isQuoting;
+                    const price = Number(watchItems[index].unitPrice) || 0;
+                    const total = price * item.quantity;
+
+                    return (
+                      <tr key={item.id} className={!isQuoting ? "opacity-40 bg-ground/50" : ""}>
+                        {allowPartialBids && (
+                          <td className="p-3 text-center">
+                            <input
+                              type="checkbox"
+                              {...register(`items.${index}.isQuoting`)}
+                              className="accent-amber w-4 h-4 rounded border-border-2"
                             />
+                          </td>
+                        )}
+                        <td className="p-3 font-medium text-text-1">
+                          {item.productName}
+                          {item.specifications && (
+                            <p className="text-[11px] text-text-3 font-normal mt-1">{item.specifications}</p>
                           )}
-                        />
-                      )}
-                      <h5 className="font-medium text-foreground">{item.productName}</h5>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Quantity: <span className="font-medium tabular-nums">{item.quantity} {item.unit}</span>
-                      {item.specifications && ` · ${item.specifications}`}
-                    </p>
-                  </div>
-                </div>
-
-                {watchedLineItems[index]?.bidOnItem && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3 border-t border-border">
-                    <FormField
-                      control={form.control}
-                      name={`lineItems.${index}.unitPrice`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Unit Price (SAR)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                className="pl-10 tabular-nums"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`lineItems.${index}.brand`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Brand (Optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Ezz Steel" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex items-end">
-                      <div className="bg-primary/10 rounded-lg px-4 py-2 w-full text-center">
-                        <p className="text-xs text-muted-foreground">Line Total</p>
-                        <p className="font-bold text-primary tabular-nums">
-                          SAR {((watchedLineItems[index]?.unitPrice || 0) * item.quantity).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                        </td>
+                        <td className="p-3 font-mono tabular-nums text-text-2">
+                          {item.quantity} {item.unit}
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            disabled={!isQuoting}
+                            {...register(`items.${index}.unitPrice`, {
+                              required: isQuoting ? "Required" : false,
+                            })}
+                            className="h-9 bg-surface-2 border-border font-mono max-w-[120px]"
+                          />
+                        </td>
+                        <td className="p-3">
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="Days"
+                            disabled={!isQuoting}
+                            {...register(`items.${index}.leadTimeDays`, {
+                              required: isQuoting ? "Required" : false,
+                            })}
+                            className="h-9 bg-surface-2 border-border font-mono max-w-[100px]"
+                          />
+                        </td>
+                        <td className="p-3 text-right font-mono tabular-nums font-semibold text-text-1">
+                          SAR {total.toFixed(2)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              
+              <div className="bg-surface-2 border-t border-border p-4 flex justify-end items-center gap-6">
+                 <span className="font-mono text-[11px] text-text-3 uppercase tracking-widest">Total Valuation</span>
+                 <span className="font-mono text-[20px] text-amber font-semibold tracking-tight">SAR {calculateTotal().toFixed(2)}</span>
               </div>
-            ))}
+            </div>
+            {errors.items && (
+              <p className="text-[13px] text-danger font-medium flex items-center gap-2">
+                 <AlertCircle className="w-4 h-4" /> Please complete pricing for all selected items.
+              </p>
+            )}
           </div>
+
+          {/* Terms & Conditions Block */}
+          <div className="space-y-4">
+             <div className="flex items-center justify-between border-b border-border pb-2">
+                <h3 className="font-display text-[16px] text-text-1">Commercial Terms</h3>
+                <span className="font-mono text-[11px] text-text-3 uppercase tracking-widest">Constraints & Validity</span>
+             </div>
+             
+             <div className="grid sm:grid-cols-2 gap-6 bg-surface border border-border rounded-lg p-5">
+                 <div className="space-y-2">
+                    <Label htmlFor="paymentTerms" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Requested Payment Terms</Label>
+                    <Input
+                      id="paymentTerms"
+                      {...register("paymentTerms", { required: true })}
+                      className="bg-surface-2 border-border font-mono text-[13px]"
+                      placeholder="e.g. Net 30, 50% Adv"
+                    />
+                 </div>
+                 
+                 <div className="space-y-2">
+                    <Label htmlFor="validUntil" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Quote Validity Expiration</Label>
+                    <Input
+                      id="validUntil"
+                      type="date"
+                      {...register("validUntil", { required: true })}
+                      className="bg-surface-2 border-border font-mono text-[13px]"
+                    />
+                 </div>
+                 
+                 <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="generalNotes" className="text-[11px] font-medium tracking-wide uppercase text-text-3">Operational Notes / Caveats</Label>
+                    <Textarea
+                      id="generalNotes"
+                      {...register("generalNotes")}
+                      className="bg-surface-2 border-border min-h-[80px] font-mono text-[13px] resize-none"
+                      placeholder="Include any shipping constraints, sub-contracting details, or material substitution notices..."
+                    />
+                 </div>
+             </div>
+          </div>
+          
+          {/* Attachments Placeholder */}
+          <div className="space-y-4">
+             <div className="flex items-center justify-between border-b border-border pb-2">
+                <h3 className="font-display text-[16px] text-text-1">Supporting Documents</h3>
+                <span className="font-mono text-[11px] text-text-3 uppercase tracking-widest">Optional</span>
+             </div>
+             <div className="border border-dashed border-border-2 rounded-lg p-8 flex flex-col items-center justify-center text-center bg-surface-2/30 hover:bg-surface-2/80 transition-colors cursor-pointer group">
+                  <div className="w-10 h-10 bg-surface border border-border rounded-full flex items-center justify-center mb-3 group-hover:border-amber/50 transition-colors">
+                      <FileUp className="w-5 h-5 text-text-3 group-hover:text-amber transition-colors" />
+                  </div>
+                  <span className="text-[13px] font-medium text-text-1">Upload Commercial Documents</span>
+                  <span className="text-[11px] font-mono text-text-3 mt-1">PDF, XLS up to 10MB</span>
+             </div>
+          </div>
+          
         </div>
 
-        {/* Delivery & Validity */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="deliveryCost"
-            render={({ field }) => (
-              <FormItem className="bg-card rounded-xl border border-border p-4">
-                <FormLabel className="flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  Delivery Cost (SAR)
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    className="tabular-nums"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormDescription>Enter 0 for free delivery</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="deliveryDays"
-            render={({ field }) => (
-              <FormItem className="bg-card rounded-xl border border-border p-4">
-                <FormLabel className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Delivery Days
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    className="tabular-nums"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                  />
-                </FormControl>
-                <FormDescription>Days from order confirmation</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="quoteValidity"
-            render={({ field }) => (
-              <FormItem className="bg-card rounded-xl border border-border p-4">
-                <FormLabel className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Quote Validity
-                </FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select validity" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {validityOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Notes */}
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem className="bg-card rounded-xl border border-border p-4">
-              <FormLabel>Additional Notes</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Add any additional information about your quote (e.g., 'Brand is Ezz Steel', 'Price includes installation')"
-                  rows={3}
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Include brand names, quality certifications, or special terms
-              </FormDescription>
-            </FormItem>
-          )}
-        />
-
-        {/* Quote Summary */}
-        <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Calculator className="w-5 h-5 text-primary" />
-            <h4 className="font-semibold text-foreground">Quote Summary</h4>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Items Bidding On</span>
-              <span className="font-medium">{biddingItemsCount} of {lineItems.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Items Subtotal</span>
-              <span className="font-medium tabular-nums">SAR {itemsTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Delivery Cost</span>
-              <span className="font-medium tabular-nums">SAR {watchedDeliveryCost.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-primary/20">
-              <span className="font-semibold text-foreground">Grand Total</span>
-              <span className="font-bold text-primary text-lg tabular-nums">
-                SAR {grandTotal.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Terms */}
-        <FormField
-          control={form.control}
-          name="termsAccepted"
-          render={({ field }) => (
-            <FormItem className="flex items-start gap-3 space-y-0">
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="text-sm font-normal">
-                  I confirm that this quote is accurate and I accept the platform terms and conditions
-                </FormLabel>
-                <FormMessage />
-              </div>
-            </FormItem>
-          )}
-        />
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-end">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+        {/* Footer Actions */}
+        <div className="border-t border-border bg-surface p-4 flex gap-3 justify-end sticky bottom-0 z-10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            className="border-border text-text-2 hover:bg-surface-2 hover:text-text-1 min-w-[120px]"
+          >
+            Cancel Draft
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            <Send className="w-4 h-4 me-2" />
-            {isSubmitting ? "Submitting..." : "Submit Quote"}
+          <Button
+            type="submit"
+            disabled={isSubmitting || calculateTotal() === 0}
+            className="bg-amber hover:bg-amber-hover text-black shadow-lg shadow-amber/20 font-bold min-w-[200px]"
+          >
+            {isSubmitting ? (
+               "Transmitting..."
+            ) : (
+              <span className="flex items-center">
+                 <CheckCircle2 className="w-4 h-4 mr-2" />
+                 Transmit Formal Quote
+              </span>
+            )}
           </Button>
         </div>
       </form>
-    </Form>
+    </div>
   );
 }

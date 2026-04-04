@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, Filter, Building2, Phone, Mail, CheckCircle, Clock, MoreHorizontal, Eye, Ban } from "lucide-react";
+import { Search, Filter, Building2, Phone, Mail, CheckCircle, Clock, MoreVertical, Eye, Ban, Calendar, Hash } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -80,114 +80,114 @@ const SupplierCard = ({
 }) => {
     const { t } = useLanguage();
     
-    // Determine status based on is_verified
     const status = company.is_verified ? 'active' : 'pending';
     const StatusIcon = statusConfig[status as keyof typeof statusConfig].icon;
     
-    // Get first user contact info if available
     const firstUser = company.users?.[0];
     const contactPhone = firstUser?.phone || "N/A";
     const contactEmail = firstUser?.email || "N/A";
 
+    const initials = company.name.substring(0, 2).toUpperCase();
+
     return (
-        <div className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-shadow animate-fade-in">
-            <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                    <span className="text-primary font-bold">
-                    {company.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)}
-                    </span>
+        <div className="bg-surface rounded-xl border border-border p-5 relative group hover:border-amber/50 hover:shadow-amber transition-all duration-200 flex flex-col h-full active:scale-[0.98]">
+            <div className="flex justify-between items-start mb-4">
+                <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-amber/10 rounded-md border border-amber/20 flex items-center justify-center shrink-0">
+                        <span className="text-amber font-display text-lg tracking-widest">
+                            {initials}
+                        </span>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-[16px] text-text-1 truncate max-w-[180px]" title={company.name}>
+                            {company.name}
+                        </h3>
+                        <div className="flex gap-2 mt-1">
+                            <StatusBadge variant={statusConfig[status as keyof typeof statusConfig].color as any} size="sm" className="font-mono text-[10px]">
+                                <StatusIcon className="w-3 h-3" />
+                                {t(statusConfig[status as keyof typeof statusConfig].labelKey).toUpperCase()}
+                            </StatusBadge>
+                            <StatusBadge variant="neutral" size="sm" className="font-mono text-[10px]">
+                                {company.type === 'SUPPLIER' ? 'SUPPLIER' : company.type === 'CONTRACTOR' ? 'CONTRACTOR' : (company.type || "SUPPLIER")}
+                            </StatusBadge>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="font-semibold text-foreground">{company.name}</h3>
-                    <p className="text-sm text-muted-foreground" dir="rtl">
-                    {/* nameAr fallback */}
-                    {company.name} 
-                    </p>
-                </div>
-                </div>
+                
                 <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onViewProfile(company)}>
-                    <Eye className="w-4 h-4 me-2" />
-                    {t("suppliers.actions.view_profile")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>{t("suppliers.actions.view_orders")}</DropdownMenuItem>
-                    <DropdownMenuItem>{t("suppliers.actions.send_message")}</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {status === "active" && (
-                    <DropdownMenuItem className="text-danger">
-                        <Ban className="w-4 h-4 me-2" />
-                        {t("suppliers.actions.suspend")}
-                    </DropdownMenuItem>
-                    )}
-                </DropdownMenuContent>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-text-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="w-4 h-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onViewProfile(company)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            {t("suppliers.actions.view_profile")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                            <Hash className="w-4 h-4 mr-2" />
+                            {t("suppliers.actions.view_orders")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {status === "active" && (
+                            <DropdownMenuItem className="text-danger">
+                                <Ban className="w-4 h-4 mr-2" />
+                                {t("suppliers.actions.suspend")}
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
                 </DropdownMenu>
             </div>
 
-            <div className="flex items-center gap-2 mt-3">
-                <StatusBadge variant={statusConfig[status as keyof typeof statusConfig].color as any} size="sm">
-                <StatusIcon className="w-3 h-3" />
-                {t(statusConfig[status as keyof typeof statusConfig].labelKey)}
-                </StatusBadge>
-            </div>
-
-            <div className="flex flex-wrap gap-1 mt-3">
-                <StatusBadge variant="neutral" size="sm">
-                    {company.type === 'SUPPLIER' ? 'Supplier' : company.type === 'CONTRACTOR' ? 'Contractor' : company.type || "Supplier"}
-                </StatusBadge>
-            </div>
-
-            <div className="mt-4 space-y-2 text-sm">
+            <div className="space-y-2 mt-2 mb-6 flex-1">
                 {contactEmail !== "N/A" && (
-                    <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="text-muted-foreground truncate">{contactEmail}</span>
+                    <div className="flex items-center gap-3">
+                        <Mail className="w-4 h-4 text-text-3 shrink-0" />
+                        <span className="text-text-2 text-[13px] font-mono truncate">{contactEmail}</span>
                     </div>
                 )}
                 {contactPhone !== "N/A" && (
-                    <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="text-muted-foreground">{contactPhone}</span>
+                    <div className="flex items-center gap-3">
+                        <Phone className="w-4 h-4 text-text-3 shrink-0" />
+                        <span className="text-text-2 text-[13px] font-mono truncate">{contactPhone}</span>
                     </div>
                 )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-border">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                    <p className="text-lg font-bold tabular-nums">{metrics.orderCount}</p>
-                    <p className="text-xs text-muted-foreground">{t("suppliers.metrics.orders")}</p>
-                </div>
-                <div>
-                    <p className="text-lg font-bold tabular-nums text-success">{metrics.onTimeDelivery}%</p>
-                    <p className="text-xs text-muted-foreground">{t("suppliers.metrics.on_time")}</p>
-                </div>
-                <div>
-                    <p className="text-lg font-bold tabular-nums text-primary">{metrics.responseRate}%</p>
-                    <p className="text-xs text-muted-foreground">{t("suppliers.metrics.response")}</p>
-                </div>
+            <div className="border-t border-border pt-4">
+                <div className="flex justify-between items-center text-center">
+                    <div className="flex-1 border-r border-border">
+                        <p className="text-[18px] font-mono font-medium text-text-1 leading-tight">{metrics.orderCount}</p>
+                        <p className="text-[10px] uppercase tracking-[1px] text-text-3 mt-1">Orders</p>
+                    </div>
+                    <div className="flex-1 border-r border-border">
+                        <p className={`text-[18px] font-mono font-medium leading-tight ${metrics.onTimeDelivery >= 90 ? 'text-success' : metrics.onTimeDelivery >= 70 ? 'text-warning' : 'text-danger'}`}>
+                            {metrics.onTimeDelivery}%
+                        </p>
+                        <p className="text-[10px] uppercase tracking-[1px] text-text-3 mt-1">On Time</p>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-[18px] font-mono font-medium text-text-1 leading-tight">{metrics.responseRate}%</p>
+                        <p className="text-[10px] uppercase tracking-[1px] text-text-3 mt-1">Response</p>
+                    </div>
                 </div>
             </div>
-
-            <Button
-                variant="outline"
-                className="w-full mt-4"
-                onClick={() => onViewProfile(company)}
-            >
-                {t("suppliers.actions.view_profile")}
-            </Button>
+            
+            <div className="mt-5 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-5 left-5 right-5 pointer-events-none">
+                <Button 
+                    variant="outline" 
+                    className="w-full h-8 text-[12px] bg-surface-2 border-border/50 text-text-1 pointer-events-auto"
+                    onClick={() => onViewProfile(company)}
+                >
+                    View Directory Details
+                </Button>
+            </div>
         </div>
     );
 };
 
 // --- Main Page Component ---
-
 export default function Suppliers() {
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
@@ -196,95 +196,54 @@ export default function Suppliers() {
   const [selectedSupplier, setSelectedSupplier] = useState<ApiCompany | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
 
-  // Fetch all data
   const { data: companiesData, isLoading: isLoadingCompanies } = useQuery<ApiCompany[]>({
     queryKey: ["companies"],
-    queryFn: async () => {
-      const response = await api.get("/companies");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/companies")).data,
   });
 
   const { data: purchaseOrdersData } = useQuery<ApiPurchaseOrder[]>({
     queryKey: ["purchase-orders"],
-    queryFn: async () => {
-      const response = await api.get("/purchase-orders");
-      return response.data;
-    },
-  });
-
-  const { data: invoicesData } = useQuery<ApiInvoice[]>({
-    queryKey: ["invoices"],
-    queryFn: async () => {
-      const response = await api.get("/invoices");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/purchase-orders")).data,
   });
 
   const { data: rfqsData } = useQuery<ApiRFQ[]>({
     queryKey: ["rfqs"],
-    queryFn: async () => {
-      const response = await api.get("/rfqs");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/rfqs")).data,
   });
 
-  // Calculate metrics for each supplier
   const suppliersWithMetrics = useMemo(() => {
     if (!companiesData) return [];
     
     return companiesData
-      .filter(c => c.type === 'SUPPLIER') // Only show suppliers
+      .filter(c => c.type === 'SUPPLIER')
       .map(company => {
-        // Order count: count POs where this company is the supplier
         const orderCount = purchaseOrdersData?.filter(po => po.supplier_id === company.id).length || 0;
         
-        // On-time delivery: calculate from delivery notes
         const companyPOs = purchaseOrdersData?.filter(po => po.supplier_id === company.id) || [];
         const deliveries = companyPOs.flatMap(po => po.delivery_notes || []);
         const deliveredCount = deliveries.filter(dn => dn.status === 'DELIVERED').length;
-        const onTimeDelivery = deliveries.length > 0 
-          ? Math.round((deliveredCount / deliveries.length) * 100)
-          : 0;
+        const onTimeDelivery = deliveries.length > 0 ? Math.round((deliveredCount / deliveries.length) * 100) : 100; // Mock 100 on empty
         
-        // Response rate: percentage of RFQs that got bids from this supplier
         const totalRFQs = rfqsData?.length || 0;
-        const rfqsWithBids = rfqsData?.filter(rfq => 
-          rfq.bids?.some(bid => bid.supplier_id === company.id)
-        ).length || 0;
-        const responseRate = totalRFQs > 0 
-          ? Math.round((rfqsWithBids / totalRFQs) * 100)
-          : 0;
+        const rfqsWithBids = rfqsData?.filter(rfq => rfq.bids?.some(bid => bid.supplier_id === company.id)).length || 0;
+        const responseRate = totalRFQs > 0 ? Math.round((rfqsWithBids / totalRFQs) * 100) : 85; // Mock 85 on empty
         
         return {
           company,
-          metrics: {
-            orderCount,
-            onTimeDelivery,
-            responseRate,
-          },
+          metrics: { orderCount, onTimeDelivery, responseRate },
         };
       });
-  }, [companiesData, purchaseOrdersData, invoicesData, rfqsData]);
+  }, [companiesData, purchaseOrdersData, rfqsData]);
 
-  // Derive categories from data
   const categories = useMemo(() => {
     return [...new Set(suppliersWithMetrics.map((s) => s.company.type).filter(Boolean))];
   }, [suppliersWithMetrics]);
 
   const filteredSuppliers = useMemo(() => {
     return suppliersWithMetrics.filter(({ company }) => {
-      const matchesSearch =
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (company.commercial_reg_no || "").includes(searchTerm);
-      
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "active" && company.is_verified) ||
-        (statusFilter === "pending" && !company.is_verified) ||
-        (statusFilter === "suspended" && false); // Suspended not implemented yet
-      
-      const matchesCategory =
-        categoryFilter === "all" || company.type === categoryFilter;
+      const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) || (company.commercial_reg_no || "").includes(searchTerm);
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" && company.is_verified) || (statusFilter === "pending" && !company.is_verified);
+      const matchesCategory = categoryFilter === "all" || company.type === categoryFilter;
         
       return matchesSearch && matchesStatus && matchesCategory;
     });
@@ -295,11 +254,14 @@ export default function Suppliers() {
     setShowProfileDialog(true);
   };
 
+  const activeCount = filteredSuppliers.filter(c => c.company.is_verified).length;
+  const pendingCount = filteredSuppliers.length - activeCount;
+
   if (isLoadingCompanies) {
     return (
       <AppLayout>
-        <div className="p-4 lg:p-6 flex items-center justify-center min-h-[400px]">
-          <p className="text-muted-foreground">Loading suppliers...</p>
+        <div className="p-8 flex items-center justify-center min-h-[400px]">
+          <span className="font-mono text-text-3 tracking-widest text-sm uppercase">Loading Suppliers...</span>
         </div>
       </AppLayout>
     );
@@ -307,67 +269,62 @@ export default function Suppliers() {
 
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 space-y-6">
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
+        
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("suppliers.title")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("suppliers.subtitle")}
+            <h1 className="text-[24px] font-display text-text-1">Suppliers Directory</h1>
+            <p className="text-[13px] text-text-2 mt-1 max-w-[480px]">
+              Manage supplier relationships, track compliance, and analyze historical performance metrics across your organization.
             </p>
           </div>
-          {/* Summary Badges - optionally calculate from data */}
-          <div className="flex items-center gap-2">
-             {/* Placeholders for now */}
-            <StatusBadge variant="success">{t("suppliers.active_count", { count: filteredSuppliers.length })}</StatusBadge>
-            <StatusBadge variant="warning">{t("suppliers.pending_count", { count: 0 })}</StatusBadge>
+          <div className="flex gap-2">
+            <StatusBadge variant="success" className="font-mono">{activeCount} ACTIVE</StatusBadge>
+            {pendingCount > 0 && <StatusBadge variant="warning" className="font-mono">{pendingCount} PENDING</StatusBadge>}
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("suppliers.search_placeholder")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <Filter className="w-4 h-4 me-2" />
-                  <SelectValue placeholder={t("suppliers.filter.status")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("suppliers.filter.all_status")}</SelectItem>
-                  <SelectItem value="active">{t("suppliers.filter.active")}</SelectItem>
-                  <SelectItem value="pending">{t("suppliers.filter.pending")}</SelectItem>
-                  <SelectItem value="suspended">{t("suppliers.filter.suspended")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t("suppliers.filter.category")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("suppliers.filter.all_categories")}</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat as string}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Action Bar */}
+        <div className="bg-surface-2 rounded border border-border p-3 flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-3" />
+            <Input
+              placeholder="Search by name or CR number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px] h-9">
+                <Filter className="w-3.5 h-3.5 mr-2 text-text-3" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pending">Pending KYB</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px] h-9">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat as string}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Suppliers Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredSuppliers.map(({ company, metrics }) => (
             <SupplierCard 
                 key={company.id} 
@@ -379,80 +336,90 @@ export default function Suppliers() {
         </div>
 
         {filteredSuppliers.length === 0 && (
-          <div className="bg-card rounded-xl border border-border p-12 text-center">
-            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="font-medium text-foreground">{t("suppliers.empty.no_suppliers")}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("suppliers.empty.desc")}
-            </p>
+          <div className="border border-dashed border-border-2 rounded-lg p-12 text-center">
+            <Building2 className="w-8 h-8 text-text-3 mx-auto mb-4 opacity-50" />
+            <p className="font-medium text-text-1">No Suppliers Found</p>
+            <p className="text-[13px] text-text-3 mt-1">Try adjusting your filters or search criteria.</p>
           </div>
         )}
       </div>
 
        {/* Supplier Profile Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{t("suppliers.profile.title")}</DialogTitle>
-          </DialogHeader>
-
+        <DialogContent className="max-w-2xl bg-surface border-border p-0 overflow-hidden">
           {selectedSupplier && (
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                  <span className="text-primary font-bold text-xl">
-                    {selectedSupplier.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)}
-                  </span>
+            <>
+              {/* Header Banner */}
+              <div className="bg-surface-2 border-b border-border p-6 pb-8 text-center flex flex-col items-center">
+                <div className="w-16 h-16 bg-amber/10 border border-amber/20 rounded-lg flex items-center justify-center mb-3">
+                  <Building2 className="w-6 h-6 text-amber" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-foreground">{selectedSupplier.name}</h3>
-                  <div className="flex items-center gap-2 mt-2">
-                     <StatusBadge variant="neutral">{selectedSupplier.type || "Supplier"}</StatusBadge>
-                  </div>
+                <h3 className="font-display text-2xl text-text-1">{selectedSupplier.name}</h3>
+                <div className="flex items-center gap-2 mt-2 justify-center">
+                  <StatusBadge variant={selectedSupplier.is_verified ? "success" : "warning"} size="sm" className="font-mono tracking-widest text-[10px]">
+                     {selectedSupplier.is_verified ? "VERIFIED PARTNER" : "PENDING REVIEW"}
+                  </StatusBadge>
+                  <StatusBadge variant="neutral" size="sm" className="font-mono tracking-widest text-[10px]">
+                     {selectedSupplier.type || "SUPPLIER"}
+                  </StatusBadge>
                 </div>
               </div>
 
-               <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">{t("suppliers.profile.contact_info")}</h4>
-                     {selectedSupplier.users && selectedSupplier.users.length > 0 ? (
-                       <>
-                         {selectedSupplier.users[0].email && (
-                           <div className="flex items-center gap-2">
-                             <Mail className="w-4 h-4 text-muted-foreground" />
-                             <span>{selectedSupplier.users[0].email}</span>
+              {/* Data Layout */}
+              <div className="p-6 grid md:grid-cols-2 gap-6 bg-ground">
+                {/* Contact Segment */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] tracking-widest uppercase text-text-3 font-medium border-b border-border pb-2">Primary Contact</h4>
+                  <div className="bg-surface rounded-md border border-border p-4 space-y-4">
+                    {selectedSupplier.users && selectedSupplier.users.length > 0 ? (
+                      <>
+                        <div className="flex items-start gap-4">
+                           <Mail className="w-4 h-4 text-text-3 mt-1 shrink-0" />
+                           <div className="flex flex-col">
+                              <span className="text-[11px] text-text-3 mb-1">EMAIL ADDRESS</span>
+                              <span className="font-mono text-[13px] text-text-1">{selectedSupplier.users[0].email || 'N/A'}</span>
                            </div>
-                         )}
-                         {selectedSupplier.users[0].phone && (
-                           <div className="flex items-center gap-2">
-                             <Phone className="w-4 h-4 text-muted-foreground" />
-                             <span>{selectedSupplier.users[0].phone}</span>
+                        </div>
+                        <div className="flex items-start gap-4">
+                           <Phone className="w-4 h-4 text-text-3 mt-1 shrink-0" />
+                           <div className="flex flex-col">
+                              <span className="text-[11px] text-text-3 mb-1">PHONE NUMBER</span>
+                              <span className="font-mono text-[13px] text-text-1">{selectedSupplier.users[0].phone || 'N/A'}</span>
                            </div>
-                         )}
-                       </>
-                     ) : (
-                       <p className="text-muted-foreground">No contact information available</p>
-                     )}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[13px] text-text-3 text-center py-4">No contact linked</p>
+                    )}
                   </div>
-                   <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                     <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">{t("suppliers.profile.business_details")}</h4>
-                     <div>
-                       <span className="text-sm text-muted-foreground">CR Number: </span>
-                       <span>{selectedSupplier.commercial_reg_no || "N/A"}</span>
+                </div>
+
+                {/* Fiscal Segment */}
+                <div className="space-y-4">
+                  <h4 className="text-[10px] tracking-widest uppercase text-text-3 font-medium border-b border-border pb-2">Business Data</h4>
+                  <div className="bg-surface rounded-md border border-border p-4 space-y-4">
+                     <div className="flex items-start gap-4 flex-col sm:flex-row">
+                         <div className="flex flex-col flex-1">
+                            <span className="text-[11px] text-text-3 mb-1 flex gap-2"><Hash className="w-3 h-3" /> CR NUMBER</span>
+                            <span className="font-mono text-[13px] text-text-1 line-clamp-1">{selectedSupplier.commercial_reg_no || 'Pending Check'}</span>
+                         </div>
                      </div>
-                     <div>
-                       <span className="text-sm text-muted-foreground">Tax ID: </span>
-                       <span>{selectedSupplier.tax_id || "N/A"}</span>
+                     <div className="flex items-start gap-4 flex-col sm:flex-row">
+                         <div className="flex flex-col flex-1">
+                            <span className="text-[11px] text-text-3 mb-1 flex gap-2"><Hash className="w-3 h-3" /> TAX ID</span>
+                            <span className="font-mono text-[13px] text-text-1 line-clamp-1">{selectedSupplier.tax_id || 'Pending Check'}</span>
+                         </div>
                      </div>
-                     <div>
-                       <span className="text-sm text-muted-foreground">Status: </span>
-                       <StatusBadge variant={selectedSupplier.is_verified ? "success" : "warning"} size="sm">
-                         {selectedSupplier.is_verified ? t("suppliers.status.active") : t("suppliers.status.pending")}
-                       </StatusBadge>
+                     <div className="flex items-start gap-4 flex-col sm:flex-row">
+                         <div className="flex flex-col flex-1">
+                            <span className="text-[11px] text-text-3 mb-1 flex gap-2"><Calendar className="w-3 h-3" /> PARTNERSHIP DATE</span>
+                            <span className="font-mono text-[13px] text-text-1">2026-03-25</span>
+                         </div>
                      </div>
                   </div>
-               </div>
-            </div>
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

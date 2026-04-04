@@ -150,8 +150,9 @@ export function SupplierRating({
         timestamp: new Date().toISOString(),
       };
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (onSubmit) {
+        await Promise.resolve(onSubmit(ratingData));
+      }
 
       toast({
         title: t("orders.rating.toast.submitted"),

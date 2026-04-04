@@ -9,8 +9,12 @@ export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   @Get()
-  findAll(@Query('category') category?: string, @Query('supplierId') supplierId?: string) {
-    return this.materialsService.findAll({ category, supplierId });
+  findAll(
+    @Query('category') category?: string,
+    @Query('supplierId') supplierId?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.materialsService.findAll({ category, supplierId, search });
   }
 
   @Get(':id')

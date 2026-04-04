@@ -1,433 +1,169 @@
 import { useMemo, useState } from "react";
-import {
-  Search,
-  Filter,
-  ShoppingCart,
-  Package,
-  Truck,
-  MapPin,
-  CheckCircle,
-  Eye,
-  MoreHorizontal,
-} from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, List, LayoutGrid, AlertCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { GoodsReceivedNote } from "@/components/orders/GoodsReceivedNote";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { toast } from "@/hooks/use-toast";
 
+const KANBAN_COLUMNS = [
+  { id: "confirmed", label: "Confirmed", borderInfo: "border-t-[3px] border-t-[#2E5A8B]" },
+  { id: "processing", label: "Processing", borderInfo: "border-t-[3px] border-t-[#B87333]" },
+  { id: "out_for_delivery", label: "Out for Delivery", borderInfo: "border-t-[3px] border-t-[#8A6BBF]" },
+  { id: "delivered", label: "Delivered", borderInfo: "border-t-[3px] border-t-[#2D7A4F]" },
+  { id: "completed", label: "Completed", borderInfo: "border-t-[3px] border-t-[#5C5A55]" },
+];
 
-const statusConfig = {
-  confirmed: { color: "primary", labelKey: "orders.status.confirmed", icon: CheckCircle },
-  processing: { color: "warning", labelKey: "orders.status.processing", icon: Package },
-  out_for_delivery: { color: "accent", labelKey: "orders.status.out_for_delivery", icon: Truck },
-  delivered: { color: "success", labelKey: "orders.status.delivered", icon: MapPin },
-  completed: { color: "success", labelKey: "orders.status.completed", icon: CheckCircle },
-  cancelled: { color: "danger", labelKey: "orders.status.cancelled", icon: MapPin },
-  CONFIRMED: { color: "primary", labelKey: "orders.status.confirmed", icon: CheckCircle },
-  PROCESSING: { color: "warning", labelKey: "orders.status.processing", icon: Package },
-  OUT_FOR_DELIVERY: { color: "accent", labelKey: "orders.status.out_for_delivery", icon: Truck },
-  DELIVERED: { color: "success", labelKey: "orders.status.delivered", icon: MapPin },
-  COMPLETED: { color: "success", labelKey: "orders.status.completed", icon: CheckCircle },
-  CANCELLED: { color: "danger", labelKey: "orders.status.cancelled", icon: MapPin },
-} as const;
-
-const paymentConfig = {
-  pending: { color: "warning", labelKey: "orders.payment_status.pending" },
-  paid: { color: "success", labelKey: "orders.payment_status.paid" },
-  overdue: { color: "danger", labelKey: "orders.payment_status.overdue" },
-} as const;
-
-type ApiPurchaseOrder = {
-  id: string;
-  status?: string;
-  total_amount?: number;
-  created_at?: string;
-  supplier?: { name?: string };
-  project?: { name?: string };
-  items?: Array<{ id: string; item_description?: string; ordered_qty?: number }>;
-};
-
-type AdaptedOrder = {
-  id: string;
-  fullId: string;
-  supplier: string;
-  project: string;
-  items: string;
-  totalAmount: number;
-  status: keyof typeof statusConfig;
-  orderDate: string;
-  paymentStatus: "pending" | "paid" | "overdue";
-  lineItems: Array<{ id: string; productName: string; quantity: number; unit: string }>;
-};
-
-const OrderRow = ({ order, onSelect }: { order: AdaptedOrder; onSelect: (o: AdaptedOrder) => void }) => {
-    const { t } = useLanguage();
-    const StatusIcon = (statusConfig[order.status] || statusConfig["confirmed"]).icon;
-    const statusVariant = (statusConfig[order.status] || statusConfig["confirmed"]).color;
-    const statusLabel = (statusConfig[order.status] || statusConfig["confirmed"]).labelKey;
-
-    return (
-        <tr className="hover:bg-muted/50 transition-colors animate-fade-in">
-        <td>
-            <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center shrink-0">
-                <ShoppingCart className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-                <p className="font-medium text-foreground">{order.id}</p>
-                <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                {order.items}
-                </p>
-            </div>
-            </div>
-        </td>
-        <td>
-            <p className="font-medium">{order.supplier}</p>
-        </td>
-        <td>
-            <p className="text-sm truncate max-w-[160px]">{order.project}</p>
-        </td>
-        <td className="tabular-nums font-semibold">
-            SAR {order.totalAmount.toLocaleString()}
-        </td>
-        <td>
-            <StatusBadge variant={statusVariant as any} size="sm">
-            <StatusIcon className="w-3 h-3" />
-            {t(statusLabel)}
-            </StatusBadge>
-        </td>
-        <td>
-            <StatusBadge variant="warning" size="sm">
-            Pending
-            </StatusBadge>
-        </td>
-        <td className="text-center">
-            <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onSelect(order)}>
-                <Eye className="w-4 h-4 me-2" />
-                {t("orders.view_details")}
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                <Truck className="w-4 h-4 me-2" />
-                {t("orders.track")}
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-            </DropdownMenu>
-        </td>
-        </tr>
-    );
-}
-
-function Orders() {
-  const { t } = useLanguage();
-  const queryClient = useQueryClient();
+export default function Orders() {
+  const [viewMode, setViewMode] = useState<"kanban" | "table">("kanban");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedOrder, setSelectedOrder] = useState<AdaptedOrder | null>(null);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [showGRNDialog, setShowGRNDialog] = useState(false);
+  const navigate = useNavigate();
 
-  const { data, isLoading, isError } = useQuery<ApiPurchaseOrder[]>({
+  const { data, isLoading } = useQuery({
     queryKey: ["purchase-orders"],
-    queryFn: async () => {
-      const response = await api.get("/purchase-orders");
-      return response.data;
-    },
+    queryFn: async () => (await api.get("/purchase-orders")).data,
   });
 
-  const orders: AdaptedOrder[] = useMemo(() => {
+  const orders = useMemo(() => {
     if (!data) return [];
-    return data.map((order) => {
-      const normalizedStatus = (() => {
-        const raw = (order.status || "confirmed").toString().toLowerCase();
-        if (raw === "processing") return "processing";
-        if (raw === "out_for_delivery") return "out_for_delivery";
-        if (raw === "delivered") return "delivered";
-        if (raw === "cancelled") return "cancelled";
-        if (raw === "completed") return "completed";
-        return "confirmed";
-      })() as AdaptedOrder["status"];
-
-      const itemsSummary = order.items?.length
-        ? `${order.items.length} item${order.items.length > 1 ? "s" : ""}`
-        : "Items not provided";
-
+    return data.map((o: any) => {
+      const s = (o.status || "confirmed").toString().toLowerCase();
+      const status = KANBAN_COLUMNS.find(c => c.id === s) ? s : "confirmed";
       return {
-        id: order.id.substring(0, 8),
-        fullId: order.id,
-        supplier: order.supplier?.name || "Unknown supplier",
-        project: order.project?.name || "Unknown project",
-        items: itemsSummary,
-        totalAmount: Number(order.total_amount || 0),
-        status: normalizedStatus,
-        orderDate: order.created_at ? new Date(order.created_at).toLocaleDateString() : "",
-        paymentStatus: "pending",
-        lineItems: (order.items || []).map((item) => ({
-          id: item.id,
-          productName: item.item_description || "Line item",
-          quantity: Number(item.ordered_qty || 0),
-          unit: "unit",
-        })),
+        id: o.id?.substring(0, 8) || "UNKNOWN",
+        fullId: o.id,
+        supplier: o.supplier?.name || "Unknown Supplier",
+        itemsCount: o.items?.length || 0,
+        totalAmount: Number(o.total_amount || 0),
+        status,
+        date: o.created_at ? new Date(o.created_at).toLocaleDateString() : "N/A",
       };
     });
   }, [data]);
 
-  const filteredOrders = orders.filter((order) => {
-      const matchesSearch =
-        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.fullId.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-      return matchesSearch && matchesStatus;
-  });
+  const filteredOrders = orders.filter(o => 
+    o.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    o.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <AppLayout>
-      <div className="p-4 lg:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{t("orders.title")}</h1>
-            <p className="text-muted-foreground mt-1">
-              {t("orders.subtitle")}
-            </p>
+      <PageShell 
+        title="Orders & Fulfillment" 
+        subtitle="Track purchase orders and manage goods receipt notes."
+        actions={
+          <div className="flex bg-surface-2 p-1 rounded-md border border-border">
+            <Button 
+              variant={viewMode === "kanban" ? "secondary" : "ghost"} 
+              size="sm" 
+              onClick={() => setViewMode("kanban")}
+              className={`h-7 px-3 ${viewMode === "kanban" ? 'bg-surface shadow-sm' : ''}`}
+            >
+              <LayoutGrid className="w-4 h-4 mr-1.5" /> Kanban
+            </Button>
+            <Button 
+              variant={viewMode === "table" ? "secondary" : "ghost"} 
+              size="sm" 
+              onClick={() => setViewMode("table")}
+              className={`h-7 px-3 ${viewMode === "table" ? 'bg-surface shadow-sm' : ''}`}
+            >
+              <List className="w-4 h-4 mr-1.5" /> Table
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge variant="accent">
-              {t("orders.in_transit_count", { count: orders.filter((o) => o.status === "out_for_delivery").length })}
-            </StatusBadge>
-          </div>
+        }
+      >
+        <div className="mb-6 max-w-sm relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-3" />
+          <Input 
+            placeholder="Search PO number or supplier..." 
+            className="pl-9 h-9" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tabular-nums">{orders.length}</p>
-                <p className="text-sm text-muted-foreground">{t("orders.total_orders")}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-card rounded-xl border border-border p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tabular-nums">
-                  {orders.filter((o) => o.status === "processing" || o.status === "PROCESSING").length}
-                </p>
-                <p className="text-sm text-muted-foreground">{t("orders.processing")}</p>
-              </div>
-            </div>
-          </div>
-          {/* ... other cards (omitted for brevity, can keep structure) ... */}
-        </div>
-
-        {/* Filters */}
-        <div className="bg-card rounded-xl border border-border p-4">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("orders.search_placeholder")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="w-4 h-4 me-2" />
-                <SelectValue placeholder={t("orders.filter.status")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("orders.filter.all_status")}</SelectItem>
-                <SelectItem value="confirmed">{t("orders.filter.confirmed")}</SelectItem>
-                <SelectItem value="processing">{t("orders.filter.processing")}</SelectItem>
-                <SelectItem value="out_for_delivery">{t("orders.filter.out_for_delivery")}</SelectItem>
-                <SelectItem value="delivered">{t("orders.filter.delivered")}</SelectItem>
-                <SelectItem value="completed">{t("orders.filter.completed")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Orders List */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <table className="w-full data-grid">
-                <thead>
-                  <tr>
-                    <th className="min-w-[200px]">{t("orders.order_info")}</th>
-                    <th className="min-w-[150px]">{t("orders.supplier")}</th>
-                    <th className="min-w-[180px]">{t("orders.project")}</th>
-                    <th className="min-w-[130px]">{t("orders.amount")}</th>
-                    <th className="min-w-[130px]">{t("orders.status")}</th>
-                    <th className="min-w-[110px]">{t("orders.payment")}</th>
-                    <th className="min-w-[100px] text-center">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...Array(5)].map((_, i) => (
-                    <tr key={i}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-4 w-[120px]" />
-                            <Skeleton className="h-3 w-[80px]" />
-                          </div>
+        {viewMode === "kanban" ? (
+          <div className="flex gap-4 overflow-x-auto pb-4 min-h-[500px]">
+            {KANBAN_COLUMNS.map(col => {
+              const colOrders = filteredOrders.filter(o => o.status === col.id);
+              return (
+                <div key={col.id} className={`w-[280px] shrink-0 bg-surface-2 rounded-md ${col.borderInfo} border-x border-b border-border-2 p-3 flex flex-col`}>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-[13px] font-medium text-text-1 uppercase tracking-wider">{col.label}</h3>
+                    <span className="text-[11px] font-mono text-text-3 px-1.5 py-0.5 bg-surface rounded border border-border">
+                      {colOrders.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3 flex-1">
+                    {colOrders.map(order => (
+                      <div 
+                        key={order.fullId} 
+                        onClick={() => navigate(`/orders/${order.fullId}`)}
+                        className="bg-surface p-3 rounded-md border border-border hover:border-amber/50 hover:shadow-[0_0_0_1px_rgba(212,146,10,0.2)] cursor-pointer transition-all active:scale-[0.98]"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-mono text-[13px] text-text-1">{order.id}</span>
+                          <span className="text-[11px] text-text-3">{order.date}</span>
                         </div>
-                      </td>
-                      <td><Skeleton className="h-4 w-[120px]" /></td>
-                      <td><Skeleton className="h-4 w-[140px]" /></td>
-                      <td><Skeleton className="h-4 w-[80px]" /></td>
-                      <td><Skeleton className="h-6 w-[80px] rounded-full" /></td>
-                      <td><Skeleton className="h-6 w-[80px] rounded-full" /></td>
-                      <td><Skeleton className="h-8 w-8 rounded-md mx-auto" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : isError ? (
-              <div className="p-8 text-center text-danger">Failed to load orders</div>
-            ) : filteredOrders.length > 0 ? (
-              <table className="w-full data-grid">
-                <thead>
-                  <tr>
-                    <th className="min-w-[200px]">{t("orders.order_info")}</th>
-                    <th className="min-w-[150px]">{t("orders.supplier")}</th>
-                    <th className="min-w-[180px]">{t("orders.project")}</th>
-                    <th className="min-w-[130px]">{t("orders.amount")}</th>
-                    <th className="min-w-[130px]">{t("orders.status")}</th>
-                    <th className="min-w-[110px]">{t("orders.payment")}</th>
-                    <th className="min-w-[100px] text-center">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                      <OrderRow 
-                          key={order.fullId} 
-                          order={order} 
-                          onSelect={(o) => {
-                              setSelectedOrder(o);
-                              setShowDetailsDialog(true);
-                          }}
-                      />
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="py-12">
-                <EmptyState
-                  icon={ShoppingCart}
-                  title={t("orders.empty.no_orders")}
-                  description={t("orders.empty.desc")}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-       {/* Order Details Dialog */}
-      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{t("orders.details.title")}</DialogTitle>
-          </DialogHeader>
-
-          {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                    <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
-                      {t("orders.order_info")}
-                    </h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("orders.order_id")}</span>
-                        <span className="font-medium">{selectedOrder.id}</span>
+                        <p className="font-medium text-[14px] text-text-1 mb-1 truncate">{order.supplier}</p>
+                        <div className="flex justify-between items-end mt-3">
+                          <p className="text-[12px] text-text-2">{order.itemsCount} items</p>
+                          <p className="font-mono text-[13px] text-text-1 font-medium">SAR {order.totalAmount.toLocaleString()}</p>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t("orders.total_amount")}</span>
-                        <span className="font-semibold text-primary tabular-nums">
-                          SAR {selectedOrder.totalAmount?.toLocaleString()}
-                        </span>
+                    ))}
+                    {colOrders.length === 0 && (
+                      <div className="flex-1 flex flex-col items-center justify-center text-text-3 opacity-50 border-2 border-dashed border-border rounded-md min-h-[100px]">
+                        <p className="text-[12px]">No orders</p>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
-                {selectedOrder.status === "out_for_delivery" ||
-                selectedOrder.status === "OUT_FOR_DELIVERY" ? (
-                  <div className="pt-2">
-                    <Button
-                      className="w-full"
-                      onClick={() => setShowGRNDialog(true)}
-                    >
-                      Record Goods Receipt (GRN)
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {selectedOrder ? (
-        <GoodsReceivedNote
-          orderId={selectedOrder.fullId}
-          supplier={selectedOrder.supplier}
-          lineItems={selectedOrder.lineItems}
-          open={showGRNDialog}
-          onOpenChange={setShowGRNDialog}
-          onConfirm={() => {
-            queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-          }}
-        />
-      ) : null}
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-surface border border-border rounded-md overflow-hidden overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-surface-2 border-b border-border">
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider">PO #</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider">Supplier</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider">Items</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider">Total</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider">Status</th>
+                  <th className="py-3 px-4 text-[12px] font-medium text-text-2 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-text-3">No orders found.</td>
+                  </tr>
+                ) : filteredOrders.map(order => {
+                  const statusInfo = KANBAN_COLUMNS.find(c => c.id === order.status)!;
+                  return (
+                    <tr key={order.fullId} className="border-b border-border hover:bg-surface-2 transition-colors">
+                      <td className="py-3 px-4 font-mono text-[13px] text-text-1">{order.id}</td>
+                      <td className="py-3 px-4 text-[13px] font-medium text-text-1">{order.supplier}</td>
+                      <td className="py-3 px-4 text-[13px] text-text-2">{order.itemsCount}</td>
+                      <td className="py-3 px-4 font-mono text-[13px] text-text-1">SAR {order.totalAmount.toLocaleString()}</td>
+                      <td className="py-3 px-4">
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded uppercase ${statusInfo.borderInfo.replace('border-t-[3px] border-t-', 'bg-').replace('[', '').replace(']', '/20 text-').concat('')}`}>{statusInfo.label}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/orders/${order.fullId}`)}>View</Button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PageShell>
     </AppLayout>
   );
 }
-
-export default Orders;

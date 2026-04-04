@@ -1,143 +1,63 @@
-import { Search, User, Globe, Check, RefreshCw, WifiOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Search, RefreshCw, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/layout/NotificationBell";
-import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { useSync } from "@/contexts/SyncContext";
+import { useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 export function TopBar() {
-  const { language, setLanguage, t, isRTL } = useLanguage();
-  const { sync, isSyncing, isOffline } = useSync();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { sync, isSyncing } = useSync();
+  const location = useLocation();
+
+  const pathnames = location.pathname.split('/').filter((x) => x);
+  const pageTitle = pathnames.length > 0 
+    ? pathnames[pathnames.length - 1].charAt(0).toUpperCase() + pathnames[pathnames.length - 1].slice(1)
+    : "Dashboard";
 
   return (
-    <header className="h-16 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40 px-4 lg:px-8 flex items-center justify-between gap-4 sticky top-0 z-50">
-      {/* Mobile Logo */}
-      <div className="lg:hidden flex items-center gap-2">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-sm">BF</span>
-        </div>
-        <span className="font-bold text-foreground">BidFlow</span>
-      </div>
-
-      {/* Search - Desktop */}
-      <div className="hidden lg:flex flex-1 max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground left-3 rtl:left-auto rtl:right-3" />
-          <Input
-            placeholder={t("common.search_placeholder")}
-            className="bg-muted/20 border-border/50 focus-visible:bg-background transition-colors placeholder:text-muted-foreground/70 pl-10 rtl:pl-3 rtl:pr-10"
-          />
-        </div>
-      </div>
-
-      {/* Actions */}
+    <header className="h-[52px] bg-ground/80 backdrop-blur-[8px] border-b border-border px-6 flex items-center justify-between gap-4 sticky top-0 z-40">
+      
       <div className="flex items-center gap-2">
-         {/* Offline Indicator */}
-         {isOffline && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 text-danger text-xs font-medium rounded-full cursor-help" title="App is running offline">
-            <WifiOff className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Offline</span>
-          </div>
-         )}
-         {/* Sync Button */}
-         <Button 
-          variant="ghost" 
-          size="icon" 
-          className={cn("text-muted-foreground transition-all", isSyncing && "animate-spin text-primary")}
-          onClick={sync}
-          disabled={isSyncing}
-          title="Sync Data"
-        >
-          <RefreshCw className="h-5 w-5" />
-        </Button>
+        <div className="hidden sm:flex items-center gap-2 text-[12px] text-text-3 font-body">
+          <span>Home</span>
+          {pathnames.length > 0 && <ChevronRight className="w-3 h-3" />}
+          {pathnames.slice(0, -1).map((val, index) => (
+            <span key={index} className="flex items-center gap-2">
+              <span>{val.charAt(0).toUpperCase() + val.slice(1)}</span>
+              <ChevronRight className="w-3 h-3" />
+            </span>
+          ))}
+        </div>
+        <h2 className="text-[16px] font-display text-text-1 leading-none pt-1">
+          {pageTitle}
+        </h2>
+      </div>
 
-        {/* Language Toggle */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <Globe className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={isRTL ? "start" : "end"}>
-            <DropdownMenuItem 
-              onClick={() => setLanguage("en")}
-              className="flex items-center justify-between gap-2"
-            >
-              <span>{t("language.english")}</span>
-              {language === "en" && <Check className="h-4 w-4 text-primary" />}
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => setLanguage("ar")}
-              className="flex items-center justify-between gap-2"
-            >
-              <span>{t("language.arabic")}</span>
-              {language === "ar" && <Check className="h-4 w-4 text-primary" />}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center gap-4">
+        <div className="hidden md:flex relative w-[280px]">
+          <Search className="absolute top-1/2 -translate-y-1/2 left-3 h-4 w-4 text-text-3" />
+          <Input
+            placeholder="Search everything..."
+            className="h-8 pl-9 pr-12 bg-surface-2 border-border-2 text-[13px]"
+          />
+          <div className="absolute top-1/2 -translate-y-1/2 right-2 flex items-center justify-center bg-surface border border-border-2 rounded px-1.5 h-5 text-[10px] text-text-3 font-mono">
+            ⌘K
+          </div>
+        </div>
 
         <NotificationBell />
 
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-muted-foreground">
-              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={isRTL ? "start" : "end"}>
-            <DropdownMenuLabel>
-              <div>
-                <p className="font-medium">{user?.name || "User"}</p>
-                <p className="text-xs text-muted-foreground">
-                  {user?.role === "contractor" ? t("common.procurement_manager") : 
-                   user?.role === "supplier" ? "Supplier" : 
-                   user?.role === "admin" ? "Administrator" : 
-                   t("common.procurement_manager")}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => {
-                navigate("/settings");
-              }}
-            >
-              {t("common.profile")}
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => {
-                navigate("/settings");
-              }}
-            >
-              {t("nav.settings")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-danger"
-              onClick={() => {
-                logout();
-              }}
-            >
-              {t("common.sign_out")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <button
+          onClick={sync}
+          disabled={isSyncing}
+          className={cn(
+            "flex items-center justify-center text-text-3 hover:text-amber transition-colors w-8 h-8 rounded hover:bg-amber-glow",
+            isSyncing && "animate-spin text-amber"
+          )}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
       </div>
     </header>
   );

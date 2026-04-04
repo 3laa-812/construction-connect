@@ -1,402 +1,267 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Award, ChevronDown, ChevronUp, Star, Truck, DollarSign, Calendar } from "lucide-react";
+import { useState } from "react";
+import { Check, Star, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
-
-interface AdaptedBid {
-  id: string;
-  supplierName: string;
-  supplierRating: number;
-  unitPrice: number;
-  totalPrice: number;
-  deliveryDate: string;
-  deliveryDays: number;
-  score: number;
-  notes?: string;
-  isLowestPrice?: boolean;
-  isEarliestDelivery?: boolean;
-}
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type ApiBid = {
   id: string;
-  total_price?: number;
-  valid_until?: string | null;
-  created_at?: string;
   supplier?: { name?: string };
-  items?: Array<{ unit_price?: number | null }>;
+  items?: { unit_price?: unknown }[];
+  total_price?: unknown;
+  valid_until?: string | null;
+  status?: string;
 };
 
-type ApiRFQ = {
-  id: string;
-  deadline?: string | null;
-  items?: Array<{ product_name?: string }>;
-  bids?: ApiBid[];
-};
+function mapBidForRow(b: ApiBid, allBids: ApiBid[]) {
+  const unitPrice = Number(b.items?.[0]?.unit_price ?? 0);
+  const total = Number(b.total_price ?? 0);
+  const unitPrices = allBids.map((x) => Number(x.items?.[0]?.unit_price ?? Infinity));
+  const totals = allBids.map((x) => Number(x.total_price ?? Infinity));
+  const unitPriceBest = unitPrice > 0 && unitPrice === Math.min(...unitPrices);
+  const totalCostBest = total > 0 && total === Math.min(...totals);
+  return {
+    id: b.id,
+    supplier: b.supplier?.name ?? "Supplier",
+    unitPrice,
+    total,
+    unitPriceBest,
+    totalCostBest,
+    validUntil: b.valid_until
+      ? new Date(b.valid_until).toLocaleDateString()
+      : "—",
+    validWarning: b.valid_until
+      ? new Date(b.valid_until).getTime() - Date.now() < 2 * 86400000
+      : false,
+    status: b.status ?? "PENDING",
+  };
+}
 
-type SortKey = "totalPrice" | "deliveryDays" | "score" | "supplierRating";
-
-export function BidComparisonTable() {
+export function BidComparisonTable({
+  rfqId,
+  rfqStatus,
+}: {
+  rfqId: string;
+  rfqStatus: string;
+}) {
   const { t } = useLanguage();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data, isLoading, isError } = useQuery<ApiRFQ[]>({
-    queryKey: ["rfqs", "bid-comparison"],
-    queryFn: async () => (await api.get("/rfqs")).data,
+  const queryClient = useQueryClient();
+  const [confirmBidId, setConfirmBidId] = useState<string | null>(null);
+
+  const { data: bids = [], isLoading } = useQuery({
+    queryKey: ["rfqs", rfqId, "bids"],
+    queryFn: async () => {
+      const res = await api.get<ApiBid[]>(`/rfqs/${rfqId}/bids`);
+      return res.data;
+    },
+    enabled: !!rfqId,
   });
 
+  const rows = bids.map((b) => mapBidForRow(b, bids));
+  const BEST_COLOR = "text-amber";
+
   const awardMutation = useMutation({
-    mutationFn: async (payload: {
-      rfqId: string;
-      bidId: string;
-      supplierName: string;
-    }) => {
-      const res = await api.patch(
-        `/rfqs/${payload.rfqId}/award/${payload.bidId}`,
-      );
-      return {
-        po: res.data as { id: string },
-        supplierName: payload.supplierName,
-      };
-    },
-    onSuccess: ({ po, supplierName }) => {
+    mutationFn: ({ bidId }: { bidId: string }) =>
+      api.patch(`/rfqs/${rfqId}/award/${bidId}`).then((r) => r.data),
+    onSuccess: (po: { id: string }) => {
       toast({
-        title: t("bids.comparison.toast.awarded_title"),
-        description: t("bids.comparison.toast.awarded_desc", {
-          supplier: supplierName,
-        }),
+        title: "Purchase order created",
+        description: `PO #${po.id.slice(-6).toUpperCase()}`,
       });
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
-      setShowAwardDialog(false);
-      setSelectedBid(null);
-      navigate(`/orders?created=${po.id}`);
+      setConfirmBidId(null);
+      navigate(`/orders/${po.id}`);
     },
-    onError: (err: unknown) => {
+    onError: (e: unknown) => {
       const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Award failed";
+        e && typeof e === "object" && "response" in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data
+              ?.message
+          : undefined;
       toast({
         variant: "destructive",
-        title: t("common.error") || "Error",
-        description: String(msg),
+        title: "Could not award bid",
+        description: msg ?? String(e),
       });
     },
   });
 
-  const [selectedBid, setSelectedBid] = useState<AdaptedBid | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("score");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [showAwardDialog, setShowAwardDialog] = useState(false);
-
-  const { rfqTitle, bids, comparisonRfqId } = useMemo(() => {
-    if (!data || data.length === 0) {
-      return {
-        rfqTitle: "",
-        bids: [] as AdaptedBid[],
-        comparisonRfqId: "" as string,
-      };
-    }
-    const rfqWithBids = data.find((r) => (r.bids?.length || 0) > 0) || data[0];
-    const title = rfqWithBids.items?.[0]?.product_name || rfqWithBids.id;
-
-    const adapted: AdaptedBid[] = (rfqWithBids.bids || []).map((bid) => {
-      const unitPrice = bid.items?.[0]?.unit_price ? Number(bid.items[0].unit_price) : 0;
-      const totalPrice = Number(bid.total_price || unitPrice);
-      const now = Date.now();
-      const deliveryDays = bid.valid_until
-        ? Math.max(1, Math.round((new Date(bid.valid_until).getTime() - now) / (1000 * 60 * 60 * 24)))
-        : 7;
-      const deliveryDate = bid.valid_until
-        ? new Date(bid.valid_until).toISOString().split("T")[0]
-        : new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
-      const priceScore = totalPrice > 0 ? Math.min(100, (Math.min(...(rfqWithBids.bids || []).map((b) => Number(b.total_price || unitPrice))) / totalPrice) * 100) : 0;
-      const deliveryScore = Math.max(0, 100 - deliveryDays * 3);
-      const score = Math.round((priceScore * 0.6 + deliveryScore * 0.4));
-
-      return {
-        id: bid.id,
-        supplierName: bid.supplier?.name || "Supplier",
-        supplierRating: 4.5,
-        unitPrice,
-        totalPrice,
-        deliveryDate,
-        deliveryDays,
-        score,
-        notes: undefined,
-      };
-    });
-
-    if (adapted.length > 0) {
-      const minPrice = Math.min(...adapted.map((b) => b.totalPrice));
-      const minDelivery = Math.min(...adapted.map((b) => b.deliveryDays));
-      adapted.forEach((b) => {
-        b.isLowestPrice = b.totalPrice === minPrice;
-        b.isEarliestDelivery = b.deliveryDays === minDelivery;
-      });
-    }
-
-    return {
-      rfqTitle: title,
-      bids: adapted,
-      comparisonRfqId: rfqWithBids.id,
-    };
-  }, [data]);
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortOrder(key === "totalPrice" || key === "deliveryDays" ? "asc" : "desc");
-    }
-  };
-
-  const sortedBids = [...bids].sort((a, b) => {
-    const multiplier = sortOrder === "asc" ? 1 : -1;
-    return (a[sortKey] - b[sortKey]) * multiplier;
-  });
-
-  const handleAward = (bid: AdaptedBid) => {
-    setSelectedBid(bid);
-    setShowAwardDialog(true);
-  };
-
   const confirmAward = () => {
-    if (selectedBid && comparisonRfqId) {
-      awardMutation.mutate({
-        rfqId: comparisonRfqId,
-        bidId: selectedBid.id,
-        supplierName: selectedBid.supplierName,
-      });
+    if (confirmBidId) {
+      awardMutation.mutate({ bidId: confirmBidId });
     }
   };
 
-  const SortHeader = ({ label, sortKeyName }: { label: string; sortKeyName: SortKey }) => (
-    <button
-      onClick={() => handleSort(sortKeyName)}
-      className="flex items-center gap-1 font-semibold hover:text-primary transition-colors"
-    >
-      {label}
-      <span className="flex flex-col">
-        <ChevronUp className={cn(
-          "h-3 w-3 -mb-1",
-          sortKey === sortKeyName && sortOrder === "asc" ? "text-primary" : "text-muted-foreground/40"
-        )} />
-        <ChevronDown className={cn(
-          "h-3 w-3",
-          sortKey === sortKeyName && sortOrder === "desc" ? "text-primary" : "text-muted-foreground/40"
-        )} />
-      </span>
-    </button>
-  );
+  if (isLoading) {
+    return (
+      <div className="p-8 text-center text-text-3 text-[13px]">
+        Loading bids...
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="p-8 text-center text-text-3 text-[13px]">
+        No bids on this RFQ yet.
+      </div>
+    );
+  }
+
+  const canAward = rfqStatus === "OPEN";
 
   return (
-    <>
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-foreground">{t("bids.comparison.title")}</h3>
-            <p className="text-sm text-muted-foreground">
-              {isLoading || isError || !rfqTitle ? t("bids.comparison.empty_rfq") : rfqTitle}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge variant="primary">{bids.length} {t("bids.comparison.total_bids")}</StatusBadge>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full data-grid">
-            <thead>
-              <tr>
-                <th className="min-w-[200px] text-start">{t("bids.comparison.table.supplier")}</th>
-                <th className="min-w-[120px]">
-                  <SortHeader label={t("bids.comparison.table.unit_price")} sortKeyName="totalPrice" />
-                </th>
-                <th className="min-w-[140px]">
-                  <SortHeader label={t("bids.comparison.table.total_price")} sortKeyName="totalPrice" />
-                </th>
-                <th className="min-w-[130px]">
-                  <SortHeader label={t("bids.comparison.table.delivery")} sortKeyName="deliveryDays" />
-                </th>
-                <th className="min-w-[100px]">
-                  <SortHeader label={t("bids.comparison.table.score")} sortKeyName="score" />
-                </th>
-                <th className="min-w-[120px] text-center">{t("bids.comparison.table.action")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    Loading bids...
-                  </td>
-                </tr>
-              ) : isError ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-danger">
-                    Failed to load bids
-                  </td>
-                </tr>
-              ) : sortedBids.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                    {t("bids.comparison.no_bids")}
-                  </td>
-                </tr>
-              ) : (
-              sortedBids.map((bid, index) => (
-                <tr
-                  key={bid.id}
-                  className={cn(
-                    "hover:bg-muted/50 transition-colors animate-fade-in",
-                    index === 0 && "bg-success/5"
+    <div className="overflow-x-auto w-full font-body rounded-md border border-border">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr>
+            <th className="p-4 border-b border-border bg-surface-2 min-w-[150px]" />
+            {rows.map((bid) => (
+              <th
+                key={bid.id}
+                className="p-4 border-b border-l border-border font-medium text-[14px] text-text-1 bg-surface-2 min-w-[150px]"
+              >
+                <div className="flex items-center gap-2">
+                  <span>{bid.supplier}</span>
+                  {bid.totalCostBest && (
+                    <Check className="w-4 h-4 text-success" />
                   )}
-                  style={{ animationDelay: `${index * 50}ms` }}
+                </div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="text-[13px] text-text-2">
+          <tr>
+            <td className="p-4 border-b border-border font-medium text-text-1 bg-surface">
+              Unit price
+            </td>
+            {rows.map((bid) => (
+              <td
+                key={`up_${bid.id}`}
+                className="p-4 border-b border-l border-border bg-surface"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="tabular-nums">
+                    SAR {bid.unitPrice.toLocaleString()}
+                  </span>
+                  {bid.unitPriceBest && (
+                    <Star
+                      className={`w-3.5 h-3.5 ${BEST_COLOR} fill-[var(--amber)]`}
+                    />
+                  )}
+                </div>
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <td className="p-4 border-b border-border font-medium text-text-1 bg-surface">
+              Valid until
+            </td>
+            {rows.map((bid) => (
+              <td
+                key={`vu_${bid.id}`}
+                className="p-4 border-b border-l border-border bg-surface"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>{bid.validUntil}</span>
+                  {bid.validWarning && (
+                    <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                  )}
+                </div>
+              </td>
+            ))}
+          </tr>
+          <tr className="bg-surface-2/50 font-medium">
+            <td className="p-4 border-b border-border text-text-1">Total</td>
+            {rows.map((bid) => (
+              <td
+                key={`tc_${bid.id}`}
+                className={`p-4 border-b border-l border-border transition-colors ${
+                  bid.totalCostBest
+                    ? "border-l-[3px] border-l-amber bg-[rgba(212,146,10,0.06)] text-text-1"
+                    : ""
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="tabular-nums">
+                    SAR {bid.total.toLocaleString()}
+                  </span>
+                  {bid.totalCostBest && (
+                    <Star
+                      className={`w-3.5 h-3.5 ${BEST_COLOR} fill-[var(--amber)]`}
+                    />
+                  )}
+                </div>
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <td className="p-4 border-border bg-surface" />
+            {rows.map((bid) => (
+              <td
+                key={`btn_${bid.id}`}
+                className="p-4 border-l border-border bg-surface"
+              >
+                <Button
+                  className="w-full text-[12px] h-8"
+                  variant={bid.totalCostBest ? "default" : "outline"}
+                  disabled={!canAward || awardMutation.isPending}
+                  aria-label={t("bids.comparison.actions.award")}
+                  onClick={() => setConfirmBidId(bid.id)}
                 >
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <span className="text-primary font-semibold text-sm">
-                          {bid.supplierName.split(" ").map(w => w[0]).join("").slice(0, 2)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{bid.supplierName}</p>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-3 h-3 text-warning fill-warning" />
-                          <span className="text-xs text-muted-foreground">{bid.supplierRating}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="tabular-nums">
-                    SAR {bid.unitPrice.toFixed(2)}
-                  </td>
-                  <td className={cn(
-                    "tabular-nums font-medium",
-                    bid.isLowestPrice && "highlight-best"
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <span>SAR {bid.totalPrice.toLocaleString()}</span>
-                      {bid.isLowestPrice && (
-                        <StatusBadge variant="success" size="sm">
-                          <DollarSign className="w-3 h-3" />
-                          {t("bids.comparison.badges.lowest")}
-                        </StatusBadge>
-                      )}
-                    </div>
-                  </td>
-                  <td className={cn(
-                    "tabular-nums",
-                    bid.isEarliestDelivery && "highlight-best"
-                  )}>
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <p className="font-medium">{bid.deliveryDays} {t("bids.comparison.badges.days")}</p>
-                        <p className="text-xs text-muted-foreground">{bid.deliveryDate}</p>
-                      </div>
-                      {bid.isEarliestDelivery && (
-                        <StatusBadge variant="success" size="sm">
-                          <Truck className="w-3 h-3" />
-                          {t("bids.comparison.badges.fastest")}
-                        </StatusBadge>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full transition-all",
-                            bid.score >= 90 ? "bg-success" : bid.score >= 80 ? "bg-warning" : "bg-danger"
-                          )}
-                          style={{ width: `${bid.score}%` }}
-                        />
-                      </div>
-                      <span className="font-semibold tabular-nums">{bid.score}</span>
-                    </div>
-                  </td>
-                  <td className="text-center">
-                    <Button
-                      size="sm"
-                      onClick={() => handleAward(bid)}
-                      className="bg-accent hover:bg-accent/90 text-accent-foreground"
-                    >
-                      <Award className="w-4 h-4 me-1" />
-                      {t("bids.comparison.actions.award")}
-                    </Button>
-                  </td>
-                </tr>
-              ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  {t("bids.comparison.actions.award")}
+                </Button>
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
 
-      {/* Award Confirmation Dialog */}
-      <Dialog open={showAwardDialog} onOpenChange={setShowAwardDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("bids.comparison.dialog.title")}</DialogTitle>
-            <DialogDescription>
+      <AlertDialog
+        open={!!confirmBidId}
+        onOpenChange={(o) => !o && setConfirmBidId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("bids.comparison.dialog.title")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
               {t("bids.comparison.dialog.description")}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedBid && (
-            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("bids.comparison.dialog.supplier")}</span>
-                <span className="font-medium">{selectedBid.supplierName}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("bids.comparison.dialog.total_amount")}</span>
-                <span className="font-semibold text-lg tabular-nums">
-                  SAR {selectedBid.totalPrice.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">{t("bids.comparison.dialog.delivery")}</span>
-                <span className="font-medium">{selectedBid.deliveryDays} {t("bids.comparison.badges.days")}</span>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAwardDialog(false)}>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
               {t("bids.comparison.dialog.cancel")}
-            </Button>
-            <Button
-              onClick={confirmAward}
-              disabled={awardMutation.isPending || !comparisonRfqId}
-              className="bg-accent hover:bg-accent/90 text-accent-foreground"
+            </AlertDialogCancel>
+            <AlertDialogAction
+              aria-label={t("bids.comparison.dialog.confirm")}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmAward();
+              }}
             >
-              <Award className="w-4 h-4 me-2" />
-              {awardMutation.isPending
-                ? t("common.loading") || "…"
-                : t("bids.comparison.dialog.confirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+              {t("bids.comparison.dialog.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

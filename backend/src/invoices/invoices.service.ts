@@ -143,7 +143,7 @@ export class InvoicesService {
       return this.prisma.invoice.findMany({ include: invoiceInclude });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     return this.prisma.invoice.findMany({
       where: {

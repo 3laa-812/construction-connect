@@ -15,7 +15,7 @@ import { OtpDeliveryService } from './otp-delivery.service';
     CompaniesModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'super-secret-key',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: (process.env.JWT_EXPIRATION || '1d') as any },
     }),
   ],

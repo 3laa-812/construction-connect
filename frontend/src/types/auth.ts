@@ -11,6 +11,8 @@ export interface User {
   crNumber?: string;
   companyId?: string;
   companyType?: 'CONTRACTOR' | 'SUPPLIER';
+  /** ISO country from company (e.g. SA, EG) — from JWT / login payload. */
+  companyCountry?: string;
 }
 
 export interface AuthState {

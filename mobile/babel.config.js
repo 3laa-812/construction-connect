@@ -1,13 +1,12 @@
-module.exports = function (api) {
+module.exports = function(api) {
   api.cache(true);
   return {
     presets: [
-      ["babel-preset-expo", { jsxImportSource: "nativewind" }],
-      "nativewind/babel",
+      ["babel-preset-expo"]
     ],
     plugins: [
-      ["@babel/plugin-transform-typescript", { isTSX: true, allExtensions: true, allowDeclareFields: true }],
-      ["@babel/plugin-proposal-decorators", { legacy: true }],
+      ["@babel/plugin-proposal-decorators", { "legacy": true }],
+      ["@babel/plugin-transform-class-static-block"],
       "react-native-reanimated/plugin",
     ],
   };

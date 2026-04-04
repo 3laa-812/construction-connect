@@ -9,7 +9,8 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import { Public } from '../common/decorators/public.decorator';
 
-@Controller('health')
+/** Deep checks (DB, disk) — public smoke URL is `GET /health` on AppController. */
+@Controller('health-check')
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

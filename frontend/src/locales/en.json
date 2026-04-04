@@ -294,6 +294,17 @@
         "pending_review": "Pending Review",
         "history": "History"
     },
+    "comparison": {
+      "actions": {
+        "award": "Award bid"
+      },
+      "dialog": {
+        "title": "Award this bid?",
+        "description": "This creates a purchase order and rejects other bids on this RFQ.",
+        "cancel": "Cancel",
+        "confirm": "Confirm award"
+      }
+    },
     "empty": {
         "caught_up": "All caught up!",
         "no_pending": "No pending bids to review",

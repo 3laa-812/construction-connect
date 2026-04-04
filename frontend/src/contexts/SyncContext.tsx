@@ -26,8 +26,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       if (typeof realSync === 'function') {
         await realSync();
       } else {
-        // simulate sync if realSync doesn't exist or work
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // No-op for web fallback
       }
     } catch (e) {
       console.error('Sync failed', e);

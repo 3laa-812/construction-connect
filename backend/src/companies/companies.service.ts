@@ -35,7 +35,7 @@ export class CompaniesService {
       });
     }
     if (!user.companyId) {
-      return [];
+      return []; // intentionally empty — no data for this query when user has no company
     }
     return this.prisma.company.findMany({
       where: { id: user.companyId },
