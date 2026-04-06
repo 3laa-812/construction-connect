@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
-import { withObservables } from '@nozbe/with-observables';
+import { View, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import withObservables from '@nozbe/with-observables';
 import { database } from '../../../lib/watermelon';
-import { DailyLog } from '../../../models/DailyLog';
+import DailyLog from '../../../models/DailyLog';
 import { Colors } from '../../../constants/theme';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
 import { useRouter } from 'expo-router';
@@ -21,7 +22,8 @@ function LogList({ logs }: { logs: DailyLog[] }) {
   );
 
   return (
-    <FlatList
+    <FlashList
+      estimatedItemSize={80}
       data={logs}
       keyExtractor={item => item.id}
       contentContainerStyle={{ padding: 16 }}

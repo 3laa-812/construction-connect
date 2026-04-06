@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
+import { View, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
 import { Colors } from '../../../constants/theme';
@@ -27,7 +28,8 @@ export default function WalletScreen() {
         Recent Transactions
       </Text>
 
-      <FlatList
+      <FlashList
+        estimatedItemSize={60}
         data={wallet?.transactions || []}
         keyExtractor={(item: any) => item.id}
         ListEmptyComponent={

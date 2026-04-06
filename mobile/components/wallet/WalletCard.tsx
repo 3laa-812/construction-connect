@@ -20,7 +20,7 @@ export function WalletCard({ balance, outstanding, isSupplier }: WalletCardProps
         <View style={styles.divider} />
         <View style={styles.section}>
           <Text style={styles.label}>{isSupplier ? 'Outstanding Due' : 'Outstanding Payable'}</Text>
-          <Text style={[styles.value, { color: isSupplier ? Colors.success.text : Colors.error.text }]}>
+          <Text style={[styles.value, { color: isSupplier ? Colors.successText : Colors.errorText }]}>
             ${outstanding.toLocaleString()}
           </Text>
         </View>
@@ -31,7 +31,7 @@ export function WalletCard({ balance, outstanding, isSupplier }: WalletCardProps
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface.DEFAULT,
+    backgroundColor: Colors.surface,
     marginBottom: 16,
   },
   content: {
@@ -45,16 +45,16 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: Colors.border.DEFAULT,
+    backgroundColor: Colors.border,
   },
   label: {
-    color: Colors.text.text2,
+    color: Colors.text2,
     fontFamily: 'Geist',
     fontSize: 12,
     marginBottom: 8,
   },
   value: {
-    color: Colors.text.text1,
+    color: Colors.text1,
     fontFamily: 'DMSerifDisplay',
     fontSize: 24,
   }

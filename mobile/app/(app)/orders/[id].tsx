@@ -1,65 +1,70 @@
-import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Button } from '../../../components/ui/Button';
-import { Colors } from '../../../constants/theme';
-import * as ImagePicker from 'expo-image-picker';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
+import { Colors, Spacing } from '../../../constants/theme';
+import { Button } from '../../../components/ui/Button';
+import { Card } from '../../../components/ui/Card';
 
-export default function ProofOfDelivery() {
+export default function OrderDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
 
-  const submitDelivery = async () => {
-    setLoading(true);
-    try {
-      const cameraPerm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!cameraPerm.granted) {
-        alert("Camera permission is required to capture proof of delivery.");
-        setLoading(false);
-        return;
-      }
-      
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.5 });
-      if (result.canceled) {
-        setLoading(false);
-        return;
-      }
-      
-      const formData = new FormData();
-      formData.append('items', JSON.stringify([])); 
-      formData.append('pod_photo', {
-        uri: result.assets[0].uri,
-        type: 'image/jpeg',
-        name: 'pod.jpg',
-      } as any);
+  const { data, isLoading } = useQuery({
+    queryKey: ['purchase-order', id],
+    queryFn: () => api.get(`/purchase-orders/${id}`).then(res => res.data),
+  });
 
-      await api.post(`/purchase-orders/${id}/delivery-notes`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      alert('Delivery Confirmed!');
-      router.back();
-    } catch (e) {
-      console.error(e);
-      alert('Network warning: Failed to upload proof of delivery. Checking offline queue fallback...');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (isLoading) {
+    return <View style={styles.container}><Text style={styles.text}>Loading order details...</Text></View>;
+  }
+
+  const order = data?.data || {};
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.ground, padding: 16, justifyContent: 'center' }}>
-      <Text style={{ color: Colors.text2, fontSize: 16, fontFamily: 'Geist', textAlign: 'center', marginBottom: 4 }}>
-        Proof of Delivery Verification
-      </Text>
-      <Text style={{ color: Colors.text1, fontSize: 24, marginBottom: 32, fontFamily: 'DMSerifDisplay', textAlign: 'center' }}>
-        Order #{id}
-      </Text>
-      <Button onPress={submitDelivery} isLoading={loading} size="lg">
-        Capture Physical Signature & Submit
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Order #{order.id || id}</Text>
+      
+      <Card variant="default" style={styles.card}>
+        <Text style={styles.text}>Status: {order.status || 'UNKNOWN'}</Text>
+        <Text style={styles.text}>Supplier ID: {order.supplier_id}</Text>
+        <Text style={styles.text}>Buyer ID: {order.buyer_id}</Text>
+      </Card>
+
+      <Button 
+        onPress={() => router.push(`/orders/delivery?id=${id}`)}
+        variant="primary"
+        size="lg"
+        style={{ marginTop: Spacing.lg }}
+      >
+        Record Delivery
       </Button>
-    </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.ground,
+  },
+  content: {
+    padding: Spacing.md,
+  },
+  title: {
+    fontFamily: 'DMSerifDisplay',
+    fontSize: 24,
+    color: Colors.text1,
+    marginBottom: Spacing.md,
+  },
+  card: {
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  text: {
+    fontFamily: 'Geist',
+    color: Colors.text1,
+    fontSize: 16,
+  }
+});

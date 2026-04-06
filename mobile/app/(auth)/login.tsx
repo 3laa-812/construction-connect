@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Colors } from '../../constants/theme';
+import * as Notifications from 'expo-notifications';
 import { useAuthStore } from '../../store/authStore';
 import { setToken } from '../../lib/auth';
 import { api } from '../../lib/api';
@@ -32,6 +33,19 @@ export default function LoginScreen() {
       await setToken(data.access_token);
       login(data.user, data.access_token);
       
+      try {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status === 'granted') {
+          const pushToken = (await Notifications.getExpoPushTokenAsync()).data;
+          // Temporarily attach Bearer to inline request if interceptor race condition exists
+          await api.patch('/users/push-token', { push_token: pushToken }, {
+            headers: { Authorization: `Bearer ${data.access_token}` }
+          });
+        }
+      } catch (pushErr) {
+        console.warn('Push token registration failed', pushErr);
+      }
+
       router.replace('/(app)');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to connect to server');
@@ -78,7 +92,7 @@ export default function LoginScreen() {
             Sign In
           </Button>
           
-          <Button variant="ghost" onPress={() => console.warn('Not implemented')}>
+          <Button variant="ghost" onPress={() => router.push('/(auth)/register')}>
             Don't have an account? Register
           </Button>
         </View>

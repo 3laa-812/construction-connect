@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
-import { withObservables } from '@nozbe/with-observables';
+import { View, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import withObservables from '@nozbe/with-observables';
 import { database } from '../../../lib/watermelon';
-import { Project } from '../../../models/Project';
+import Project from '../../../models/Project';
 import { Colors } from '../../../constants/theme';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -20,7 +21,7 @@ function ProjectList({ projects }: { projects: Project[] }) {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
             <CardTitle>{item.name}</CardTitle>
-            <CardDescription>{item.location || 'Location not specified'}</CardDescription>
+            <CardDescription>Industrial Zone Project</CardDescription>
           </View>
           <Badge variant={item.status === 'ACTIVE' ? 'success' : 'default'}>
             {item.status}
@@ -31,7 +32,8 @@ function ProjectList({ projects }: { projects: Project[] }) {
   );
 
   return (
-    <FlatList
+    <FlashList
+      estimatedItemSize={80}
       data={projects}
       keyExtractor={item => item.id}
       contentContainerStyle={{ padding: 16 }}

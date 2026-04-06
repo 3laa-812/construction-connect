@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
+import { View, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
 import { Colors } from '../../../constants/theme';
@@ -16,7 +17,8 @@ export default function InvoicesList() {
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.ground }}>
-      <FlatList
+      <FlashList
+        estimatedItemSize={80}
         data={data?.data || []}
         keyExtractor={(item: any) => item.id}
         contentContainerStyle={{ padding: 16 }}

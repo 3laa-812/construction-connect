@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, FlatList } from 'react-native';
-import { withObservables } from '@nozbe/with-observables';
+import { View, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import withObservables from '@nozbe/with-observables';
 import { database } from '../../../lib/watermelon';
 import Notification from '../../../models/Notification';
 import { Colors } from '../../../constants/theme';
@@ -15,7 +16,7 @@ function NotificationsList({ notifications }: { notifications: Notification[] })
         padding: 16, 
         borderBottomWidth: 1, 
         borderBottomColor: Colors.border,
-        backgroundColor: item.isRead ? Colors.ground : Colors.surface.DEFAULT 
+        backgroundColor: item.isRead ? Colors.ground : Colors.surface 
       }}
       onTouchEnd={() => {
         // Mark as read in db
@@ -35,7 +36,8 @@ function NotificationsList({ notifications }: { notifications: Notification[] })
   );
 
   return (
-    <FlatList
+    <FlashList
+      estimatedItemSize={80}
       data={notifications}
       keyExtractor={item => item.id}
       renderItem={renderItem}
