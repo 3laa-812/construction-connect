@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors, Spacing } from '../../../constants/theme';
-import { Card, CardTitle, CardDescription, CardHeader } from '../../../components/ui/Card';
-import { Badge } from '../../../components/ui/Badge';
-import { FAB } from '../../../components/ui/FAB';
+import { api } from '../../../../lib/api';
+import { Colors, Spacing } from '../../../../constants/theme';
+import { Card, CardTitle, CardDescription, CardHeader } from '../../../../components/ui/Card';
+import { Badge } from '../../../../components/ui/Badge';
+import { FAB } from '../../../../components/ui/FAB';
 
 export default function RFQsList() {
   const router = useRouter();

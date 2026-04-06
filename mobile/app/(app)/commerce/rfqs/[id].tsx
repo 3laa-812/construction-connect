@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors, Spacing } from '../../../constants/theme';
-import { Card, CardTitle, CardDescription } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { api } from '../../../../lib/api';
+import { Colors, Spacing } from '../../../../constants/theme';
+import { Card, CardTitle, CardDescription } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 
 export default function RFQDetail() {
   const { id } = useLocalSearchParams();

@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors, Spacing } from '../../../constants/theme';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
+import { api } from '../../../../lib/api';
+import { Colors, Spacing } from '../../../../constants/theme';
+import { Button } from '../../../../components/ui/Button';
+import { Card } from '../../../../components/ui/Card';
 
 export default function OrderDetail() {
   const { id } = useLocalSearchParams();

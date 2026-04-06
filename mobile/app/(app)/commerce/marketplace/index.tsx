@@ -3,10 +3,10 @@ import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors, Spacing, Radius } from '../../../constants/theme';
-import { Card, CardTitle, CardDescription } from '../../../components/ui/Card';
-import { Button } from '../../../components/ui/Button';
+import { api } from '../../../../lib/api';
+import { Colors, Spacing, Radius } from '../../../../constants/theme';
+import { Card, CardTitle, CardDescription } from '../../../../components/ui/Card';
+import { Button } from '../../../../components/ui/Button';
 import { Feather } from '@expo/vector-icons';
 
 export default function Marketplace() {

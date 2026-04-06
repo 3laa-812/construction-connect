@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Button } from '../../../components/ui/Button';
-import { Colors, Spacing } from '../../../constants/theme';
+import { Button } from '../../../../components/ui/Button';
+import { Colors, Spacing } from '../../../../constants/theme';
 import * as ImagePicker from 'expo-image-picker';
-import { api } from '../../../lib/api';
+import { api } from '../../../../lib/api';
 
 export default function ProofOfDelivery() {
   const { id } = useLocalSearchParams();

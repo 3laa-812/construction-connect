@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
-import { Colors, Spacing } from '../../../constants/theme';
-import { api } from '../../../lib/api';
+import { Button } from '../../../../components/ui/Button';
+import { Input } from '../../../../components/ui/Input';
+import { Colors, Spacing } from '../../../../constants/theme';
+import { api } from '../../../../lib/api';
 
 export default function NewRFQ() {
   const router = useRouter();

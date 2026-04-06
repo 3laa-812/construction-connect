@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors } from '../../../constants/theme';
-import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
+import { api } from '../../../../lib/api';
+import { Colors } from '../../../../constants/theme';
+import { Card, CardHeader, CardTitle, CardDescription } from '../../../../components/ui/Card';
 import { useRouter } from 'expo-router';
 
 export default function OrdersList() {
