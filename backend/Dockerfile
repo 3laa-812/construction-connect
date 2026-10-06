@@ -33,11 +33,12 @@ COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 COPY prisma.config.ts ./
 
-# Install production deps only
-RUN pnpm install --frozen-lockfile --prod
+# Install production deps only — skip postinstall (prisma is a devDep, not available here)
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Generate Prisma client in production layer
-RUN pnpm exec prisma generate
+# Copy the already-generated Prisma client from builder (avoids needing prisma CLI)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
@@ -45,3 +46,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 
 CMD ["node", "dist/main"]
+
