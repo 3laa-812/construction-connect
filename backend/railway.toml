@@ -2,6 +2,9 @@
 builder = "nixpacks"
 buildCommand = "pnpm install --frozen-lockfile && pnpm exec prisma generate && pnpm run build"
 
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_22"]
+
 [deploy]
 startCommand = "node dist/main"
 healthcheckPath = "/health"
