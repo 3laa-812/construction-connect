@@ -1,12 +1,9 @@
 [build]
-builder = "nixpacks"
-buildCommand = "pnpm exec prisma generate && pnpm run build"
-
-[build.nixpacksPlan.phases.setup]
-nixPkgs = ["nodejs_22"]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "pnpm run start:prod"
+startCommand = "node dist/main"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
