@@ -7,7 +7,7 @@ export default function RFQsLayout() {
       headerStyle: { backgroundColor: Colors.surface },
       headerTintColor: Colors.text1,
       headerTitleStyle: { fontFamily: 'Geist', fontWeight: '600' },
-      contentStyle: { backgroundColor: Colors.ground }
+      contentStyle: { backgroundColor: 'transparent' }
     }}>
       <Stack.Screen name="index" options={{ title: 'RFQs' }} />
       <Stack.Screen name="new" options={{ title: 'Create RFQ', presentation: 'modal' }} />

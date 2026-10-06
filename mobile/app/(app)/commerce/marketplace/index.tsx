@@ -8,6 +8,7 @@ import { Colors, Spacing, Radius } from '../../../../constants/theme';
 import { Card, CardTitle, CardDescription } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
 import { Feather } from '@expo/vector-icons';
+import { ScreenBackground } from '../../../../components/ui/ScreenBackground';
 
 export default function Marketplace() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function Marketplace() {
   });
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <View style={styles.searchContainer}>
         <Feather name="search" size={20} color={Colors.text2} style={styles.searchIcon} />
         <TextInput
@@ -62,14 +63,13 @@ export default function Marketplace() {
           </Card>
         )}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.ground,
   },
   list: {
     padding: Spacing.md,

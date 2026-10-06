@@ -1,9 +1,26 @@
 import { synchronize } from '@nozbe/watermelondb/sync';
+import { Q } from '@nozbe/watermelondb';
 import { database } from './watermelon';
 import { api } from './api';
 import { useSyncStore } from '../store/syncStore';
 
 let isSyncRunning = false;
+
+export async function refreshPendingCount() {
+  try {
+    const draftLogs = await database
+      .get('daily_logs')
+      .query(Q.where('status', Q.notEq('SYNCED')))
+      .fetchCount();
+    const pendingPhotos = await database
+      .get('log_photos')
+      .query(Q.where('uploaded', false))
+      .fetchCount();
+    useSyncStore.getState().setPendingCount(draftLogs + pendingPhotos);
+  } catch {
+    // no-op to keep sync resilient
+  }
+}
 
 export async function syncDatabase(lastPulledAt?: number) {
   if (isSyncRunning) {
@@ -15,6 +32,7 @@ export async function syncDatabase(lastPulledAt?: number) {
   useSyncStore.getState().setSyncing(true);
 
   try {
+    await refreshPendingCount();
     await synchronize({
     database,
     pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
@@ -35,6 +53,7 @@ export async function syncDatabase(lastPulledAt?: number) {
     sendCreatedAsUpdated: false,
     });
     useSyncStore.getState().setLastSyncAt(Date.now());
+    await refreshPendingCount();
   } finally {
     isSyncRunning = false;
     useSyncStore.getState().setSyncing(false);

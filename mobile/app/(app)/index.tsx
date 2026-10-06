@@ -9,18 +9,18 @@ import { useAuthStore } from '../../store/authStore';
 import { useSyncStore } from '../../store/syncStore';
 import { Colors, Fonts, Radius } from '../../constants/theme';
 import { AmberGlow } from '../../constants/glass';
-import { useSync } from '../../hooks/useSync';
 import { ScreenBackground } from '../../components/ui/ScreenBackground';
 import { GlassView } from '../../components/ui/GlassView';
 import { ProgressBar } from '../../components/ui/ProgressBar';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { mapProject, mapPurchaseOrder, mapRfq, unwrapList, unwrapTotal } from '../../lib/apiMappers';
 
 export default function Dashboard() {
   const { user } = useAuthStore();
   const { isSyncing, lastSyncAt } = useSyncStore();
   const router = useRouter();
   
-  useSync();
-
   const isContractor = user?.role === 'CONTRACTOR';
 
   // React Query Parallel Loads for summary info
@@ -39,6 +39,14 @@ export default function Dashboard() {
     queryKey: ['notifications', 'unread'],
     queryFn: () => api.get('/notifications?unread=true').then(res => res.data),
   });
+  const { data: rfqs } = useQuery({
+    queryKey: ['rfqs', 'recent'],
+    queryFn: () => api.get('/rfqs').then(res => res.data),
+  });
+  const { data: dailyLogs } = useQuery({
+    queryKey: ['daily-logs', 'recent'],
+    queryFn: () => api.get('/daily-logs').then((res) => res.data),
+  });
 
   const onRefresh = async () => {
     isContractor && refetchProjects();
@@ -50,6 +58,13 @@ export default function Dashboard() {
 
   const today = format(new Date(), 'EEEE, MMM do');
   const syncColor = isSyncing ? Colors.amber : (lastSyncAt ? Colors.success : Colors.text3);
+  const projectRows = unwrapList(projects).map(mapProject);
+  const orderRows = unwrapList(orders).map(mapPurchaseOrder);
+  const rfqRows = unwrapList(rfqs).map(mapRfq);
+  const openRfqs = rfqRows.filter((r) => r.status === 'OPEN').length;
+  const pendingOrders = orderRows.filter((o) => ['CONFIRMED', 'PROCESSING', 'OUT_FOR_DELIVERY'].includes(o.status)).length;
+  const completedOrders = orderRows.filter((o) => ['DELIVERED', 'COMPLETED'].includes(o.status)).length;
+  const activityRows = unwrapList(dailyLogs);
 
   return (
     <ScreenBackground>
@@ -85,46 +100,69 @@ export default function Dashboard() {
           snapToInterval={168} // 160 + 8 gap
           decelerationRate="fast"
         >
-          {/* Projects Card */}
-          <GlassView variant="card" style={styles.statCard}>
-            <Text style={styles.statLabel}>{isContractor ? 'Projects' : 'Revenue'}</Text>
-            <Text style={styles.statValue}>{projects?.total || 0}</Text>
-            {isContractor && (
-              <View style={styles.statBottomRadial}>
-                <ProgressBar value={72} variant="radial" animated={true} /> 
-                <Text style={styles.statDetailText}>avg progress</Text>
-              </View>
-            )}
-          </GlassView>
+          {isLoading ? (
+            <>
+              <Skeleton width={160} height={140} borderRadius={20} />
+              <Skeleton width={160} height={140} borderRadius={20} />
+              <Skeleton width={160} height={140} borderRadius={20} />
+            </>
+          ) : (
+            <>
+              {/* Projects Card */}
+              <GlassView variant="card" style={styles.statCard}>
+                <Text style={styles.statLabel}>{isContractor ? 'Projects' : 'Revenue'}</Text>
+                <Text style={styles.statValue}>{unwrapTotal(projects)}</Text>
+                {isContractor && (
+                  <View style={styles.statBottomRadial}>
+                    <ProgressBar
+                      value={
+                        projectRows.length
+                          ? Math.round(
+                              projectRows.reduce((sum, p) => {
+                                const denom = Math.max(p.ordersCount, 1);
+                                return sum + Math.min(100, Math.round((p.ordersCount / (denom + 3)) * 100));
+                              }, 0) / projectRows.length
+                            )
+                          : 0
+                      }
+                      variant="radial"
+                      animated={true}
+                    />
+                    <Text style={styles.statDetailText}>avg progress</Text>
+                  </View>
+                )}
+              </GlassView>
 
-          {/* RFQs Card */}
-          <GlassView variant="card" style={styles.statCard}>
-            <Text style={styles.statLabel}>Open RFQs</Text>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statTrendText}>+3 this week</Text>
-          </GlassView>
+              {/* RFQs Card */}
+              <GlassView variant="card" style={styles.statCard}>
+                <Text style={styles.statLabel}>Open RFQs</Text>
+                <Text style={styles.statValue}>{openRfqs}</Text>
+                <Text style={styles.statTrendText}>{rfqRows.length} total RFQs</Text>
+              </GlassView>
 
-          {/* Orders Card */}
-          <GlassView variant="card" style={styles.statCard}>
-            <Text style={styles.statLabel}>Orders</Text>
-            <Text style={styles.statValue}>{orders?.total || 0}</Text>
-            <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
-              <View style={styles.miniPillPending}><Text style={styles.miniPillTextAmber}>2 pending</Text></View>
-              <View style={styles.miniPillDone}><Text style={styles.miniPillTextGreen}>2 done</Text></View>
-            </View>
-          </GlassView>
+              {/* Orders Card */}
+              <GlassView variant="card" style={styles.statCard}>
+                <Text style={styles.statLabel}>Orders</Text>
+                <Text style={styles.statValue}>{unwrapTotal(orders)}</Text>
+                <View style={{ flexDirection: 'row', gap: 4, marginTop: 4 }}>
+                  <View style={styles.miniPillPending}><Text style={styles.miniPillTextAmber}>{pendingOrders} pending</Text></View>
+                  <View style={styles.miniPillDone}><Text style={styles.miniPillTextGreen}>{completedOrders} done</Text></View>
+                </View>
+              </GlassView>
 
-          {/* Alerts Card */}
-          <GlassView variant="card" style={styles.statCard}>
-            <Text style={styles.statLabel}>Alerts</Text>
-            <Text style={styles.statValue}>{notifications?.total || 0}</Text>
-            <Text style={styles.statAlertText}>2 unread</Text>
-          </GlassView>
+              {/* Alerts Card */}
+              <GlassView variant="card" style={styles.statCard}>
+                <Text style={styles.statLabel}>Alerts</Text>
+                <Text style={styles.statValue}>{unwrapTotal(notifications)}</Text>
+                <Text style={styles.statAlertText}>{unwrapTotal(notifications)} unread</Text>
+              </GlassView>
+            </>
+          )}
         </ScrollView>
 
         {/* Quick Action CTA */}
         {isContractor ? (
-          <TouchableOpacity onPress={() => router.push('/work/daily-logs/new' as any)}>
+          <TouchableOpacity onPress={() => router.push('/daily-logs/new' as any)}>
             <GlassView variant="card" style={styles.quickActionCard}>
               <Text style={styles.quickActionTop}>Today's Action</Text>
               <View style={{ marginTop: 8 }}>
@@ -163,14 +201,29 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
             <View style={{ gap: 12 }}>
-              {projects?.data?.slice(0, 3).map((p: any) => (
-                <GlassView key={p.id} variant="card" style={{ padding: 16 }}>
-                  <Text style={{ fontFamily: Fonts.body, color: Colors.text1, fontSize: 16 }}>{p.name}</Text>
-                  <Text style={{ fontFamily: Fonts.mono, color: Colors.text3, fontSize: 12, marginTop: 4 }}>{p.location}</Text>
-                </GlassView>
-              ))}
-              {(!projects?.data || projects.data.length === 0) && (
-                <Text style={{ fontFamily: Fonts.body, color: Colors.text3, fontSize: 14 }}>No active projects.</Text>
+              {isLoading ? (
+                <>
+                  <Skeleton height={80} borderRadius={16} />
+                  <Skeleton height={80} borderRadius={16} />
+                </>
+              ) : projectRows.length > 0 ? (
+                projectRows.slice(0, 3).map((p) => (
+                  <GlassView key={p.id} variant="card" style={{ padding: 16 }}>
+                    <Text style={{ fontFamily: Fonts.body, color: Colors.text1, fontSize: 16 }}>{p.name}</Text>
+                    <Text style={{ fontFamily: Fonts.mono, color: Colors.text3, fontSize: 12, marginTop: 4 }}>
+                      {p.sitesCount} sites • {p.ordersCount} orders
+                    </Text>
+                  </GlassView>
+                ))
+              ) : (
+                <EmptyState 
+                  icon="construct-outline"
+                  title="No Projects Yet"
+                  subtitle="Create your first project to start tracking progress"
+                  actionLabel="New Project"
+                  onAction={() => router.push('/work' as any)}
+                  style={{ marginTop: 0 }}
+                />
               )}
             </View>
           </View>
@@ -182,15 +235,24 @@ export default function Dashboard() {
             <Text style={styles.sectionTitle}>Recent Activity</Text>
           </View>
           <View style={{ gap: 12 }}>
-            <GlassView variant="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="document-text" size={20} color={Colors.text2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: Fonts.body, color: Colors.text1, fontSize: 14 }}>Daily Log Submitted</Text>
-                <Text style={{ fontFamily: Fonts.body, color: Colors.text3, fontSize: 12 }}>Project Alpha • 2h ago</Text>
-              </View>
-            </GlassView>
+            {activityRows.slice(0, 3).map((log: any) => (
+              <GlassView key={log.id} variant="card" style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="document-text" size={20} color={Colors.text2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: Fonts.body, color: Colors.text1, fontSize: 14 }}>Daily log submitted</Text>
+                  <Text style={{ fontFamily: Fonts.body, color: Colors.text3, fontSize: 12 }}>
+                    {log.project?.name || 'Project'} • {new Date(log.log_date ?? log.logDate ?? Date.now()).toLocaleDateString()}
+                  </Text>
+                </View>
+              </GlassView>
+            ))}
+            {activityRows.length === 0 ? (
+              <GlassView variant="card" style={{ padding: 16 }}>
+                <Text style={{ fontFamily: Fonts.body, color: Colors.text2, fontSize: 13 }}>No recent activity yet.</Text>
+              </GlassView>
+            ) : null}
           </View>
         </View>
 

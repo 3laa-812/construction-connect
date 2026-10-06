@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Button } from '../../../components/ui/Button';
-import { Colors } from '../../../constants/theme';
+import { Button } from '../../../../../components/ui/Button';
+import { Colors } from '../../../../../constants/theme';
 import * as WebBrowser from 'expo-web-browser';
+import { ScreenBackground } from '../../../../../components/ui/ScreenBackground';
+import { api } from '../../../../../lib/api';
 
 export default function InvoiceDetails() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
 
   const handleViewPDF = async () => {
-    // In reality this would fetch a signed URL
-    await WebBrowser.openBrowserAsync(`https://api.your-domain.com/invoices/${id}/pdf`);
+    const url = `${api.defaults.baseURL}/invoices/${id}/pdf`;
+    await WebBrowser.openBrowserAsync(url);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.ground, padding: 16, justifyContent: 'center' }}>
+    <ScreenBackground style={{ padding: 16, justifyContent: 'center' }}>
       <Text style={{ color: Colors.text2, fontSize: 16, fontFamily: 'Geist', textAlign: 'center', marginBottom: 4 }}>
         Invoice Details
       </Text>
@@ -28,6 +30,6 @@ export default function InvoiceDetails() {
       <Button variant="ghost" onPress={() => router.back()} style={{ marginTop: 16 }}>
         Close
       </Button>
-    </View>
+    </ScreenBackground>
   );
 }

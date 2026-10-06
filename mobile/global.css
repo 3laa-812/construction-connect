@@ -24,6 +24,12 @@
   --color-info-bg: #2a4a6b;
   --color-info-text: #7eb8e0;
 
+  /* Forged Glass semantic layers (UI_UX_POLISH Section 1) */
+  --layer-0: var(--color-ground);
+  --layer-1: var(--color-surface);
+  --layer-2: rgba(20, 23, 22, 0.6);
+  --layer-3: var(--color-amber);
+
   --font-display: DMSerifDisplay, ui-serif, Georgia, serif;
   --font-body: Geist, ui-sans-serif, system-ui, sans-serif;
   --font-mono: GeistMono, ui-monospace, monospace;

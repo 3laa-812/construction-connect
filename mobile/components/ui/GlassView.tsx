@@ -15,10 +15,10 @@ export function GlassView({ variant = 'card', intensity, style, children }: Glas
   const blurIntensity = intensity ?? {
     nav: 80, card: 40, sheet: 60, toast: 50, input: 20
   }[variant] ?? 40;
-
-  const combinedStyles: ViewStyle = Array.isArray(style) 
-    ? Object.assign({}, ...style) 
-    : style || {};
+  const borderStyles = {
+    borderColor: 'borderColor' in config ? (config as any).borderColor : undefined,
+    borderTopColor: 'borderTopColor' in config ? (config as any).borderTopColor : undefined,
+  };
 
   // For Android, fallback to standard View as BlurView is heavy/inconsistent
   if (Platform.OS === 'android') {
@@ -26,12 +26,12 @@ export function GlassView({ variant = 'card', intensity, style, children }: Glas
       <View
         style={[
           styles.base,
-          { 
-            backgroundColor: config.backgroundColor,
-            borderColor: 'borderColor' in config ? (config as any).borderColor : undefined,
-            borderTopColor: 'borderTopColor' in config ? (config as any).borderTopColor : undefined
+          {
+            // Section 2.2 spec: use solid surface-2 @ 0.9 opacity on Android.
+            backgroundColor: 'rgba(28, 31, 29, 0.9)',
           },
-          combinedStyles
+          borderStyles,
+          style
         ]}
       >
         {children}
@@ -45,11 +45,8 @@ export function GlassView({ variant = 'card', intensity, style, children }: Glas
       tint="dark"
       style={[
         styles.base,
-        { 
-          borderColor: 'borderColor' in config ? (config as any).borderColor : undefined,
-          borderTopColor: 'borderTopColor' in config ? (config as any).borderTopColor : undefined 
-        },
-        combinedStyles
+        borderStyles,
+        style
       ]}
     >
       <View style={[StyleSheet.absoluteFill, { backgroundColor: config.backgroundColor }]} />

@@ -6,6 +6,7 @@ import { database } from '../../../lib/watermelon';
 import Notification from '../../../models/Notification';
 import { Colors } from '../../../constants/theme';
 import { useRouter } from 'expo-router';
+import { ScreenBackground } from '../../../components/ui/ScreenBackground';
 
 function NotificationsList({ notifications }: { notifications: Notification[] }) {
   const router = useRouter();
@@ -56,8 +57,8 @@ const EnhancedNotificationsList = withObservables([], () => ({
 
 export default function NotificationsScreen() {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.ground }}>
+    <ScreenBackground>
       <EnhancedNotificationsList />
-    </View>
+    </ScreenBackground>
   );
 }

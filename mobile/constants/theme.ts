@@ -29,6 +29,22 @@ export const Colors = {
   infoText:    '#7EB8E0',
 };
 
+// Forged Glass design language layers from UI_UX_POLISH Section 1.
+export const ForgedGlassLayers = {
+  layer0: Colors.ground,
+  layer1: Colors.surface,
+  layer2: 'glass',
+  layer3: Colors.amber,
+} as const;
+
+// Shared stacking contract so "glass" always sits between surfaces and energy accents.
+export const ZLayers = {
+  ground: 0,
+  surface: 1,
+  glass: 2,
+  accent: 3,
+} as const;
+
 export const Spacing = {
   xs: 4, 
   sm: 8, 

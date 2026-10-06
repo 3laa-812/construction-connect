@@ -8,6 +8,8 @@ import { Colors, Spacing } from '../../../../constants/theme';
 import { Card, CardTitle, CardDescription, CardHeader } from '../../../../components/ui/Card';
 import { Badge } from '../../../../components/ui/Badge';
 import { FAB } from '../../../../components/ui/FAB';
+import { ScreenBackground } from '../../../../components/ui/ScreenBackground';
+import { mapRfq, unwrapList } from '../../../../lib/apiMappers';
 
 export default function RFQsList() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function RFQsList() {
     queryKey: ['rfqs'],
     queryFn: () => api.get('/rfqs').then(res => res.data),
   });
+  const rows = unwrapList(data).map(mapRfq);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -34,10 +37,10 @@ export default function RFQsList() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <FlashList
         estimatedItemSize={100}
-        data={data?.data || []}
+        data={rows}
         keyExtractor={(item: any) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.amber} />}
@@ -50,12 +53,12 @@ export default function RFQsList() {
         }
         renderItem={({ item }) => (
           <Card style={styles.card}>
-            <CardHeader onTouchEnd={() => router.push(`/rfqs/${item.id}` as any)}>
+            <CardHeader onTouchEnd={() => router.push(`/commerce/rfqs/${item.id}` as any)}>
               <View style={styles.headerRow}>
                 <CardTitle style={{ flex: 1 }}>{item.title || `RFQ #${item.id.substring(0, 8)}`}</CardTitle>
                 <Badge variant={getStatusVariant(item.status)}>{item.status}</Badge>
               </View>
-              <CardDescription>{item.project_id ? `Project ID: ${item.project_id}` : 'General RFQ'}</CardDescription>
+              <CardDescription>{item.itemsCount} items • {item.bidsCount} bids</CardDescription>
             </CardHeader>
           </Card>
         )}
@@ -63,17 +66,16 @@ export default function RFQsList() {
 
       <FAB 
         icon="plus" 
-        onPress={() => router.push('/rfqs/new' as any)}
+        onPress={() => router.push('/commerce/rfqs/new' as any)}
         style={{ bottom: Spacing.xl, right: Spacing.xl }}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.ground,
   },
   list: {
     padding: Spacing.md,

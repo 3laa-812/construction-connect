@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
@@ -9,6 +9,8 @@ import { AmberGlow, Glass } from '../../constants/glass';
 import { GlassView } from '../../components/ui/GlassView';
 import { ScreenBackground } from '../../components/ui/ScreenBackground';
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { useAuthStore } from '../../store/authStore';
 import { setToken } from '../../lib/auth';
 import { api } from '../../lib/api';
@@ -38,15 +40,24 @@ export default function LoginScreen() {
       login(data.user, data.access_token);
       
       try {
-        const { status } = await Notifications.requestPermissionsAsync();
-        if (status === 'granted') {
-          const pushToken = (await Notifications.getExpoPushTokenAsync()).data;
-          await api.patch('/users/push-token', { push_token: pushToken }, {
-            headers: { Authorization: `Bearer ${data.access_token}` }
-          });
+        // Only attempt FCM token registration on a real device
+        if (Device.isDevice) {
+          const { status } = await Notifications.requestPermissionsAsync();
+          if (status === 'granted') {
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+            if (projectId) {
+              const pushToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+              await api.patch('/users/push-token', { push_token: pushToken }, {
+                headers: { Authorization: `Bearer ${data.access_token}` }
+              });
+            }
+          }
         }
       } catch (pushErr) {
-        console.warn('Push token registration failed', pushErr);
+        // Non-fatal: FCM may not be configured in local dev builds
+        if (__DEV__) {
+          console.log('[Push] Token registration skipped:', (pushErr as Error)?.message);
+        }
       }
 
       router.replace('/(app)');
@@ -68,7 +79,11 @@ export default function LoginScreen() {
           {/* Logo Area (Top 35%) */}
           <View style={styles.logoArea}>
             <View style={styles.appIconWrapper}>
-              <Ionicons name="construct" size={32} color={Colors.amber} />
+              <Image
+                source={require('../../assets/icon-master.png')}
+                style={styles.appIconImage}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.title}>Construction Connect</Text>
             <Text style={styles.tagline}>Intelligent Project Management</Text>
@@ -134,13 +149,19 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   appIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 18,
     backgroundColor: Colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  appIconImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 18,
   },
   title: {
     fontFamily: Fonts.display,

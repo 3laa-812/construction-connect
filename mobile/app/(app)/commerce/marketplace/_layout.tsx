@@ -7,7 +7,7 @@ export default function MarketplaceLayout() {
       headerStyle: { backgroundColor: Colors.surface },
       headerTintColor: Colors.text1,
       headerTitleStyle: { fontFamily: 'Geist', fontWeight: '600' },
-      contentStyle: { backgroundColor: Colors.ground }
+      contentStyle: { backgroundColor: 'transparent' }
     }}>
       <Stack.Screen name="index" options={{ title: 'Marketplace' }} />
     </Stack>

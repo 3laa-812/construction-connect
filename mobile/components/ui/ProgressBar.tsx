@@ -80,9 +80,10 @@ function LinearFill({ value, height, color, animated }: { value: number; height:
     width: animatedWidth.value,
   }));
 
+  const resolvedColor = color ?? getProgressColor(value);
   const bgGradient = color 
     ? [color, color]
-    : [Colors.amberDim, Colors.amber];
+    : [Colors.amberDim, resolvedColor];
   
   const glowStyle = Platform.OS === 'ios' ? AmberGlow.bar : {};
 
@@ -148,7 +149,7 @@ function RadialProgress({ value, color, animated }: { value: number; color?: str
     strokeDashoffset: animatedOffset.value,
   }));
 
-  const indicatorColor = color || Colors.amber;
+  const indicatorColor = color ?? getProgressColor(value);
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>

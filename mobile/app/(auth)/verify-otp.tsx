@@ -33,7 +33,7 @@ export default function VerifyOtpScreen() {
     setLoading(true);
     setError(null);
     try {
-      await api.post('/auth/verify', { userId, code: fullCode });
+      await api.post('/auth/verify-otp', { userId, otp: fullCode });
       router.replace('/(auth)/login');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Verification failed');
@@ -79,12 +79,8 @@ export default function VerifyOtpScreen() {
 
   const handleResend = async () => {
     if (countdown > 0) return;
-    try {
-      await api.post('/auth/resend-code', { userId });
-      setCountdown(60);
-    } catch (err) {
-      // ignore or show toast
-    }
+    // Backend currently does not expose a resend endpoint.
+    setCountdown(60);
   };
 
   return (

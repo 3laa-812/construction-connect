@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Construction Connect — App Icon
+    Master file at 1024×1024 (required by Expo for all platform generation)
+    
+    Export targets from this file:
+      iOS:     1024×1024 (App Store), 180×180 (@3x), 120×120 (@2x), 87×87, 60×60, 58×58, 40×40, 29×29, 20×20
+      Android: 512×512 (Play Store), 192×192 (xxxhdpi), 144×144 (xxhdpi), 96×96 (xhdpi), 72×72 (hdpi), 48×48 (mdpi)
+      Expo:    Place as mobile/assets/images/icon.png (1024×1024 PNG export from this SVG)
+               Place as mobile/assets/images/adaptive-icon.png (1024×1024, Android adaptive)
+               Place as mobile/assets/images/favicon.png (48×48 PNG export)
+    
+    Corner radius for iOS rounded square: 224px (22% of 1024)
+    Expo handles cropping automatically — export at full 1024×1024 square, no pre-rounding needed.
+    
+    Design system:
+      ground:    #0D0F0E
+      surface:   #141716
+      surface-2: #1C1F1D
+      border:    #2A2E2B
+      amber:     #D4920A
+      text-1:    #F0EDE8
+  -->
+  <defs>
+    <!-- Background gradient: surface-2 top-left → ground bottom-right -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1C1F1D"/>
+      <stop offset="100%" stop-color="#0D0F0E"/>
+    </linearGradient>
+
+    <!-- Amber gradient: warm highlight top, deep amber bottom -->
+    <linearGradient id="amb" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#F0A818"/>
+      <stop offset="100%" stop-color="#A87008"/>
+    </linearGradient>
+
+    <!-- Steel beam gradient: slight surface sheen -->
+    <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2A2E2B"/>
+      <stop offset="100%" stop-color="#181B19"/>
+    </linearGradient>
+
+    <!-- Glass highlight on beam top edge -->
+    <linearGradient id="gleam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(240,237,232,0.20)"/>
+      <stop offset="100%" stop-color="rgba(240,237,232,0.00)"/>
+    </linearGradient>
+
+    <!-- Inner glass panel fill -->
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(240,237,232,0.055)"/>
+      <stop offset="100%" stop-color="rgba(240,237,232,0.010)"/>
+    </linearGradient>
+
+    <!-- Amber node radial: bright center, deep edge -->
+    <radialGradient id="nodeGrad" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#F4B830"/>
+      <stop offset="100%" stop-color="#9A6208"/>
+    </radialGradient>
+
+    <!-- Corner reflection (top-right warmth) -->
+    <radialGradient id="corner" cx="100%" cy="0%" r="55%">
+      <stop offset="0%" stop-color="rgba(212,146,10,0.06)"/>
+      <stop offset="100%" stop-color="rgba(212,146,10,0.00)"/>
+    </radialGradient>
+
+    <!-- Glow filter for amber node -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Subtle glow for connector dots -->
+    <filter id="dotGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- ── BACKGROUND ── -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Ambient corner warmth (top-right) -->
+  <rect width="1024" height="1024" fill="url(#corner)"/>
+
+  <!-- Subtle grid (3×3 divisions, very faint) -->
+  <g stroke="rgba(42,46,43,0.35)" stroke-width="1">
+    <line x1="0" y1="341" x2="1024" y2="341"/>
+    <line x1="0" y1="682" x2="1024" y2="682"/>
+    <line x1="341" y1="0" x2="341" y2="1024"/>
+    <line x1="682" y1="0" x2="682" y2="1024"/>
+  </g>
+
+  <!-- ── STRUCTURAL FRAME (the "C" — left + top + bottom beams) ── -->
+
+  <!-- LEFT VERTICAL BEAM -->
+  <!-- Main steel body -->
+  <rect x="248" y="248" width="112" height="528" rx="14" fill="url(#steel)" stroke="rgba(54,59,55,0.9)" stroke-width="1.5"/>
+  <!-- Top-edge gleam -->
+  <rect x="248" y="248" width="112" height="16" rx="14" fill="url(#gleam)"/>
+  <!-- Left-edge gleam (thin) -->
+  <rect x="248" y="248" width="14" height="528" rx="14" fill="url(#gleam)"/>
+
+  <!-- TOP HORIZONTAL BEAM -->
+  <rect x="248" y="248" width="528" height="112" rx="14" fill="url(#steel)" stroke="rgba(54,59,55,0.9)" stroke-width="1.5"/>
+  <rect x="248" y="248" width="528" height="16" rx="14" fill="url(#gleam)"/>
+  <rect x="248" y="248" width="14" height="112" rx="14" fill="url(#gleam)"/>
+
+  <!-- BOTTOM HORIZONTAL BEAM -->
+  <rect x="248" y="664" width="528" height="112" rx="14" fill="url(#steel)" stroke="rgba(54,59,55,0.9)" stroke-width="1.5"/>
+  <rect x="248" y="664" width="528" height="16" rx="14" fill="url(#gleam)"/>
+  <rect x="248" y="664" width="14" height="112" rx="14" fill="url(#gleam)"/>
+
+  <!-- ── AMBER ACCENT BAND on left beam (mid-point) ── -->
+  <!-- Signals the "active zone" — primary accent on structure -->
+  <rect x="248" y="488" width="112" height="48" fill="url(#amb)"/>
+  <!-- Gleam on accent band -->
+  <rect x="248" y="488" width="14" height="48" fill="rgba(255,255,255,0.18)"/>
+  <!-- Top micro-line on accent band -->
+  <rect x="248" y="488" width="112" height="2" fill="rgba(255,255,255,0.25)"/>
+
+  <!-- ── INNER GLASS PANEL ── -->
+  <!-- The open space inside the C, glazed -->
+  <rect x="368" y="368" width="296" height="288" rx="20" fill="url(#glass)" stroke="rgba(240,237,232,0.07)" stroke-width="1"/>
+  <!-- Inner panel top gleam -->
+  <rect x="368" y="368" width="296" height="8" rx="8" fill="rgba(240,237,232,0.06)"/>
+
+  <!-- ── AMBER NODE (the "connect" — right side of the C's opening) ── -->
+  <!-- Outer halo ring (very faint amber) -->
+  <circle cx="776" cy="512" r="96" fill="none" stroke="rgba(212,146,10,0.15)" stroke-width="2"/>
+  <!-- Mid ring -->
+  <circle cx="776" cy="512" r="72" fill="none" stroke="rgba(212,146,10,0.22)" stroke-width="1.5"/>
+  <!-- Node body with glow -->
+  <circle cx="776" cy="512" r="56" fill="url(#nodeGrad)" filter="url(#glow)"/>
+  <!-- Node inner core (the white "signal") -->
+  <circle cx="776" cy="512" r="28" fill="#F0EDE8"/>
+  <!-- Core highlight -->
+  <circle cx="764" cy="500" r="10" fill="rgba(255,255,255,0.45)"/>
+
+  <!-- ── VERTICAL CONNECTOR LINES from beams to node ── -->
+  <!-- Top connector: from junction of top beam right-end to node top -->
+  <line x1="776" y1="360" x2="776" y2="452" stroke="#D4920A" stroke-width="7" stroke-linecap="round"/>
+  <!-- Bottom connector: from node bottom to bottom beam right-end -->
+  <line x1="776" y1="572" x2="776" y2="664" stroke="#D4920A" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Connector dots at beam junctions -->
+  <circle cx="776" cy="360" r="12" fill="#D4920A" filter="url(#dotGlow)"/>
+  <circle cx="776" cy="360" r="5" fill="#F0EDE8"/>
+
+  <circle cx="776" cy="664" r="12" fill="#D4920A" filter="url(#dotGlow)"/>
+  <circle cx="776" cy="664" r="5" fill="#F0EDE8"/>
+
+  <!-- Mid connector dots on the vertical lines (signal "data in transit") -->
+  <circle cx="776" cy="408" r="5" fill="rgba(212,146,10,0.6)"/>
+  <circle cx="776" cy="616" r="5" fill="rgba(212,146,10,0.6)"/>
+
+  <!-- ── TOP-RIGHT CORNER REFLECTION ── -->
+  <!-- Mimics a glass surface catching light at the icon corner -->
+  <path d="M840 0 L1024 0 L1024 184 Q980 80 840 0Z" fill="rgba(240,237,232,0.025)"/>
+</svg>

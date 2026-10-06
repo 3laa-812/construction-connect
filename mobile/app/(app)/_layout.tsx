@@ -1,146 +1,50 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
-import { Colors } from '../../constants/theme';
-import { Glass, AmberGlow } from '../../constants/glass';
-import { StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { GlassView } from '../../components/ui/GlassView';
+import { View } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
+import { useAuthStore } from '../../store/authStore';
+import { CustomTabBar } from '../../components/navigation/CustomTabBar';
+import { SyncBanner } from '../../components/sync/SyncBanner';
+import { useSync } from '../../hooks/useSync';
 
 export default function AppLayout() {
-  return (
-    <Tabs 
-      screenOptions={{ 
-        headerStyle: { backgroundColor: Colors.ground },
-        headerTintColor: Colors.text1,
-        // Tab bar styling matching Forge Glass Spec
-        tabBarBackground: () => (
-          <GlassView variant="nav" style={StyleSheet.absoluteFill} />
-        ),
-        tabBarStyle: { 
-          position: 'absolute',
-          borderTopColor: Glass.nav.borderTopColor,
-          borderTopWidth: 1,
-          height: 64,
-          elevation: 0, 
-        },
-        tabBarActiveTintColor: Colors.amber,
-        tabBarInactiveTintColor: Colors.text3,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontFamily: 'Geist',
-          fontSize: 10,
-          letterSpacing: 0.5,
-          marginTop: 4,
-        },
-      }}
-    >
-      <Tabs.Screen 
-        name="index" 
-        options={{ 
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? AmberGlow.soft : undefined}>
-              {focused && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  left: '50%',
-                  transform: [{ translateX: -10 }],
-                  width: 20,
-                  height: 2,
-                  backgroundColor: Colors.amber,
-                  borderRadius: 1
-                }} />
-              )}
-              <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
-            </View>
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
-        name="work" 
-        options={{ 
-          title: 'Work',
-          headerShown: false,
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? AmberGlow.soft : undefined}>
-              {focused && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  left: '50%',
-                  transform: [{ translateX: -10 }],
-                  width: 20,
-                  height: 2,
-                  backgroundColor: Colors.amber,
-                  borderRadius: 1
-                }} />
-              )}
-              <Ionicons name={focused ? 'briefcase' : 'briefcase-outline'} size={24} color={color} />
-            </View>
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
-        name="commerce" 
-        options={{ 
-          title: 'Commerce',
-          headerShown: false,
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? AmberGlow.soft : undefined}>
-              {focused && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  left: '50%',
-                  transform: [{ translateX: -10 }],
-                  width: 20,
-                  height: 2,
-                  backgroundColor: Colors.amber,
-                  borderRadius: 1
-                }} />
-              )}
-              <Ionicons name={focused ? 'storefront' : 'storefront-outline'} size={24} color={color} />
-            </View>
-          ) 
-        }} 
-      />
-      
-      <Tabs.Screen 
-        name="profile" 
-        options={{ 
-          title: 'Profile',
-          headerShown: false,
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? AmberGlow.soft : undefined}>
-              {focused && (
-                <View style={{
-                  position: 'absolute',
-                  top: -6,
-                  left: '50%',
-                  transform: [{ translateX: -10 }],
-                  width: 20,
-                  height: 2,
-                  backgroundColor: Colors.amber,
-                  borderRadius: 1
-                }} />
-              )}
-              <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={24} color={color} />
-            </View>
-          ) 
-        }} 
-      />
+  const { isAuthenticated, user } = useAuthStore();
+  useSync();
 
-      <Tabs.Screen name="notifications" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="daily-logs" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="invoices" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="marketplace" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="orders" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="projects" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="rfqs" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen name="wallet" options={{ href: null, headerShown: false }} />
-    </Tabs>
+  // If we had a loading state in the store, we'd check it here
+  // For now, if not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <SyncBanner />
+      <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: 'transparent',
+            elevation: 0,
+            borderTopWidth: 0,
+          },
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: 'Home' }} />
+        <Tabs.Screen name="work" options={{ title: 'Work' }} />
+        <Tabs.Screen 
+          name="daily-logs" 
+          options={{ 
+            title: 'Logs',
+            href: user?.role === 'CONTRACTOR' ? undefined : null,
+          }} 
+        />
+        <Tabs.Screen name="commerce" options={{ title: 'Commerce' }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+
+        {/* Hidden screens - suppress from tab bar */}
+        <Tabs.Screen name="notifications" options={{ href: null }} />
+      </Tabs>
+    </View>
   );
 }

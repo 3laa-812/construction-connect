@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, TouchableOpacityProps, ViewStyle, TextStyle } from 'react-native';
-import { Colors, Radius } from '../../constants/theme';
+import { View, Text, ActivityIndicator, TouchableOpacityProps, ViewStyle, TextStyle, StyleSheet, Pressable } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { Colors, Radius, Fonts } from '../../constants/theme';
 import * as Haptics from 'expo-haptics';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
@@ -33,60 +34,97 @@ const variantTextStyles: Record<ButtonVariant, TextStyle> = {
 const sizeStyles: Record<ButtonSize, ViewStyle> = {
   sm: { height: 28, paddingHorizontal: 12, borderRadius: Radius.sm },  
   md: { height: 36, paddingHorizontal: 16, borderRadius: Radius.md },  
-  lg: { height: 44, paddingHorizontal: 24, borderRadius: Radius.lg },  
+  lg: { height: 48, paddingHorizontal: 24, borderRadius: Radius.lg },  
   icon: { height: 36, width: 36, borderRadius: Radius.md, justifyContent: 'center', alignItems: 'center' },
 };
 
 const sizeTextStyles: Record<ButtonSize, TextStyle> = {
   sm: { fontSize: 12 },   
   md: { fontSize: 14 },   
-  lg: { fontSize: 14 },
+  lg: { fontSize: 15, fontWeight: '600' },
   icon: { fontSize: 14 },
 };
 
-export const Button = forwardRef<TouchableOpacity, ButtonProps>(
+export const Button = forwardRef<View, ButtonProps>(
   ({ variant = 'primary', size = 'md', isLoading, disabled, children, leftIcon, rightIcon, style, onPress, ...props }, ref) => {
-    
-    const handlePress = (e: any) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      if (onPress) onPress(e);
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: scale.value }],
+    }));
+
+    const handlePressIn = () => {
+      if (!disabled && !isLoading) {
+        scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
+    };
+
+    const handlePressOut = () => {
+      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
     };
 
     return (
-      <TouchableOpacity
-        ref={ref}
-        onPress={handlePress}
+      <Pressable
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         disabled={disabled || isLoading}
-        activeOpacity={0.8}
-        style={[
-          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+        style={({ pressed }) => [
+          styles.base,
           variantStyles[variant],
           sizeStyles[size],
-          disabled && { opacity: 0.4 },
+          disabled && styles.disabled,
           style as ViewStyle,
         ]}
         {...props}
       >
-        {isLoading ? (
-          <ActivityIndicator color={variantTextStyles[variant].color} />
-        ) : (
-          <>
-            {leftIcon}
-            {typeof children === 'string' ? (
-              <Text style={[
-                { fontFamily: 'Geist', fontWeight: '500' },
-                variantTextStyles[variant],
-                sizeTextStyles[size],
-              ]}>
-                {children}
-              </Text>
-            ) : children}
-            {rightIcon}
-          </>
-        )}
-      </TouchableOpacity>
+        <Animated.View style={[styles.inner, animatedStyle]}>
+          {isLoading ? (
+            <ActivityIndicator color={variantTextStyles[variant].color} size="small" />
+          ) : (
+            <>
+              {leftIcon}
+              {typeof children === 'string' ? (
+                <Text style={[
+                  styles.textBase,
+                  variantTextStyles[variant],
+                  sizeTextStyles[size],
+                ]}>
+                  {children}
+                </Text>
+              ) : children}
+              {rightIcon}
+            </>
+          )}
+        </Animated.View>
+      </Pressable>
     );
   }
 );
+
+const styles = StyleSheet.create({
+  base: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    width: '100%',
+    height: '100%',
+  },
+  textBase: {
+    fontFamily: Fonts.body,
+    fontWeight: '500',
+  },
+  disabled: {
+    opacity: 0.4,
+  }
+});
 
 Button.displayName = 'Button';

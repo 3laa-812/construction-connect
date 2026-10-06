@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '../../../../components/ui/Button';
 import { Colors, Spacing } from '../../../../constants/theme';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../../../../lib/api';
+import { ScreenBackground } from '../../../../components/ui/ScreenBackground';
 
 export default function ProofOfDelivery() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { data: order } = useQuery({
+    queryKey: ['purchase-order-delivery', id],
+    queryFn: () => api.get(`/purchase-orders/${id}`).then((res) => res.data),
+    enabled: Boolean(id),
+  });
 
   const submitDelivery = async () => {
     setLoading(true);
@@ -27,16 +34,22 @@ export default function ProofOfDelivery() {
         return;
       }
       
-      const formData = new FormData();
-      formData.append('items', JSON.stringify([])); 
-      formData.append('pod_photo', {
-        uri: result.assets[0].uri,
-        type: 'image/jpeg',
-        name: 'pod.jpg',
-      } as any);
-
-      await api.post(`/purchase-orders/${id}/delivery-notes`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Backend endpoint expects JSON body (not multipart).
+      const items = Array.isArray(order?.items)
+        ? order.items.map((line: any) => ({
+            po_item_id: line.id,
+            delivered_qty: Number(line.remaining_qty ?? line.ordered_qty ?? 1) || 1,
+          }))
+        : [];
+      if (!items.length) {
+        alert('No order items available for delivery confirmation.');
+        setLoading(false);
+        return;
+      }
+      await api.post(`/purchase-orders/${id}/delivery-notes`, {
+        status: 'DELIVERED',
+        pod_image_url: result.assets[0].uri,
+        items,
       });
       
       alert('Delivery Confirmed!');
@@ -50,7 +63,7 @@ export default function ProofOfDelivery() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScreenBackground style={styles.container}>
       <Text style={styles.subtitle}>
         Proof of Delivery Verification
       </Text>
@@ -60,14 +73,13 @@ export default function ProofOfDelivery() {
       <Button onPress={submitDelivery} isLoading={loading} size="lg">
         Capture Physical Signature & Submit
       </Button>
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: Colors.ground, 
     padding: Spacing.md, 
     justifyContent: 'center' 
   },

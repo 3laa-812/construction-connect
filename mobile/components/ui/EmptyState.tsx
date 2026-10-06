@@ -1,22 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../constants/theme';
-import { Button } from './Button';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Fonts, Spacing } from '../../constants/theme';
+import { Button, ButtonVariant } from './Button';
 
 interface EmptyStateProps {
+  icon: keyof typeof Ionicons.glyphMap;
   title: string;
-  description: string;
+  subtitle: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionVariant?: ButtonVariant;
+  style?: ViewStyle;
 }
 
-export function EmptyState({ title, description, actionLabel, onAction }: EmptyStateProps) {
+export function EmptyState({ 
+  icon, 
+  title, 
+  subtitle, 
+  actionLabel, 
+  onAction, 
+  actionVariant = 'primary',
+  style 
+}: EmptyStateProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
+      <Ionicons name={icon} size={64} color={Colors.surface2} />
+      
       <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+      
       {actionLabel && onAction && (
-        <Button onPress={onAction} style={{ marginTop: 16 }}>
+        <Button 
+          variant={actionVariant} 
+          onPress={onAction} 
+          style={styles.button}
+        >
           {actionLabel}
         </Button>
       )}
@@ -29,19 +48,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    paddingHorizontal: 40,
+    backgroundColor: 'transparent',
+    marginTop: 60,
   },
   title: {
-    fontFamily: 'DMSerifDisplay',
+    fontFamily: Fonts.display,
     fontSize: 20,
-    color: Colors.text.text1,
-    marginBottom: 8,
+    color: Colors.text1,
+    marginTop: 16,
     textAlign: 'center',
   },
-  description: {
-    fontFamily: 'Geist',
+  subtitle: {
+    fontFamily: Fonts.body,
     fontSize: 14,
-    color: Colors.text.text2,
+    color: Colors.text2,
+    marginTop: 8,
     textAlign: 'center',
-  }
+    lineHeight: 20,
+  },
+  button: {
+    marginTop: 24,
+    minWidth: 160,
+  },
 });

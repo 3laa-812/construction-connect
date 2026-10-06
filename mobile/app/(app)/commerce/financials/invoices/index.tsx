@@ -2,10 +2,12 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/api';
-import { Colors } from '../../../constants/theme';
-import { Card, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
+import { api } from '../../../../../lib/api';
+import { Colors } from '../../../../../constants/theme';
+import { Card, CardHeader, CardTitle, CardDescription } from '../../../../../components/ui/Card';
 import { useRouter } from 'expo-router';
+import { ScreenBackground } from '../../../../../components/ui/ScreenBackground';
+import { unwrapList } from '../../../../../lib/apiMappers';
 
 export default function InvoicesList() {
   const router = useRouter();
@@ -14,12 +16,15 @@ export default function InvoicesList() {
     queryKey: ['invoices'],
     queryFn: () => api.get('/invoices').then(res => res.data),
   });
+  const rows = unwrapList(data);
+
+  const TypedFlashList = FlashList as any;
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.ground }}>
-      <FlashList
+    <ScreenBackground>
+      <TypedFlashList
         estimatedItemSize={80}
-        data={data?.data || []}
+        data={rows}
         keyExtractor={(item: any) => item.id}
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={
@@ -29,15 +34,15 @@ export default function InvoicesList() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: any }) => (
           <Card style={{ marginBottom: 12 }}>
-            <CardHeader onTouchEnd={() => router.push(`/invoices/${item.id}`)}>
-              <CardTitle>{item.id} - ${item.total}</CardTitle>
+            <CardHeader onTouchEnd={() => router.push(`/commerce/financials/invoices/${item.id}` as any)}>
+              <CardTitle>{item.id} - ${Number(item.total_amount ?? item.total ?? 0).toLocaleString()}</CardTitle>
               <CardDescription>Status: {item.status}</CardDescription>
             </CardHeader>
           </Card>
         )}
       />
-    </View>
+    </ScreenBackground>
   );
 }

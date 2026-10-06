@@ -12,9 +12,12 @@ export async function fetchWeather(lat: number, lon: number) {
     );
     return {
       temp: Math.round(data.main.temp),
+      feels_like: Math.round(data.main.feels_like),
       humidity: data.main.humidity,
       wind_speed: data.wind.speed,
       condition: data.weather[0].main,
+      icon: data.weather[0].icon,
+      description: data.weather[0].description,
     };
   } catch (err) {
     console.error('Failed to fetch weather', err);
